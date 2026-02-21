@@ -113,6 +113,7 @@ const CreateTrip = () => {
   const [bookingCloseDate, setBookingCloseDate] = useState("");
   const [totalSeats, setTotalSeats] = useState("");
   const [minSeats, setMinSeats] = useState("");
+  const [accessType, setAccessType] = useState<"open" | "apply" | "invite">("open");
 
   // Pricing
   const [totalPrice, setTotalPrice] = useState("");
@@ -508,6 +509,30 @@ const CreateTrip = () => {
                         </div>
                       </Field>
                     </div>
+                    <Field label="Trip Access Type" required hint="Control how travelers can join your trip">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {([
+                          { value: "open" as const, label: "Open Trip", desc: "Anyone can book instantly" },
+                          { value: "apply" as const, label: "Apply to Join", desc: "You approve each application" },
+                          { value: "invite" as const, label: "Invite Only", desc: "Only invited people can book" },
+                        ]).map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setAccessType(opt.value)}
+                            className={cn(
+                              "rounded-lg border p-3 text-left transition-all",
+                              accessType === opt.value
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border hover:border-primary/40"
+                            )}
+                          >
+                            <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                            <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
                   </CardContent>
                 )}
               </Card>
