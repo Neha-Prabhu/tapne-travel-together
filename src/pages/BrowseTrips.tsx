@@ -1,14 +1,21 @@
 import { useState, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import TripCard from "@/components/TripCard";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { trips, TRIP_TYPES } from "@/data/mockData";
-import { Search } from "lucide-react";
+import { trips, TRIP_TYPES, getUserById } from "@/data/mockData";
+import { Search, MapPin, Calendar, Users, IndianRupee, ArrowRight } from "lucide-react";
+import { format } from "date-fns";
 
 const BrowseTrips = () => {
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const destinationFilter = searchParams.get("destination") || "";
+
+  const [search, setSearch] = useState(destinationFilter);
   const [typeFilter, setTypeFilter] = useState("all");
 
   const filtered = useMemo(() => {
@@ -56,13 +63,78 @@ const BrowseTrips = () => {
           {filtered.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-xl font-medium text-foreground">No trips found</p>
-              <p className="mt-2 text-muted-foreground">Try adjusting your search or filters. Or be the first to create one!</p>
+              <p className="mt-2 text-muted-foreground">Try adjusting your search or filters.</p>
             </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((trip) => (
-                <TripCard key={trip.id} trip={trip} />
-              ))}
+            <div className="space-y-4">
+              {filtered.map((trip) => {
+                const host = getUserById(trip.hostId);
+                const spotsLeft = trip.maxGroupSize - trip.participantIds.length;
+                return (
+                  <Link key={trip.id} to={`/trips/${trip.id}`}>
+                    <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
+                      <div className="flex flex-col sm:flex-row">
+                        {/* Left: Image */}
+                        <div className="relative aspect-[16/10] w-full overflow-hidden sm:aspect-auto sm:w-72 md:w-80 lg:w-96">
+                          <img
+                            src={trip.coverImage}
+                            alt={trip.title}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground">
+                            {trip.tripType}
+                          </Badge>
+                        </div>
+                        {/* Right: Info */}
+                        <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
+                          <div>
+                            <h3 className="mb-1 text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                              {trip.title}
+                            </h3>
+                            <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {trip.destination}
+                            </div>
+                            <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
+                              {trip.summary || trip.description}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {trip.tripVibes?.slice(0, 3).map(v => (
+                                <Badge key={v} variant="outline" className="text-xs">{v}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {format(new Date(trip.startDate), "MMM d")} – {format(new Date(trip.endDate), "MMM d")}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <IndianRupee className="h-3.5 w-3.5" />
+                                {trip.budget.toLocaleString()}
+                              </span>
+                              <span className={`flex items-center gap-1 ${spotsLeft <= 2 ? "font-medium text-destructive" : ""}`}>
+                                <Users className="h-3.5 w-3.5" />
+                                {spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left
+                              </span>
+                              {host && (
+                                <span className="flex items-center gap-1.5">
+                                  <img src={host.avatar} alt={host.name} className="h-5 w-5 rounded-full object-cover" />
+                                  {host.name.split(" ")[0]}
+                                </span>
+                              )}
+                            </div>
+                            <Button variant="outline" size="sm" className="shrink-0">
+                              View Details <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>

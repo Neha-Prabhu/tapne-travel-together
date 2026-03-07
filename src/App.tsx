@@ -11,6 +11,7 @@ import CreateTrip from "./pages/CreateTrip";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
+import Blogs from "./pages/Blogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/trips" element={<BrowseTrips />} />
             <Route path="/trips/:id" element={<TripDetail />} />
             <Route path="/create-trip" element={<CreateTrip />} />
+            <Route path="/blogs" element={<Blogs />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/profile" element={<Profile />} />
