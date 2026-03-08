@@ -178,17 +178,13 @@ const Index = () => {
             </Button>
           </div>
 
-          <div className="space-y-6">
-            {[row1, row2, row3].map((row, ri) => (
-              <HorizontalCarousel key={ri}>
-                {row.map(trip => (
-                  <div key={`${ri}-${trip.id}`} className="w-[300px] shrink-0 sm:w-[320px]">
-                    <TripCard trip={trip} />
-                  </div>
-                ))}
-              </HorizontalCarousel>
+          <HorizontalCarousel>
+            {featuredTrips.map(trip => (
+              <div key={trip.id} className="w-[300px] shrink-0 sm:w-[320px]">
+                <TripCard trip={trip} />
+              </div>
             ))}
-          </div>
+          </HorizontalCarousel>
 
           <div className="mt-6 text-center sm:hidden">
             <Button variant="outline" asChild>
