@@ -66,12 +66,12 @@ const BrowseTrips = () => {
               <p className="mt-2 text-muted-foreground">Try adjusting your search or filters.</p>
             </div>
           ) : (
-            <div className="space-y-14">
+            <div className="flex flex-col gap-8">
               {filtered.map((trip) => {
                 const host = getUserById(trip.hostId);
                 const spotsLeft = trip.maxGroupSize - trip.participantIds.length;
                 return (
-                  <Link key={trip.id} to={`/trips/${trip.id}`}>
+                  <Link key={trip.id} to={`/trips/${trip.id}`} className="block">
                     <Card className="group overflow-hidden transition-shadow hover:shadow-lg h-[200px] sm:h-[220px]">
                       <div className="flex h-full flex-col sm:flex-row">
                         {/* Left: Image */}
