@@ -550,7 +550,7 @@ const CreateTrip = () => {
 
               {/* 4. HIGHLIGHTS (drag list) */}
               <Card id="highlights" ref={(el) => { sectionRefs.current.highlights = el; }}>
-                <SectionHeader id="highlights" icon={Star} title="Highlights" description="Top reasons someone should join." />
+                {renderSectionHeader("highlights", Star, "Highlights", "Top reasons someone should join.")}
                 {!collapsedSections.has("highlights") && (
                   <CardContent className="space-y-3 pt-0">
                     {highlights.map((_, i) => (
