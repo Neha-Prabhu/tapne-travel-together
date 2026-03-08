@@ -779,7 +779,7 @@ const CreateTrip = () => {
 
               {/* 10. SAFETY & POLICIES */}
               <Card id="safety" ref={(el) => { sectionRefs.current.safety = el; }}>
-                <SectionHeader id="safety" icon={Shield} title="Safety & Policies" description="Build trust with clear guidelines." />
+                {renderSectionHeader("safety", Shield, "Safety & Policies", "Build trust with clear guidelines.")}
                 {!collapsedSections.has("safety") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Code of Conduct">
