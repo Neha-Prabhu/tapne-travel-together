@@ -86,10 +86,8 @@ const Index = () => {
 
   const hasResults = searchResults.trips.length > 0 || searchResults.users.length > 0;
 
-  // Split trips into 3 rows
-  const row1 = trips.slice(0, Math.min(trips.length, 6));
-  const row2 = trips.slice(0, Math.min(trips.length, 6)).reverse();
-  const row3 = [...trips].sort(() => 0.5 - Math.random()).slice(0, 6);
+  // Featured trips (first 3)
+  const featuredTrips = trips.slice(0, 3);
 
   return (
     <div className="flex min-h-screen flex-col">
