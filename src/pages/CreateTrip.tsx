@@ -170,9 +170,25 @@ const CreateTrip = () => {
   });
   const progressPercent = Math.round((completedSections.length / SECTIONS.length) * 100);
 
+  const isInputFocusedRef = useRef(false);
+
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = true;
+    };
+    const handleFocusOut = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = false;
+    };
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    return () => { document.removeEventListener("focusin", handleFocusIn); document.removeEventListener("focusout", handleFocusOut); };
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => { entries.forEach(entry => { if (entry.isIntersecting) setActiveSection(entry.target.id); }); },
+      (entries) => { entries.forEach(entry => { if (entry.isIntersecting && !isInputFocusedRef.current) setActiveSection(entry.target.id); }); },
       { rootMargin: "-100px 0px -60% 0px", threshold: 0.1 }
     );
     Object.values(sectionRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
