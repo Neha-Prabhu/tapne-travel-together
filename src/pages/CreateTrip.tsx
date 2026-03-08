@@ -337,83 +337,9 @@ const CreateTrip = () => {
     setLoading(false);
   };
 
-  // ─ Section Header ─
-  const SectionHeader = ({ id, icon: Icon, title, description, required }: {
-    id: string; icon: React.ElementType; title: string; description: string; required?: boolean;
-  }) => (
-    <button type="button" onClick={() => toggleSection(id)} className="flex w-full items-center justify-between rounded-lg p-4 text-left transition-colors hover:bg-muted/50">
-      <div className="flex items-center gap-3">
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", completedSections.some(s => s.id === id) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-            {required && <Badge variant="outline" className="text-xs text-destructive border-destructive/30">Required</Badge>}
-            {completedSections.some(s => s.id === id) && <CheckCircle2 className="h-4 w-4 text-primary" />}
-          </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      {collapsedSections.has(id) ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronUp className="h-5 w-5 text-muted-foreground" />}
-    </button>
-  );
-
-  const Field = ({ label, error, hint, required, children }: {
-    label: string; error?: string; hint?: string; required?: boolean; children: React.ReactNode;
-  }) => (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-foreground">{label}{required && <span className="ml-1 text-destructive">*</span>}</Label>
-      {children}
-      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-
-  // Wanderlog-style draggable list item with dotted grip handle
-  const DragListItem = ({ items, setItems, index, icon: ItemIcon, placeholder }: {
-    items: string[]; setItems: React.Dispatch<React.SetStateAction<string[]>>; index: number; icon: React.ElementType; placeholder: string;
-  }) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const dragItemRef = useRef<number | null>(null);
-    const dragOverItemRef = useRef<number | null>(null);
-
-    return (
-      <div
-        draggable
-        onDragStart={() => { dragItemRef.current = index; setIsDragging(true); }}
-        onDragEnter={() => { dragOverItemRef.current = index; }}
-        onDragOver={e => e.preventDefault()}
-        onDragEnd={() => {
-          setIsDragging(false);
-          if (dragItemRef.current !== null && dragOverItemRef.current !== null && dragItemRef.current !== dragOverItemRef.current) {
-            moveItem(setItems, dragItemRef.current, dragOverItemRef.current);
-          }
-          dragItemRef.current = null;
-          dragOverItemRef.current = null;
-        }}
-        className={cn(
-          "group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-all",
-          isDragging ? "opacity-50 border-primary shadow-md" : "border-border hover:border-primary/30 hover:shadow-sm"
-        )}
-      >
-        <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
-          <GripVertical className="h-5 w-5" />
-        </div>
-        <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
-        <Input
-          value={items[index]}
-          onChange={e => updateListItem(setItems, index, e.target.value)}
-          placeholder={placeholder}
-          className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-        />
-        <Button variant="ghost" size="icon" onClick={() => removeListItem(setItems, index)} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-        </Button>
-      </div>
-    );
-  };
-
+  // Drag state for list items
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const dragOverIndexRef = useRef<number | null>(null);
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
