@@ -86,7 +86,7 @@ const BrowseTrips = () => {
                           </Badge>
                         </div>
                         {/* Right: Info */}
-                        <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
+                        <div className="flex flex-1 flex-col justify-between p-5 sm:p-6">
                           <div>
                             <h3 className="mb-1 text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                               {trip.title}
