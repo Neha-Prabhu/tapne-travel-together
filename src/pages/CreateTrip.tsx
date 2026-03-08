@@ -698,7 +698,7 @@ const CreateTrip = () => {
 
               {/* 8. THINGS TO CARRY (pill tags) */}
               <Card id="thingsToCarry" ref={(el) => { sectionRefs.current.thingsToCarry = el; }}>
-                <SectionHeader id="thingsToCarry" icon={Backpack} title="Things to Carry" description="Help participants pack right." />
+                {renderSectionHeader("thingsToCarry", Backpack, "Things to Carry", "Help participants pack right.")}
                 {!collapsedSections.has("thingsToCarry") && (
                   <CardContent className="space-y-3 pt-0">
                     <div className="flex flex-wrap gap-2">
