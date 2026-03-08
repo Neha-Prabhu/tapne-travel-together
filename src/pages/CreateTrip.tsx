@@ -540,12 +540,17 @@ const CreateTrip = () => {
                 {!collapsedSections.has("itinerary") && (
                   <CardContent className="space-y-4 pt-0">
                     {itinerary.map((day, i) => (
-                      <div key={day.id} className="rounded-lg border bg-card p-4 space-y-3">
+                      <div
+                        key={day.id}
+                        draggable
+                        onDragStart={() => { }}
+                        onDragOver={e => e.preventDefault()}
+                        className="group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm"
+                      >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex flex-col gap-0.5">
-                              {i > 0 && <button type="button" onClick={() => moveItineraryDay(i, i - 1)} className="text-muted-foreground hover:text-foreground"><ChevronUp className="h-3 w-3" /></button>}
-                              {i < itinerary.length - 1 && <button type="button" onClick={() => moveItineraryDay(i, i + 1)} className="text-muted-foreground hover:text-foreground"><ChevronDown className="h-3 w-3" /></button>}
+                          <div className="flex items-center gap-3">
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+                              <GripVertical className="h-5 w-5" />
                             </div>
                             <Badge variant="secondary" className="font-semibold">Day {i + 1}</Badge>
                             {day.isFlexible && <Badge variant="outline" className="text-xs">Flexible</Badge>}
@@ -554,7 +559,7 @@ const CreateTrip = () => {
                             <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                               <Checkbox checked={day.isFlexible} onCheckedChange={v => updateItineraryDay(i, "isFlexible", !!v)} />Flexible
                             </label>
-                            {itinerary.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeItineraryDay(i)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
+                            {itinerary.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeItineraryDay(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                           </div>
                         </div>
                         <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
