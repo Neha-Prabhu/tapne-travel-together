@@ -796,16 +796,15 @@ const CreateTrip = () => {
                 {!collapsedSections.has("faqs") && (
                   <CardContent className="space-y-4 pt-0">
                     {faqs.map((faq, i) => (
-                      <div key={faq.id} className="rounded-lg border bg-card p-4 space-y-3">
+                      <div key={faq.id} className="group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex flex-col gap-0.5">
-                              {i > 0 && <button type="button" onClick={() => moveFAQ(i, i - 1)} className="text-muted-foreground hover:text-foreground"><ChevronUp className="h-3 w-3" /></button>}
-                              {i < faqs.length - 1 && <button type="button" onClick={() => moveFAQ(i, i + 1)} className="text-muted-foreground hover:text-foreground"><ChevronDown className="h-3 w-3" /></button>}
+                          <div className="flex items-center gap-3">
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+                              <GripVertical className="h-5 w-5" />
                             </div>
                             <Badge variant="secondary" className="text-xs">Q{i + 1}</Badge>
                           </div>
-                          {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
+                          {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                         </div>
                         <Input placeholder="e.g. Is this trip beginner-friendly?" value={faq.question} onChange={e => updateFAQ(i, "question", e.target.value)} />
                         <Textarea rows={2} placeholder="Your answer..." value={faq.answer} onChange={e => updateFAQ(i, "answer", e.target.value)} />
