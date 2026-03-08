@@ -553,9 +553,7 @@ const CreateTrip = () => {
                 {renderSectionHeader("highlights", Star, "Highlights", "Top reasons someone should join.")}
                 {!collapsedSections.has("highlights") && (
                   <CardContent className="space-y-3 pt-0">
-                    {highlights.map((_, i) => (
-                      <DragListItem key={i} items={highlights} setItems={setHighlights} index={i} icon={Sparkles} placeholder={`Highlight #${i + 1}`} />
-                    ))}
+                    {renderDragList(highlights, setHighlights, Sparkles, (i) => `Highlight #${i + 1}`)}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setHighlights)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Highlight</Button>
                   </CardContent>
                 )}
