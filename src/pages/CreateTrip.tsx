@@ -246,12 +246,12 @@ const CreateTrip = () => {
 
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = true;
+      const el = e.target as HTMLElement;
+      if (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable) isInputFocusedRef.current = true;
     };
     const handleFocusOut = (e: FocusEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = false;
+      const el = e.target as HTMLElement;
+      if (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable) isInputFocusedRef.current = false;
     };
     document.addEventListener("focusin", handleFocusIn);
     document.addEventListener("focusout", handleFocusOut);
