@@ -170,9 +170,25 @@ const CreateTrip = () => {
   });
   const progressPercent = Math.round((completedSections.length / SECTIONS.length) * 100);
 
+  const isInputFocusedRef = useRef(false);
+
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = true;
+    };
+    const handleFocusOut = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = false;
+    };
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+    return () => { document.removeEventListener("focusin", handleFocusIn); document.removeEventListener("focusout", handleFocusOut); };
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => { entries.forEach(entry => { if (entry.isIntersecting) setActiveSection(entry.target.id); }); },
+      (entries) => { entries.forEach(entry => { if (entry.isIntersecting && !isInputFocusedRef.current) setActiveSection(entry.target.id); }); },
       { rootMargin: "-100px 0px -60% 0px", threshold: 0.1 }
     );
     Object.values(sectionRefs.current).forEach(ref => { if (ref) observer.observe(ref); });
@@ -288,20 +304,49 @@ const CreateTrip = () => {
     </div>
   );
 
-  // Draggable list item component
+  // Wanderlog-style draggable list item with dotted grip handle
   const DragListItem = ({ items, setItems, index, icon: ItemIcon, placeholder }: {
     items: string[]; setItems: React.Dispatch<React.SetStateAction<string[]>>; index: number; icon: React.ElementType; placeholder: string;
-  }) => (
-    <div className="flex items-center gap-2">
-      <div className="flex flex-col gap-0.5">
-        {index > 0 && <button type="button" onClick={() => moveItem(setItems, index, index - 1)} className="text-muted-foreground hover:text-foreground"><ChevronUp className="h-3 w-3" /></button>}
-        {index < items.length - 1 && <button type="button" onClick={() => moveItem(setItems, index, index + 1)} className="text-muted-foreground hover:text-foreground"><ChevronDown className="h-3 w-3" /></button>}
+  }) => {
+    const [isDragging, setIsDragging] = useState(false);
+    const dragItemRef = useRef<number | null>(null);
+    const dragOverItemRef = useRef<number | null>(null);
+
+    return (
+      <div
+        draggable
+        onDragStart={() => { dragItemRef.current = index; setIsDragging(true); }}
+        onDragEnter={() => { dragOverItemRef.current = index; }}
+        onDragOver={e => e.preventDefault()}
+        onDragEnd={() => {
+          setIsDragging(false);
+          if (dragItemRef.current !== null && dragOverItemRef.current !== null && dragItemRef.current !== dragOverItemRef.current) {
+            moveItem(setItems, dragItemRef.current, dragOverItemRef.current);
+          }
+          dragItemRef.current = null;
+          dragOverItemRef.current = null;
+        }}
+        className={cn(
+          "group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-all",
+          isDragging ? "opacity-50 border-primary shadow-md" : "border-border hover:border-primary/30 hover:shadow-sm"
+        )}
+      >
+        <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+          <GripVertical className="h-5 w-5" />
+        </div>
+        <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
+        <Input
+          value={items[index]}
+          onChange={e => updateListItem(setItems, index, e.target.value)}
+          placeholder={placeholder}
+          className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+        <Button variant="ghost" size="icon" onClick={() => removeListItem(setItems, index)} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+        </Button>
       </div>
-      <ItemIcon className="h-4 w-4 shrink-0 text-primary" />
-      <Input value={items[index]} onChange={e => updateListItem(setItems, index, e.target.value)} placeholder={placeholder} />
-      <Button variant="ghost" size="icon" onClick={() => removeListItem(setItems, index)} className="shrink-0"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -495,12 +540,17 @@ const CreateTrip = () => {
                 {!collapsedSections.has("itinerary") && (
                   <CardContent className="space-y-4 pt-0">
                     {itinerary.map((day, i) => (
-                      <div key={day.id} className="rounded-lg border bg-card p-4 space-y-3">
+                      <div
+                        key={day.id}
+                        draggable
+                        onDragStart={() => { }}
+                        onDragOver={e => e.preventDefault()}
+                        className="group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm"
+                      >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex flex-col gap-0.5">
-                              {i > 0 && <button type="button" onClick={() => moveItineraryDay(i, i - 1)} className="text-muted-foreground hover:text-foreground"><ChevronUp className="h-3 w-3" /></button>}
-                              {i < itinerary.length - 1 && <button type="button" onClick={() => moveItineraryDay(i, i + 1)} className="text-muted-foreground hover:text-foreground"><ChevronDown className="h-3 w-3" /></button>}
+                          <div className="flex items-center gap-3">
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+                              <GripVertical className="h-5 w-5" />
                             </div>
                             <Badge variant="secondary" className="font-semibold">Day {i + 1}</Badge>
                             {day.isFlexible && <Badge variant="outline" className="text-xs">Flexible</Badge>}
@@ -509,7 +559,7 @@ const CreateTrip = () => {
                             <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                               <Checkbox checked={day.isFlexible} onCheckedChange={v => updateItineraryDay(i, "isFlexible", !!v)} />Flexible
                             </label>
-                            {itinerary.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeItineraryDay(i)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
+                            {itinerary.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeItineraryDay(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                           </div>
                         </div>
                         <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
@@ -746,16 +796,15 @@ const CreateTrip = () => {
                 {!collapsedSections.has("faqs") && (
                   <CardContent className="space-y-4 pt-0">
                     {faqs.map((faq, i) => (
-                      <div key={faq.id} className="rounded-lg border bg-card p-4 space-y-3">
+                      <div key={faq.id} className="group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex flex-col gap-0.5">
-                              {i > 0 && <button type="button" onClick={() => moveFAQ(i, i - 1)} className="text-muted-foreground hover:text-foreground"><ChevronUp className="h-3 w-3" /></button>}
-                              {i < faqs.length - 1 && <button type="button" onClick={() => moveFAQ(i, i + 1)} className="text-muted-foreground hover:text-foreground"><ChevronDown className="h-3 w-3" /></button>}
+                          <div className="flex items-center gap-3">
+                            <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+                              <GripVertical className="h-5 w-5" />
                             </div>
                             <Badge variant="secondary" className="text-xs">Q{i + 1}</Badge>
                           </div>
-                          {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
+                          {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                         </div>
                         <Input placeholder="e.g. Is this trip beginner-friendly?" value={faq.question} onChange={e => updateFAQ(i, "question", e.target.value)} />
                         <Textarea rows={2} placeholder="Your answer..." value={faq.answer} onChange={e => updateFAQ(i, "answer", e.target.value)} />
