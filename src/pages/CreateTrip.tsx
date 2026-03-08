@@ -834,7 +834,7 @@ const CreateTrip = () => {
                           {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                         </div>
                         <Input placeholder="e.g. Is this trip beginner-friendly?" value={faq.question} onChange={e => updateFAQ(i, "question", e.target.value)} />
-                        <Textarea rows={2} placeholder="Your answer..." value={faq.answer} onChange={e => updateFAQ(i, "answer", e.target.value)} />
+                        <RichTextEditor value={faq.answer} onChange={(val) => updateFAQ(i, "answer", val)} placeholder="Your answer..." minHeight="60px" />
                       </div>
                     ))}
                     <Button variant="outline" size="sm" onClick={addFAQ}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add FAQ</Button>
