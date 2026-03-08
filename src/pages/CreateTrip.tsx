@@ -357,14 +357,14 @@ const CreateTrip = () => {
   );
 
   // Helper to render drag list items with proper props
-  const renderDragList = (items: string[], setItems: React.Dispatch<React.SetStateAction<string[]>>, icon: React.ElementType, placeholderFn: (i: number) => string) => (
+  const renderDragList = (items: string[], setItems: React.Dispatch<React.SetStateAction<string[]>>, placeholderFn: (i: number) => string) => (
     items.map((item, i) => (
       <DragListItem
         key={`${i}-${items.length}`}
         value={item}
         onChange={(val) => updateListItem(setItems, i, val)}
         onRemove={() => removeListItem(setItems, i)}
-        icon={icon}
+        onEnterKey={() => addListItem(setItems)}
         placeholder={placeholderFn(i)}
         isDragging={draggingIndex === i}
         onDragStart={() => setDraggingIndex(i)}
