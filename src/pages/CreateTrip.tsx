@@ -47,6 +47,7 @@ const SECTIONS = [
   { id: "pricing", label: "Pricing", icon: DollarSign },
   { id: "highlights", label: "Highlights", icon: Star },
   { id: "itinerary", label: "Itinerary", icon: Route },
+  { id: "stay", label: "Stay & Accommodation", icon: Hotel },
   { id: "included", label: "What's Included", icon: CheckCircle2 },
   { id: "notIncluded", label: "Not Included", icon: XCircle },
   { id: "thingsToCarry", label: "Things to Carry", icon: Backpack },
