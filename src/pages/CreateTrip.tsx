@@ -511,7 +511,7 @@ const CreateTrip = () => {
 
               {/* 3. PRICING (simplified) */}
               <Card id="pricing" ref={(el) => { sectionRefs.current.pricing = el; }}>
-                <SectionHeader id="pricing" icon={DollarSign} title="Pricing" description="Keep it simple and transparent." required />
+                {renderSectionHeader("pricing", DollarSign, "Pricing", "Keep it simple and transparent.", true)}
                 {!collapsedSections.has("pricing") && (
                   <CardContent className="space-y-4 pt-0">
                     <div className="grid gap-4 sm:grid-cols-2">
