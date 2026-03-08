@@ -561,7 +561,7 @@ const CreateTrip = () => {
 
               {/* 5. ITINERARY */}
               <Card id="itinerary" ref={(el) => { sectionRefs.current.itinerary = el; }}>
-                <SectionHeader id="itinerary" icon={Route} title="Detailed Itinerary" description="Plan each day. Use the description to explain what happens." />
+                {renderSectionHeader("itinerary", Route, "Detailed Itinerary", "Plan each day. Use the description to explain what happens.")}
                 {!collapsedSections.has("itinerary") && (
                   <CardContent className="space-y-4 pt-0">
                     {itinerary.map((day, i) => (
