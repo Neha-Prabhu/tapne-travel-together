@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
   Loader2, Plus, Trash2, GripVertical, MapPin, Calendar, Users, DollarSign,
-  Image, Star, Route, CheckCircle2, XCircle, Backpack,
+  Image, Star, Route, CheckCircle2, XCircle, Backpack, Hotel,
   Heart, Shield, HelpCircle, UserCircle, ChevronDown, ChevronUp, Eye, Save,
   Send, Sparkles, Mountain, Globe, X
 } from "lucide-react";
