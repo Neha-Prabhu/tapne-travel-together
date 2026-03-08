@@ -838,7 +838,7 @@ const CreateTrip = () => {
 
               {/* 12. HOST INFO */}
               <Card id="host" ref={(el) => { sectionRefs.current.host = el; }}>
-                <SectionHeader id="host" icon={UserCircle} title="Host Information" description="Your profile and contact preferences." />
+                {renderSectionHeader("host", UserCircle, "Host Information", "Your profile and contact preferences.")}
                 {!collapsedSections.has("host") && (
                   <CardContent className="space-y-4 pt-0">
                     {user ? (
