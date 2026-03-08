@@ -105,8 +105,8 @@ const Field = ({ label, error, hint, required, children }: {
   </div>
 );
 
-const DragListItem = ({ value, onChange, onRemove, icon: ItemIcon, placeholder, onDragStart, onDragEnter, onDragOver, onDragEnd, isDragging }: {
-  value: string; onChange: (val: string) => void; onRemove: () => void; icon: React.ElementType; placeholder: string;
+const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDragStart, onDragEnter, onDragOver, onDragEnd, isDragging }: {
+  value: string; onChange: (val: string) => void; onRemove: () => void; onEnterKey?: () => void; placeholder: string;
   onDragStart: () => void; onDragEnter: () => void; onDragOver: (e: React.DragEvent) => void; onDragEnd: () => void; isDragging: boolean;
 }) => (
   <div
@@ -123,12 +123,17 @@ const DragListItem = ({ value, onChange, onRemove, icon: ItemIcon, placeholder, 
     <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
       <GripVertical className="h-5 w-5" />
     </div>
-    <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
     <Input
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+      onKeyDown={e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onEnterKey?.();
+        }
+      }}
     />
     <Button variant="ghost" size="icon" onClick={onRemove} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
       <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
