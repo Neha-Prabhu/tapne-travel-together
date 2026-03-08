@@ -111,6 +111,14 @@ const CreateTrip = () => {
   const [includedItems, setIncludedItems] = useState<string[]>(["Accommodation", "Breakfast", "Local Transport"]);
   const [notIncludedItems, setNotIncludedItems] = useState<string[]>(["Flights", "Travel Insurance", "Personal Expenses"]);
 
+  // Stay & Accommodation
+  const [accommodationType, setAccommodationType] = useState("");
+  const [roomSharing, setRoomSharing] = useState("");
+  const [stayName, setStayName] = useState("");
+  const [stayDescription, setStayDescription] = useState("");
+  const [amenities, setAmenities] = useState<string[]>([]);
+  const [amenityInput, setAmenityInput] = useState("");
+
   // Things to carry (pill tags)
   const [thingsToCarry, setThingsToCarry] = useState<string[]>(["ID Proof", "Sunscreen", "Power Bank"]);
   const [carryInput, setCarryInput] = useState("");
