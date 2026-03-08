@@ -600,7 +600,7 @@ const CreateTrip = () => {
 
               {/* 5b. STAY & ACCOMMODATION */}
               <Card id="stay" ref={(el) => { sectionRefs.current.stay = el; }}>
-                <SectionHeader id="stay" icon={Hotel} title="Stay & Accommodation" description="Where will participants stay during the trip?" />
+                {renderSectionHeader("stay", Hotel, "Stay & Accommodation", "Where will participants stay during the trip?")}
                 {!collapsedSections.has("stay") && (
                   <CardContent className="space-y-4 pt-0">
                     <div className="grid gap-4 sm:grid-cols-2">
