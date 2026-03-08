@@ -685,7 +685,7 @@ const CreateTrip = () => {
                 {renderSectionHeader("included", CheckCircle2, "What's Included", "Everything that's part of the trip cost.")}
                 {!collapsedSections.has("included") && (
                   <CardContent className="space-y-3 pt-0">
-                    {renderDragList(includedItems, setIncludedItems, CheckCircle2, () => "e.g. Airport pickup")}
+                    {renderDragList(includedItems, setIncludedItems, () => "e.g. Airport pickup")}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setIncludedItems)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
                   </CardContent>
                 )}
