@@ -795,7 +795,7 @@ const CreateTrip = () => {
                       <RichTextEditor value={generalPolicy} onChange={setGeneralPolicy} placeholder="Overall trip policies, guidelines..." />
                     </Field>
                     <Field label="Cancellation Policy" hint="Be clear about refund windows">
-                      <Textarea rows={4} placeholder="Full refund if cancelled 30 days before..." value={cancellationPolicy} onChange={e => setCancellationPolicy(e.target.value)} />
+                      <RichTextEditor value={cancellationPolicy} onChange={setCancellationPolicy} placeholder="Full refund if cancelled 30 days before..." />
                     </Field>
                     <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
                       <label className="flex items-center gap-3 cursor-pointer">
