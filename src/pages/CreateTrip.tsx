@@ -523,6 +523,82 @@ const CreateTrip = () => {
                 )}
               </Card>
 
+              {/* 5b. STAY & ACCOMMODATION */}
+              <Card id="stay" ref={(el) => { sectionRefs.current.stay = el; }}>
+                <SectionHeader id="stay" icon={Hotel} title="Stay & Accommodation" description="Where will participants stay during the trip?" />
+                {!collapsedSections.has("stay") && (
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Accommodation Type" hint="e.g. Hotel, Hostel, Camping, Villa, Homestay">
+                        <Select value={accommodationType} onValueChange={setAccommodationType}>
+                          <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                          <SelectContent>
+                            {["Hotel", "Hostel", "Camping", "Villa", "Homestay", "Resort", "Mixed"].map(t => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="Room Sharing" hint="How rooms are shared">
+                        <Select value={roomSharing} onValueChange={setRoomSharing}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            {["Private", "Twin Sharing", "Triple Sharing", "Dorm"].map(t => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+                    <Field label="Stay Name" hint="Name of the property (if known)">
+                      <Input placeholder="e.g. Zostel Goa — Anjuna" value={stayName} onChange={e => setStayName(e.target.value)} />
+                    </Field>
+                    <Field label="Stay Description" hint="Describe the accommodation, location, and vibe">
+                      <Textarea rows={3} placeholder="A vibrant backpacker hostel just 5 minutes from the beach..." value={stayDescription} onChange={e => setStayDescription(e.target.value)} />
+                    </Field>
+                    <Field label="Amenities">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {amenities.map((item, i) => (
+                          <Badge key={i} variant="secondary" className="gap-1 py-1.5 px-3 text-sm">
+                            {item}
+                            <button type="button" onClick={() => setAmenities(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Type an amenity and press Enter..."
+                          value={amenityInput}
+                          onChange={e => setAmenityInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (amenityInput.trim() && !amenities.includes(amenityInput.trim())) {
+                                setAmenities(prev => [...prev, amenityInput.trim()]);
+                                setAmenityInput("");
+                              }
+                            }
+                          }}
+                        />
+                        <Button type="button" variant="outline" size="sm" onClick={() => {
+                          if (amenityInput.trim() && !amenities.includes(amenityInput.trim())) {
+                            setAmenities(prev => [...prev, amenityInput.trim()]);
+                            setAmenityInput("");
+                          }
+                        }}>Add</Button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {["WiFi", "Hot Water", "AC", "Pool", "Breakfast", "Parking", "Laundry", "Power Backup", "Locker"].filter(s => !amenities.includes(s)).map(suggestion => (
+                          <button key={suggestion} type="button" onClick={() => setAmenities(prev => [...prev, suggestion])} className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+                            + {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                  </CardContent>
+                )}
+              </Card>
+
               {/* 6. WHAT'S INCLUDED (drag list) */}
               <Card id="included" ref={(el) => { sectionRefs.current.included = el; }}>
                 <SectionHeader id="included" icon={CheckCircle2} title="What's Included" description="Everything that's part of the trip cost." />
