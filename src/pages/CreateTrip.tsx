@@ -70,6 +70,72 @@ interface FAQ {
   answer: string;
 }
 
+// ─ Extracted components to prevent re-mount on parent state changes ─
+
+const SectionHeader = ({ id, icon: Icon, title, description, required, isComplete, isCollapsed, onToggle }: {
+  id: string; icon: React.ElementType; title: string; description: string; required?: boolean;
+  isComplete: boolean; isCollapsed: boolean; onToggle: (id: string) => void;
+}) => (
+  <button type="button" onClick={() => onToggle(id)} className="flex w-full items-center justify-between rounded-lg p-4 text-left transition-colors hover:bg-muted/50">
+    <div className="flex items-center gap-3">
+      <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", isComplete ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+          {required && <Badge variant="outline" className="text-xs text-destructive border-destructive/30">Required</Badge>}
+          {isComplete && <CheckCircle2 className="h-4 w-4 text-primary" />}
+        </div>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
+    {isCollapsed ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronUp className="h-5 w-5 text-muted-foreground" />}
+  </button>
+);
+
+const Field = ({ label, error, hint, required, children }: {
+  label: string; error?: string; hint?: string; required?: boolean; children: React.ReactNode;
+}) => (
+  <div className="space-y-1.5">
+    <Label className="text-sm font-medium text-foreground">{label}{required && <span className="ml-1 text-destructive">*</span>}</Label>
+    {children}
+    {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+);
+
+const DragListItem = ({ value, onChange, onRemove, icon: ItemIcon, placeholder, onDragStart, onDragEnter, onDragOver, onDragEnd, isDragging }: {
+  value: string; onChange: (val: string) => void; onRemove: () => void; icon: React.ElementType; placeholder: string;
+  onDragStart: () => void; onDragEnter: () => void; onDragOver: (e: React.DragEvent) => void; onDragEnd: () => void; isDragging: boolean;
+}) => (
+  <div
+    draggable
+    onDragStart={onDragStart}
+    onDragEnter={onDragEnter}
+    onDragOver={onDragOver}
+    onDragEnd={onDragEnd}
+    className={cn(
+      "group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-all",
+      isDragging ? "opacity-50 border-primary shadow-md" : "border-border hover:border-primary/30 hover:shadow-sm"
+    )}
+  >
+    <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+      <GripVertical className="h-5 w-5" />
+    </div>
+    <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
+    <Input
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+    />
+    <Button variant="ghost" size="icon" onClick={onRemove} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+    </Button>
+  </div>
+);
+
 const CreateTrip = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
