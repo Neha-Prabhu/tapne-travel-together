@@ -813,7 +813,7 @@ const CreateTrip = () => {
 
               {/* 11. FAQs (with reorder) */}
               <Card id="faqs" ref={(el) => { sectionRefs.current.faqs = el; }}>
-                <SectionHeader id="faqs" icon={HelpCircle} title="FAQs" description="Answer common questions upfront." />
+                {renderSectionHeader("faqs", HelpCircle, "FAQs", "Answer common questions upfront.")}
                 {!collapsedSections.has("faqs") && (
                   <CardContent className="space-y-4 pt-0">
                     {faqs.map((faq, i) => (
