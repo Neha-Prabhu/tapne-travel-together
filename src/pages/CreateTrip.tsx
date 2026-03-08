@@ -340,6 +340,41 @@ const CreateTrip = () => {
   // Drag state for list items
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const dragOverIndexRef = useRef<number | null>(null);
+
+  // Helper to render section headers with common props
+  const renderSectionHeader = (id: string, icon: React.ElementType, title: string, description: string, required?: boolean) => (
+    <SectionHeader
+      id={id} icon={icon} title={title} description={description} required={required}
+      isComplete={completedSections.some(s => s.id === id)}
+      isCollapsed={collapsedSections.has(id)}
+      onToggle={toggleSection}
+    />
+  );
+
+  // Helper to render drag list items with proper props
+  const renderDragList = (items: string[], setItems: React.Dispatch<React.SetStateAction<string[]>>, icon: React.ElementType, placeholderFn: (i: number) => string) => (
+    items.map((item, i) => (
+      <DragListItem
+        key={`${i}-${items.length}`}
+        value={item}
+        onChange={(val) => updateListItem(setItems, i, val)}
+        onRemove={() => removeListItem(setItems, i)}
+        icon={icon}
+        placeholder={placeholderFn(i)}
+        isDragging={draggingIndex === i}
+        onDragStart={() => setDraggingIndex(i)}
+        onDragEnter={() => { dragOverIndexRef.current = i; }}
+        onDragOver={(e) => e.preventDefault()}
+        onDragEnd={() => {
+          if (draggingIndex !== null && dragOverIndexRef.current !== null && draggingIndex !== dragOverIndexRef.current) {
+            moveItem(setItems, draggingIndex, dragOverIndexRef.current);
+          }
+          setDraggingIndex(null);
+          dragOverIndexRef.current = null;
+        }}
+      />
+    ))
+  );
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
