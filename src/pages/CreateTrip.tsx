@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import RichTextEditor from "@/components/RichTextEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -105,8 +106,8 @@ const Field = ({ label, error, hint, required, children }: {
   </div>
 );
 
-const DragListItem = ({ value, onChange, onRemove, icon: ItemIcon, placeholder, onDragStart, onDragEnter, onDragOver, onDragEnd, isDragging }: {
-  value: string; onChange: (val: string) => void; onRemove: () => void; icon: React.ElementType; placeholder: string;
+const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDragStart, onDragEnter, onDragOver, onDragEnd, isDragging }: {
+  value: string; onChange: (val: string) => void; onRemove: () => void; onEnterKey?: () => void; placeholder: string;
   onDragStart: () => void; onDragEnter: () => void; onDragOver: (e: React.DragEvent) => void; onDragEnd: () => void; isDragging: boolean;
 }) => (
   <div
@@ -123,12 +124,17 @@ const DragListItem = ({ value, onChange, onRemove, icon: ItemIcon, placeholder, 
     <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
       <GripVertical className="h-5 w-5" />
     </div>
-    <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
     <Input
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+      onKeyDown={e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onEnterKey?.();
+        }
+      }}
     />
     <Button variant="ghost" size="icon" onClick={onRemove} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
       <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
@@ -240,12 +246,12 @@ const CreateTrip = () => {
 
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = true;
+      const el = e.target as HTMLElement;
+      if (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable) isInputFocusedRef.current = true;
     };
     const handleFocusOut = (e: FocusEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "TEXTAREA" || tag === "INPUT") isInputFocusedRef.current = false;
+      const el = e.target as HTMLElement;
+      if (el.tagName === "TEXTAREA" || el.tagName === "INPUT" || el.isContentEditable) isInputFocusedRef.current = false;
     };
     document.addEventListener("focusin", handleFocusIn);
     document.addEventListener("focusout", handleFocusOut);
@@ -352,14 +358,14 @@ const CreateTrip = () => {
   );
 
   // Helper to render drag list items with proper props
-  const renderDragList = (items: string[], setItems: React.Dispatch<React.SetStateAction<string[]>>, icon: React.ElementType, placeholderFn: (i: number) => string) => (
+  const renderDragList = (items: string[], setItems: React.Dispatch<React.SetStateAction<string[]>>, placeholderFn: (i: number) => string) => (
     items.map((item, i) => (
       <DragListItem
         key={`${i}-${items.length}`}
         value={item}
         onChange={(val) => updateListItem(setItems, i, val)}
         onRemove={() => removeListItem(setItems, i)}
-        icon={icon}
+        onEnterKey={() => addListItem(setItems)}
         placeholder={placeholderFn(i)}
         isDragging={draggingIndex === i}
         onDragStart={() => setDraggingIndex(i)}
@@ -553,7 +559,7 @@ const CreateTrip = () => {
                 {renderSectionHeader("highlights", Star, "Highlights", "Top reasons someone should join.")}
                 {!collapsedSections.has("highlights") && (
                   <CardContent className="space-y-3 pt-0">
-                    {renderDragList(highlights, setHighlights, Sparkles, (i) => `Highlight #${i + 1}`)}
+                    {renderDragList(highlights, setHighlights, (i) => `Highlight #${i + 1}`)}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setHighlights)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Highlight</Button>
                   </CardContent>
                 )}
@@ -589,7 +595,7 @@ const CreateTrip = () => {
                         </div>
                         <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
                         <Field label="What happens on this day" hint="Describe activities, experiences, and plan for this day">
-                          <Textarea rows={4} placeholder="Write about the day's activities, places to visit, experiences planned..." value={day.description} onChange={e => updateItineraryDay(i, "description", e.target.value)} />
+                          <RichTextEditor value={day.description} onChange={(val) => updateItineraryDay(i, "description", val)} placeholder="Write about the day's activities, places to visit, experiences planned..." />
                         </Field>
                       </div>
                     ))}
@@ -629,7 +635,7 @@ const CreateTrip = () => {
                       <Input placeholder="e.g. Zostel Goa — Anjuna" value={stayName} onChange={e => setStayName(e.target.value)} />
                     </Field>
                     <Field label="Stay Description" hint="Describe the accommodation, location, and vibe">
-                      <Textarea rows={3} placeholder="A vibrant backpacker hostel just 5 minutes from the beach..." value={stayDescription} onChange={e => setStayDescription(e.target.value)} />
+                      <RichTextEditor value={stayDescription} onChange={setStayDescription} placeholder="A vibrant backpacker hostel just 5 minutes from the beach..." minHeight="80px" />
                     </Field>
                     <Field label="Amenities">
                       <div className="flex flex-wrap gap-2 mb-2">
@@ -679,7 +685,7 @@ const CreateTrip = () => {
                 {renderSectionHeader("included", CheckCircle2, "What's Included", "Everything that's part of the trip cost.")}
                 {!collapsedSections.has("included") && (
                   <CardContent className="space-y-3 pt-0">
-                    {renderDragList(includedItems, setIncludedItems, CheckCircle2, () => "e.g. Airport pickup")}
+                    {renderDragList(includedItems, setIncludedItems, () => "e.g. Airport pickup")}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setIncludedItems)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
                   </CardContent>
                 )}
@@ -690,7 +696,7 @@ const CreateTrip = () => {
                 {renderSectionHeader("notIncluded", XCircle, "What's Not Included", "Set expectations clearly.")}
                 {!collapsedSections.has("notIncluded") && (
                   <CardContent className="space-y-3 pt-0">
-                    {renderDragList(notIncludedItems, setNotIncludedItems, XCircle, () => "e.g. Flights")}
+                    {renderDragList(notIncludedItems, setNotIncludedItems, () => "e.g. Flights")}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setNotIncludedItems)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
                   </CardContent>
                 )}
@@ -783,13 +789,13 @@ const CreateTrip = () => {
                 {!collapsedSections.has("safety") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Code of Conduct">
-                      <Textarea rows={4} placeholder="General rules for respectful group travel..." value={codeOfConduct} onChange={e => setCodeOfConduct(e.target.value)} />
+                      <RichTextEditor value={codeOfConduct} onChange={setCodeOfConduct} placeholder="General rules for respectful group travel..." />
                     </Field>
                     <Field label="General Policy">
-                      <Textarea rows={4} placeholder="Overall trip policies, guidelines..." value={generalPolicy} onChange={e => setGeneralPolicy(e.target.value)} />
+                      <RichTextEditor value={generalPolicy} onChange={setGeneralPolicy} placeholder="Overall trip policies, guidelines..." />
                     </Field>
                     <Field label="Cancellation Policy" hint="Be clear about refund windows">
-                      <Textarea rows={4} placeholder="Full refund if cancelled 30 days before..." value={cancellationPolicy} onChange={e => setCancellationPolicy(e.target.value)} />
+                      <RichTextEditor value={cancellationPolicy} onChange={setCancellationPolicy} placeholder="Full refund if cancelled 30 days before..." />
                     </Field>
                     <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
                       <label className="flex items-center gap-3 cursor-pointer">
@@ -828,7 +834,7 @@ const CreateTrip = () => {
                           {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                         </div>
                         <Input placeholder="e.g. Is this trip beginner-friendly?" value={faq.question} onChange={e => updateFAQ(i, "question", e.target.value)} />
-                        <Textarea rows={2} placeholder="Your answer..." value={faq.answer} onChange={e => updateFAQ(i, "answer", e.target.value)} />
+                        <RichTextEditor value={faq.answer} onChange={(val) => updateFAQ(i, "answer", val)} placeholder="Your answer..." minHeight="60px" />
                       </div>
                     ))}
                     <Button variant="outline" size="sm" onClick={addFAQ}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add FAQ</Button>
