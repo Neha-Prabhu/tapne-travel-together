@@ -66,7 +66,7 @@ const BrowseTrips = () => {
               <p className="mt-2 text-muted-foreground">Try adjusting your search or filters.</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-8">
               {filtered.map((trip) => {
                 const host = getUserById(trip.hostId);
                 const spotsLeft = trip.maxGroupSize - trip.participantIds.length;
