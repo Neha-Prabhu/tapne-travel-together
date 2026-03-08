@@ -70,6 +70,72 @@ interface FAQ {
   answer: string;
 }
 
+// ─ Extracted components to prevent re-mount on parent state changes ─
+
+const SectionHeader = ({ id, icon: Icon, title, description, required, isComplete, isCollapsed, onToggle }: {
+  id: string; icon: React.ElementType; title: string; description: string; required?: boolean;
+  isComplete: boolean; isCollapsed: boolean; onToggle: (id: string) => void;
+}) => (
+  <button type="button" onClick={() => onToggle(id)} className="flex w-full items-center justify-between rounded-lg p-4 text-left transition-colors hover:bg-muted/50">
+    <div className="flex items-center gap-3">
+      <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", isComplete ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+          {required && <Badge variant="outline" className="text-xs text-destructive border-destructive/30">Required</Badge>}
+          {isComplete && <CheckCircle2 className="h-4 w-4 text-primary" />}
+        </div>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
+    {isCollapsed ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronUp className="h-5 w-5 text-muted-foreground" />}
+  </button>
+);
+
+const Field = ({ label, error, hint, required, children }: {
+  label: string; error?: string; hint?: string; required?: boolean; children: React.ReactNode;
+}) => (
+  <div className="space-y-1.5">
+    <Label className="text-sm font-medium text-foreground">{label}{required && <span className="ml-1 text-destructive">*</span>}</Label>
+    {children}
+    {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+);
+
+const DragListItem = ({ value, onChange, onRemove, icon: ItemIcon, placeholder, onDragStart, onDragEnter, onDragOver, onDragEnd, isDragging }: {
+  value: string; onChange: (val: string) => void; onRemove: () => void; icon: React.ElementType; placeholder: string;
+  onDragStart: () => void; onDragEnter: () => void; onDragOver: (e: React.DragEvent) => void; onDragEnd: () => void; isDragging: boolean;
+}) => (
+  <div
+    draggable
+    onDragStart={onDragStart}
+    onDragEnter={onDragEnter}
+    onDragOver={onDragOver}
+    onDragEnd={onDragEnd}
+    className={cn(
+      "group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-all",
+      isDragging ? "opacity-50 border-primary shadow-md" : "border-border hover:border-primary/30 hover:shadow-sm"
+    )}
+  >
+    <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+      <GripVertical className="h-5 w-5" />
+    </div>
+    <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
+    <Input
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+    />
+    <Button variant="ghost" size="icon" onClick={onRemove} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+    </Button>
+  </div>
+);
+
 const CreateTrip = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -271,83 +337,44 @@ const CreateTrip = () => {
     setLoading(false);
   };
 
-  // ─ Section Header ─
-  const SectionHeader = ({ id, icon: Icon, title, description, required }: {
-    id: string; icon: React.ElementType; title: string; description: string; required?: boolean;
-  }) => (
-    <button type="button" onClick={() => toggleSection(id)} className="flex w-full items-center justify-between rounded-lg p-4 text-left transition-colors hover:bg-muted/50">
-      <div className="flex items-center gap-3">
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", completedSections.some(s => s.id === id) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-            {required && <Badge variant="outline" className="text-xs text-destructive border-destructive/30">Required</Badge>}
-            {completedSections.some(s => s.id === id) && <CheckCircle2 className="h-4 w-4 text-primary" />}
-          </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      {collapsedSections.has(id) ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronUp className="h-5 w-5 text-muted-foreground" />}
-    </button>
+  // Drag state for list items
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const dragOverIndexRef = useRef<number | null>(null);
+
+  // Helper to render section headers with common props
+  const renderSectionHeader = (id: string, icon: React.ElementType, title: string, description: string, required?: boolean) => (
+    <SectionHeader
+      id={id} icon={icon} title={title} description={description} required={required}
+      isComplete={completedSections.some(s => s.id === id)}
+      isCollapsed={collapsedSections.has(id)}
+      onToggle={toggleSection}
+    />
   );
 
-  const Field = ({ label, error, hint, required, children }: {
-    label: string; error?: string; hint?: string; required?: boolean; children: React.ReactNode;
-  }) => (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium text-foreground">{label}{required && <span className="ml-1 text-destructive">*</span>}</Label>
-      {children}
-      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-
-  // Wanderlog-style draggable list item with dotted grip handle
-  const DragListItem = ({ items, setItems, index, icon: ItemIcon, placeholder }: {
-    items: string[]; setItems: React.Dispatch<React.SetStateAction<string[]>>; index: number; icon: React.ElementType; placeholder: string;
-  }) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const dragItemRef = useRef<number | null>(null);
-    const dragOverItemRef = useRef<number | null>(null);
-
-    return (
-      <div
-        draggable
-        onDragStart={() => { dragItemRef.current = index; setIsDragging(true); }}
-        onDragEnter={() => { dragOverItemRef.current = index; }}
-        onDragOver={e => e.preventDefault()}
+  // Helper to render drag list items with proper props
+  const renderDragList = (items: string[], setItems: React.Dispatch<React.SetStateAction<string[]>>, icon: React.ElementType, placeholderFn: (i: number) => string) => (
+    items.map((item, i) => (
+      <DragListItem
+        key={`${i}-${items.length}`}
+        value={item}
+        onChange={(val) => updateListItem(setItems, i, val)}
+        onRemove={() => removeListItem(setItems, i)}
+        icon={icon}
+        placeholder={placeholderFn(i)}
+        isDragging={draggingIndex === i}
+        onDragStart={() => setDraggingIndex(i)}
+        onDragEnter={() => { dragOverIndexRef.current = i; }}
+        onDragOver={(e) => e.preventDefault()}
         onDragEnd={() => {
-          setIsDragging(false);
-          if (dragItemRef.current !== null && dragOverItemRef.current !== null && dragItemRef.current !== dragOverItemRef.current) {
-            moveItem(setItems, dragItemRef.current, dragOverItemRef.current);
+          if (draggingIndex !== null && dragOverIndexRef.current !== null && draggingIndex !== dragOverIndexRef.current) {
+            moveItem(setItems, draggingIndex, dragOverIndexRef.current);
           }
-          dragItemRef.current = null;
-          dragOverItemRef.current = null;
+          setDraggingIndex(null);
+          dragOverIndexRef.current = null;
         }}
-        className={cn(
-          "group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-all",
-          isDragging ? "opacity-50 border-primary shadow-md" : "border-border hover:border-primary/30 hover:shadow-sm"
-        )}
-      >
-        <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
-          <GripVertical className="h-5 w-5" />
-        </div>
-        <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
-        <Input
-          value={items[index]}
-          onChange={e => updateListItem(setItems, index, e.target.value)}
-          placeholder={placeholder}
-          className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-        />
-        <Button variant="ghost" size="icon" onClick={() => removeListItem(setItems, index)} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-        </Button>
-      </div>
-    );
-  };
-
+      />
+    ))
+  );
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
@@ -409,7 +436,7 @@ const CreateTrip = () => {
 
               {/* 1. BASIC OVERVIEW */}
               <Card id="overview" ref={(el) => { sectionRefs.current.overview = el; }}>
-                <SectionHeader id="overview" icon={Globe} title="Basic Trip Overview" description="Give a short, exciting overview. This is what people see first." required />
+                {renderSectionHeader("overview", Globe, "Basic Trip Overview", "Give a short, exciting overview. This is what people see first.", true)}
                 {!collapsedSections.has("overview") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Trip Title" error={errors.title} required>
@@ -462,7 +489,7 @@ const CreateTrip = () => {
 
               {/* 2. HERO & MEDIA (unchanged) */}
               <Card id="media" ref={(el) => { sectionRefs.current.media = el; }}>
-                <SectionHeader id="media" icon={Image} title="Hero & Media" description="Stunning visuals make your trip stand out." />
+                {renderSectionHeader("media", Image, "Hero & Media", "Stunning visuals make your trip stand out.")}
                 {!collapsedSections.has("media") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Hero Image" required hint="Main cover photo">
@@ -484,7 +511,7 @@ const CreateTrip = () => {
 
               {/* 3. PRICING (simplified) */}
               <Card id="pricing" ref={(el) => { sectionRefs.current.pricing = el; }}>
-                <SectionHeader id="pricing" icon={DollarSign} title="Pricing" description="Keep it simple and transparent." required />
+                {renderSectionHeader("pricing", DollarSign, "Pricing", "Keep it simple and transparent.", true)}
                 {!collapsedSections.has("pricing") && (
                   <CardContent className="space-y-4 pt-0">
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -523,12 +550,10 @@ const CreateTrip = () => {
 
               {/* 4. HIGHLIGHTS (drag list) */}
               <Card id="highlights" ref={(el) => { sectionRefs.current.highlights = el; }}>
-                <SectionHeader id="highlights" icon={Star} title="Highlights" description="Top reasons someone should join." />
+                {renderSectionHeader("highlights", Star, "Highlights", "Top reasons someone should join.")}
                 {!collapsedSections.has("highlights") && (
                   <CardContent className="space-y-3 pt-0">
-                    {highlights.map((_, i) => (
-                      <DragListItem key={i} items={highlights} setItems={setHighlights} index={i} icon={Sparkles} placeholder={`Highlight #${i + 1}`} />
-                    ))}
+                    {renderDragList(highlights, setHighlights, Sparkles, (i) => `Highlight #${i + 1}`)}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setHighlights)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Highlight</Button>
                   </CardContent>
                 )}
@@ -536,7 +561,7 @@ const CreateTrip = () => {
 
               {/* 5. ITINERARY */}
               <Card id="itinerary" ref={(el) => { sectionRefs.current.itinerary = el; }}>
-                <SectionHeader id="itinerary" icon={Route} title="Detailed Itinerary" description="Plan each day. Use the description to explain what happens." />
+                {renderSectionHeader("itinerary", Route, "Detailed Itinerary", "Plan each day. Use the description to explain what happens.")}
                 {!collapsedSections.has("itinerary") && (
                   <CardContent className="space-y-4 pt-0">
                     {itinerary.map((day, i) => (
@@ -575,7 +600,7 @@ const CreateTrip = () => {
 
               {/* 5b. STAY & ACCOMMODATION */}
               <Card id="stay" ref={(el) => { sectionRefs.current.stay = el; }}>
-                <SectionHeader id="stay" icon={Hotel} title="Stay & Accommodation" description="Where will participants stay during the trip?" />
+                {renderSectionHeader("stay", Hotel, "Stay & Accommodation", "Where will participants stay during the trip?")}
                 {!collapsedSections.has("stay") && (
                   <CardContent className="space-y-4 pt-0">
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -651,12 +676,10 @@ const CreateTrip = () => {
 
               {/* 6. WHAT'S INCLUDED (drag list) */}
               <Card id="included" ref={(el) => { sectionRefs.current.included = el; }}>
-                <SectionHeader id="included" icon={CheckCircle2} title="What's Included" description="Everything that's part of the trip cost." />
+                {renderSectionHeader("included", CheckCircle2, "What's Included", "Everything that's part of the trip cost.")}
                 {!collapsedSections.has("included") && (
                   <CardContent className="space-y-3 pt-0">
-                    {includedItems.map((_, i) => (
-                      <DragListItem key={i} items={includedItems} setItems={setIncludedItems} index={i} icon={CheckCircle2} placeholder="e.g. Airport pickup" />
-                    ))}
+                    {renderDragList(includedItems, setIncludedItems, CheckCircle2, () => "e.g. Airport pickup")}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setIncludedItems)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
                   </CardContent>
                 )}
@@ -664,12 +687,10 @@ const CreateTrip = () => {
 
               {/* 7. NOT INCLUDED (drag list) */}
               <Card id="notIncluded" ref={(el) => { sectionRefs.current.notIncluded = el; }}>
-                <SectionHeader id="notIncluded" icon={XCircle} title="What's Not Included" description="Set expectations clearly." />
+                {renderSectionHeader("notIncluded", XCircle, "What's Not Included", "Set expectations clearly.")}
                 {!collapsedSections.has("notIncluded") && (
                   <CardContent className="space-y-3 pt-0">
-                    {notIncludedItems.map((_, i) => (
-                      <DragListItem key={i} items={notIncludedItems} setItems={setNotIncludedItems} index={i} icon={XCircle} placeholder="e.g. Flights" />
-                    ))}
+                    {renderDragList(notIncludedItems, setNotIncludedItems, XCircle, () => "e.g. Flights")}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setNotIncludedItems)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
                   </CardContent>
                 )}
@@ -677,7 +698,7 @@ const CreateTrip = () => {
 
               {/* 8. THINGS TO CARRY (pill tags) */}
               <Card id="thingsToCarry" ref={(el) => { sectionRefs.current.thingsToCarry = el; }}>
-                <SectionHeader id="thingsToCarry" icon={Backpack} title="Things to Carry" description="Help participants pack right." />
+                {renderSectionHeader("thingsToCarry", Backpack, "Things to Carry", "Help participants pack right.")}
                 {!collapsedSections.has("thingsToCarry") && (
                   <CardContent className="space-y-3 pt-0">
                     <div className="flex flex-wrap gap-2">
@@ -703,7 +724,7 @@ const CreateTrip = () => {
 
               {/* 9. EXPERIENCE & VIBE */}
               <Card id="experience" ref={(el) => { sectionRefs.current.experience = el; }}>
-                <SectionHeader id="experience" icon={Heart} title="Trip Experience & Social Context" description="Help the right people find this trip." />
+                {renderSectionHeader("experience", Heart, "Trip Experience & Social Context", "Help the right people find this trip.")}
                 {!collapsedSections.has("experience") && (
                   <CardContent className="space-y-4 pt-0">
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -758,7 +779,7 @@ const CreateTrip = () => {
 
               {/* 10. SAFETY & POLICIES */}
               <Card id="safety" ref={(el) => { sectionRefs.current.safety = el; }}>
-                <SectionHeader id="safety" icon={Shield} title="Safety & Policies" description="Build trust with clear guidelines." />
+                {renderSectionHeader("safety", Shield, "Safety & Policies", "Build trust with clear guidelines.")}
                 {!collapsedSections.has("safety") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Code of Conduct">
@@ -792,7 +813,7 @@ const CreateTrip = () => {
 
               {/* 11. FAQs (with reorder) */}
               <Card id="faqs" ref={(el) => { sectionRefs.current.faqs = el; }}>
-                <SectionHeader id="faqs" icon={HelpCircle} title="FAQs" description="Answer common questions upfront." />
+                {renderSectionHeader("faqs", HelpCircle, "FAQs", "Answer common questions upfront.")}
                 {!collapsedSections.has("faqs") && (
                   <CardContent className="space-y-4 pt-0">
                     {faqs.map((faq, i) => (
@@ -817,7 +838,7 @@ const CreateTrip = () => {
 
               {/* 12. HOST INFO */}
               <Card id="host" ref={(el) => { sectionRefs.current.host = el; }}>
-                <SectionHeader id="host" icon={UserCircle} title="Host Information" description="Your profile and contact preferences." />
+                {renderSectionHeader("host", UserCircle, "Host Information", "Your profile and contact preferences.")}
                 {!collapsedSections.has("host") && (
                   <CardContent className="space-y-4 pt-0">
                     {user ? (
