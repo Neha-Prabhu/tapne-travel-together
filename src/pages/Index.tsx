@@ -179,8 +179,8 @@ const Index = () => {
           </div>
 
           <HorizontalCarousel>
-            {featuredTrips.map(trip => (
-              <div key={trip.id} className="w-[300px] shrink-0 sm:w-[320px]">
+            {trips.slice(0, 6).map(trip => (
+              <div key={trip.id} className="min-w-[300px] max-w-[320px] shrink-0">
                 <TripCard trip={trip} />
               </div>
             ))}

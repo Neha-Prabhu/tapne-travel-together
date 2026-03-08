@@ -390,7 +390,7 @@ export const trips: Trip[] = [
     id: "t6",
     title: "Ladakh Road Trip",
     destination: "Leh, Ladakh",
-    coverImage: "https://images.unsplash.com/photo-1626014303715-48c7b1a7a814?w=800&q=80",
+    coverImage: "https://images.unsplash.com/photo-1506038634487-60a69ae4b7b1?w=800&q=80",
     startDate: "2026-06-05",
     endDate: "2026-06-15",
     budget: 30000,
