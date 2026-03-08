@@ -288,20 +288,49 @@ const CreateTrip = () => {
     </div>
   );
 
-  // Draggable list item component
+  // Wanderlog-style draggable list item with dotted grip handle
   const DragListItem = ({ items, setItems, index, icon: ItemIcon, placeholder }: {
     items: string[]; setItems: React.Dispatch<React.SetStateAction<string[]>>; index: number; icon: React.ElementType; placeholder: string;
-  }) => (
-    <div className="flex items-center gap-2">
-      <div className="flex flex-col gap-0.5">
-        {index > 0 && <button type="button" onClick={() => moveItem(setItems, index, index - 1)} className="text-muted-foreground hover:text-foreground"><ChevronUp className="h-3 w-3" /></button>}
-        {index < items.length - 1 && <button type="button" onClick={() => moveItem(setItems, index, index + 1)} className="text-muted-foreground hover:text-foreground"><ChevronDown className="h-3 w-3" /></button>}
+  }) => {
+    const [isDragging, setIsDragging] = useState(false);
+    const dragItemRef = useRef<number | null>(null);
+    const dragOverItemRef = useRef<number | null>(null);
+
+    return (
+      <div
+        draggable
+        onDragStart={() => { dragItemRef.current = index; setIsDragging(true); }}
+        onDragEnter={() => { dragOverItemRef.current = index; }}
+        onDragOver={e => e.preventDefault()}
+        onDragEnd={() => {
+          setIsDragging(false);
+          if (dragItemRef.current !== null && dragOverItemRef.current !== null && dragItemRef.current !== dragOverItemRef.current) {
+            moveItem(setItems, dragItemRef.current, dragOverItemRef.current);
+          }
+          dragItemRef.current = null;
+          dragOverItemRef.current = null;
+        }}
+        className={cn(
+          "group flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5 transition-all",
+          isDragging ? "opacity-50 border-primary shadow-md" : "border-border hover:border-primary/30 hover:shadow-sm"
+        )}
+      >
+        <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+          <GripVertical className="h-5 w-5" />
+        </div>
+        <ItemIcon className="h-4 w-4 shrink-0 text-primary/70" />
+        <Input
+          value={items[index]}
+          onChange={e => updateListItem(setItems, index, e.target.value)}
+          placeholder={placeholder}
+          className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+        <Button variant="ghost" size="icon" onClick={() => removeListItem(setItems, index)} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+        </Button>
       </div>
-      <ItemIcon className="h-4 w-4 shrink-0 text-primary" />
-      <Input value={items[index]} onChange={e => updateListItem(setItems, index, e.target.value)} placeholder={placeholder} />
-      <Button variant="ghost" size="icon" onClick={() => removeListItem(setItems, index)} className="shrink-0"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
