@@ -489,7 +489,7 @@ const CreateTrip = () => {
 
               {/* 2. HERO & MEDIA (unchanged) */}
               <Card id="media" ref={(el) => { sectionRefs.current.media = el; }}>
-                <SectionHeader id="media" icon={Image} title="Hero & Media" description="Stunning visuals make your trip stand out." />
+                {renderSectionHeader("media", Image, "Hero & Media", "Stunning visuals make your trip stand out.")}
                 {!collapsedSections.has("media") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Hero Image" required hint="Main cover photo">
