@@ -696,7 +696,7 @@ const CreateTrip = () => {
                 {renderSectionHeader("notIncluded", XCircle, "What's Not Included", "Set expectations clearly.")}
                 {!collapsedSections.has("notIncluded") && (
                   <CardContent className="space-y-3 pt-0">
-                    {renderDragList(notIncludedItems, setNotIncludedItems, XCircle, () => "e.g. Flights")}
+                    {renderDragList(notIncludedItems, setNotIncludedItems, () => "e.g. Flights")}
                     <Button variant="outline" size="sm" onClick={() => addListItem(setNotIncludedItems)}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
                   </CardContent>
                 )}
