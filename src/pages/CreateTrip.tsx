@@ -635,7 +635,7 @@ const CreateTrip = () => {
                       <Input placeholder="e.g. Zostel Goa — Anjuna" value={stayName} onChange={e => setStayName(e.target.value)} />
                     </Field>
                     <Field label="Stay Description" hint="Describe the accommodation, location, and vibe">
-                      <Textarea rows={3} placeholder="A vibrant backpacker hostel just 5 minutes from the beach..." value={stayDescription} onChange={e => setStayDescription(e.target.value)} />
+                      <RichTextEditor value={stayDescription} onChange={setStayDescription} placeholder="A vibrant backpacker hostel just 5 minutes from the beach..." minHeight="80px" />
                     </Field>
                     <Field label="Amenities">
                       <div className="flex flex-wrap gap-2 mb-2">
