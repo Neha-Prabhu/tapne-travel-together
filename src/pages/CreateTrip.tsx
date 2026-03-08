@@ -792,7 +792,7 @@ const CreateTrip = () => {
                       <RichTextEditor value={codeOfConduct} onChange={setCodeOfConduct} placeholder="General rules for respectful group travel..." />
                     </Field>
                     <Field label="General Policy">
-                      <Textarea rows={4} placeholder="Overall trip policies, guidelines..." value={generalPolicy} onChange={e => setGeneralPolicy(e.target.value)} />
+                      <RichTextEditor value={generalPolicy} onChange={setGeneralPolicy} placeholder="Overall trip policies, guidelines..." />
                     </Field>
                     <Field label="Cancellation Policy" hint="Be clear about refund windows">
                       <Textarea rows={4} placeholder="Full refund if cancelled 30 days before..." value={cancellationPolicy} onChange={e => setCancellationPolicy(e.target.value)} />
