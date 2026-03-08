@@ -687,7 +687,7 @@ const CreateTrip = () => {
 
               {/* 7. NOT INCLUDED (drag list) */}
               <Card id="notIncluded" ref={(el) => { sectionRefs.current.notIncluded = el; }}>
-                <SectionHeader id="notIncluded" icon={XCircle} title="What's Not Included" description="Set expectations clearly." />
+                {renderSectionHeader("notIncluded", XCircle, "What's Not Included", "Set expectations clearly.")}
                 {!collapsedSections.has("notIncluded") && (
                   <CardContent className="space-y-3 pt-0">
                     {notIncludedItems.map((_, i) => (
