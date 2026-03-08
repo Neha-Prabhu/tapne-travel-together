@@ -789,7 +789,7 @@ const CreateTrip = () => {
                 {!collapsedSections.has("safety") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Code of Conduct">
-                      <Textarea rows={4} placeholder="General rules for respectful group travel..." value={codeOfConduct} onChange={e => setCodeOfConduct(e.target.value)} />
+                      <RichTextEditor value={codeOfConduct} onChange={setCodeOfConduct} placeholder="General rules for respectful group travel..." />
                     </Field>
                     <Field label="General Policy">
                       <Textarea rows={4} placeholder="Overall trip policies, guidelines..." value={generalPolicy} onChange={e => setGeneralPolicy(e.target.value)} />
