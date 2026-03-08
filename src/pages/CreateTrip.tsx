@@ -436,7 +436,7 @@ const CreateTrip = () => {
 
               {/* 1. BASIC OVERVIEW */}
               <Card id="overview" ref={(el) => { sectionRefs.current.overview = el; }}>
-                <SectionHeader id="overview" icon={Globe} title="Basic Trip Overview" description="Give a short, exciting overview. This is what people see first." required />
+                {renderSectionHeader("overview", Globe, "Basic Trip Overview", "Give a short, exciting overview. This is what people see first.", true)}
                 {!collapsedSections.has("overview") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Trip Title" error={errors.title} required>
