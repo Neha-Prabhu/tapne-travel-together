@@ -72,10 +72,10 @@ const BrowseTrips = () => {
                 const spotsLeft = trip.maxGroupSize - trip.participantIds.length;
                 return (
                   <Link key={trip.id} to={`/trips/${trip.id}`}>
-                    <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
-                      <div className="flex flex-col sm:flex-row">
+                    <Card className="group overflow-hidden transition-shadow hover:shadow-lg h-[200px] sm:h-[220px]">
+                      <div className="flex h-full flex-col sm:flex-row">
                         {/* Left: Image */}
-                        <div className="relative aspect-[16/10] w-full overflow-hidden sm:aspect-auto sm:w-72 md:w-80 lg:w-96">
+                        <div className="relative hidden sm:block sm:w-72 md:w-80 lg:w-96 h-full overflow-hidden shrink-0">
                           <img
                             src={trip.coverImage}
                             alt={trip.title}

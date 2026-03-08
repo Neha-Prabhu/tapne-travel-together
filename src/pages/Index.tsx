@@ -240,39 +240,41 @@ const Index = () => {
             </Button>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <HorizontalCarousel>
             {mockBlogs.slice(0, 6).map(blog => (
-              <Card key={blog.id} className="group overflow-hidden transition-shadow hover:shadow-lg">
-                <div className="relative aspect-[16/10] overflow-hidden">
-                  <img
-                    src={blog.coverImage}
-                    alt={blog.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  {blog.trip && (
-                    <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground text-xs">
-                      {blog.trip}
-                    </Badge>
-                  )}
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
-                    {blog.title}
-                  </h3>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {blog.author}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(blog.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </div>
+              <div key={blog.id} className="min-w-[280px] max-w-[300px] shrink-0">
+                <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
+                  <div className="relative aspect-[16/10] overflow-hidden">
+                    <img
+                      src={blog.coverImage}
+                      alt={blog.title}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    {blog.trip && (
+                      <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground text-xs">
+                        {blog.trip}
+                      </Badge>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                  <CardContent className="p-4">
+                    <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+                      {blog.title}
+                    </h3>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {blog.author}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(blog.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
-          </div>
+          </HorizontalCarousel>
 
           <div className="mt-6 text-center">
             <Button variant="outline" asChild>
