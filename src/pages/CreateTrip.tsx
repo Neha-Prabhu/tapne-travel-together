@@ -724,7 +724,7 @@ const CreateTrip = () => {
 
               {/* 9. EXPERIENCE & VIBE */}
               <Card id="experience" ref={(el) => { sectionRefs.current.experience = el; }}>
-                <SectionHeader id="experience" icon={Heart} title="Trip Experience & Social Context" description="Help the right people find this trip." />
+                {renderSectionHeader("experience", Heart, "Trip Experience & Social Context", "Help the right people find this trip.")}
                 {!collapsedSections.has("experience") && (
                   <CardContent className="space-y-4 pt-0">
                     <div className="grid gap-4 sm:grid-cols-2">
