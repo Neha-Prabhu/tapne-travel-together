@@ -595,7 +595,7 @@ const CreateTrip = () => {
                         </div>
                         <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
                         <Field label="What happens on this day" hint="Describe activities, experiences, and plan for this day">
-                          <Textarea rows={4} placeholder="Write about the day's activities, places to visit, experiences planned..." value={day.description} onChange={e => updateItineraryDay(i, "description", e.target.value)} />
+                          <RichTextEditor value={day.description} onChange={(val) => updateItineraryDay(i, "description", val)} placeholder="Write about the day's activities, places to visit, experiences planned..." />
                         </Field>
                       </div>
                     ))}
