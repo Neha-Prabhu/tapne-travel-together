@@ -676,7 +676,7 @@ const CreateTrip = () => {
 
               {/* 6. WHAT'S INCLUDED (drag list) */}
               <Card id="included" ref={(el) => { sectionRefs.current.included = el; }}>
-                <SectionHeader id="included" icon={CheckCircle2} title="What's Included" description="Everything that's part of the trip cost." />
+                {renderSectionHeader("included", CheckCircle2, "What's Included", "Everything that's part of the trip cost.")}
                 {!collapsedSections.has("included") && (
                   <CardContent className="space-y-3 pt-0">
                     {includedItems.map((_, i) => (
