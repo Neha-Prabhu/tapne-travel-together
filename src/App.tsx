@@ -31,6 +31,7 @@ const App = () => (
             <Route path="/trips" element={<BrowseTrips />} />
             <Route path="/trips/:id" element={<TripDetail />} />
             <Route path="/create-trip" element={<CreateTrip />} />
+            <Route path="/my-trips" element={<MyTrips />} />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
