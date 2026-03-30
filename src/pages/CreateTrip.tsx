@@ -432,9 +432,12 @@ const CreateTrip = () => {
     if (!isAuthenticated) { toast.info("Please log in to create a trip"); navigate("/login"); return; }
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
+    saveDraftData();
+    const id = draftId || draftIdParam;
+    if (id) publishDraft(id);
     await new Promise(r => setTimeout(r, 1500));
     toast.success("Trip published! 🎉");
-    navigate("/trips");
+    navigate("/my-trips");
     setLoading(false);
   };
 
