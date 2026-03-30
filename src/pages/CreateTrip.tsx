@@ -145,6 +145,27 @@ const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDr
 const CreateTrip = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const draftIdParam = searchParams.get("draft");
+
+  // Lazy import to avoid circular deps
+  const { useDrafts } = require("@/contexts/DraftContext");
+  const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
+
+  // If no draft param, create one and redirect
+  const [draftId, setDraftId] = useState<string>(() => {
+    if (draftIdParam) return draftIdParam;
+    return "";
+  });
+
+  useEffect(() => {
+    if (!draftId && !draftIdParam) {
+      const id = createDraft();
+      setDraftId(id);
+      window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+    }
+  }, [draftId, draftIdParam, createDraft]);
+
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
