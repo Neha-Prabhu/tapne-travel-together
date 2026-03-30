@@ -148,9 +148,6 @@ const CreateTrip = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const draftIdParam = searchParams.get("draft");
-
-  // Lazy import to avoid circular deps
-  const { useDrafts } = require("@/contexts/DraftContext");
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
 
   // If no draft param, create one and redirect
