@@ -25,6 +25,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
