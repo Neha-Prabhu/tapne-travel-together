@@ -35,6 +35,7 @@ const Navbar = () => {
   const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
+    <>
     <nav className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="text-xl font-bold tracking-tight text-primary">
