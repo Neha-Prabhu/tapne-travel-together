@@ -95,6 +95,9 @@ const Navbar = () => {
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <User className="mr-2 h-4 w-4" /> My Profile
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/my-trips")}>
+                  <MapPinIcon className="mr-2 h-4 w-4" /> My Trips
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/inbox")}>
                   <Inbox className="mr-2 h-4 w-4" /> Inbox
                 </DropdownMenuItem>
