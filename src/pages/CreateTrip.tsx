@@ -381,7 +381,36 @@ const CreateTrip = () => {
     setFaqs(prev => { const arr = [...prev]; const [item] = arr.splice(from, 1); arr.splice(to, 0, item); return arr; });
   };
 
-  const handleSaveDraft = useCallback(() => { setSavedDraft(true); toast.success("Draft saved!"); setTimeout(() => setSavedDraft(false), 2000); }, []);
+  const saveDraftData = useCallback(() => {
+    const id = draftId || draftIdParam;
+    if (!id) return;
+    updateDraft(id, {
+      title, destination, category, summary, startDate, endDate,
+      formData: {
+        bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice,
+        earlyBirdPrice, earlyBirdSeats, paymentTerms, advanceAmount, highlights,
+        itinerary, includedItems, notIncludedItems, accommodationType, roomSharing,
+        stayName, stayDescription, amenities, thingsToCarry, experienceLevel,
+        fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
+        generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
+        medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
+      },
+    });
+  }, [draftId, draftIdParam, updateDraft, title, destination, category, summary, startDate, endDate,
+      bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice, earlyBirdPrice,
+      earlyBirdSeats, paymentTerms, advanceAmount, highlights, itinerary, includedItems, notIncludedItems,
+      accommodationType, roomSharing, stayName, stayDescription, amenities, thingsToCarry,
+      experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
+      generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact, medicalDetails,
+      emergencyDetails, faqs, contactPreferences, hosts]);
+
+  // Auto-save every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => { saveDraftData(); }, 10000);
+    return () => clearInterval(interval);
+  }, [saveDraftData]);
+
+  const handleSaveDraft = useCallback(() => { saveDraftData(); setSavedDraft(true); toast.success("Draft saved!"); setTimeout(() => setSavedDraft(false), 2000); }, [saveDraftData]);
 
   const validate = () => {
     const e: Record<string, string> = {};
