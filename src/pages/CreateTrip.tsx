@@ -238,6 +238,53 @@ const CreateTrip = () => {
   const [contactPreferences, setContactPreferences] = useState<string[]>(["In-app chat"]);
   const [hosts, setHosts] = useState("");
 
+  // ── Load draft data on mount ──
+  const hasLoadedDraft = useRef(false);
+  useEffect(() => {
+    const id = draftId || draftIdParam;
+    if (!id || hasLoadedDraft.current) return;
+    const draft = getDraft(id);
+    if (!draft) return;
+    hasLoadedDraft.current = true;
+    if (draft.title) setTitle(draft.title);
+    if (draft.destination) setDestination(draft.destination);
+    if (draft.category) setCategory(draft.category);
+    if (draft.summary) setSummary(draft.summary);
+    if (draft.startDate) setStartDate(draft.startDate);
+    if (draft.endDate) setEndDate(draft.endDate);
+    const fd = draft.formData || {};
+    if (fd.bookingCloseDate) setBookingCloseDate(fd.bookingCloseDate);
+    if (fd.totalSeats) setTotalSeats(fd.totalSeats);
+    if (fd.minSeats) setMinSeats(fd.minSeats);
+    if (fd.accessType) setAccessType(fd.accessType);
+    if (fd.currency) setCurrency(fd.currency);
+    if (fd.totalPrice) setTotalPrice(fd.totalPrice);
+    if (fd.earlyBirdPrice) setEarlyBirdPrice(fd.earlyBirdPrice);
+    if (fd.earlyBirdSeats) setEarlyBirdSeats(fd.earlyBirdSeats);
+    if (fd.paymentTerms) setPaymentTerms(fd.paymentTerms);
+    if (fd.advanceAmount) setAdvanceAmount(fd.advanceAmount);
+    if (fd.highlights) setHighlights(fd.highlights);
+    if (fd.itinerary) setItinerary(fd.itinerary);
+    if (fd.includedItems) setIncludedItems(fd.includedItems);
+    if (fd.notIncludedItems) setNotIncludedItems(fd.notIncludedItems);
+    if (fd.accommodationType) setAccommodationType(fd.accommodationType);
+    if (fd.roomSharing) setRoomSharing(fd.roomSharing);
+    if (fd.stayName) setStayName(fd.stayName);
+    if (fd.stayDescription) setStayDescription(fd.stayDescription);
+    if (fd.amenities) setAmenities(fd.amenities);
+    if (fd.thingsToCarry) setThingsToCarry(fd.thingsToCarry);
+    if (fd.experienceLevel) setExperienceLevel(fd.experienceLevel);
+    if (fd.fitnessLevel) setFitnessLevel(fd.fitnessLevel);
+    if (fd.suitableFor) setSuitableFor(fd.suitableFor);
+    if (fd.tripVibes) setTripVibes(fd.tripVibes);
+    if (fd.codeOfConduct) setCodeOfConduct(fd.codeOfConduct);
+    if (fd.generalPolicy) setGeneralPolicy(fd.generalPolicy);
+    if (fd.cancellationPolicy) setCancellationPolicy(fd.cancellationPolicy);
+    if (fd.faqs) setFaqs(fd.faqs);
+    if (fd.contactPreferences) setContactPreferences(fd.contactPreferences);
+    if (fd.hosts) setHosts(fd.hosts);
+  }, [draftId, draftIdParam, getDraft]);
+
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
