@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDrafts } from "@/contexts/DraftContext";
 import { toast } from "sonner";
 import {
   Loader2, Plus, Trash2, GripVertical, MapPin, Calendar, Users, DollarSign,
@@ -145,6 +146,24 @@ const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDr
 const CreateTrip = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const draftIdParam = searchParams.get("draft");
+  const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
+
+  // If no draft param, create one and redirect
+  const [draftId, setDraftId] = useState<string>(() => {
+    if (draftIdParam) return draftIdParam;
+    return "";
+  });
+
+  useEffect(() => {
+    if (!draftId && !draftIdParam) {
+      const id = createDraft();
+      setDraftId(id);
+      window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+    }
+  }, [draftId, draftIdParam, createDraft]);
+
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
@@ -218,6 +237,53 @@ const CreateTrip = () => {
   // Host
   const [contactPreferences, setContactPreferences] = useState<string[]>(["In-app chat"]);
   const [hosts, setHosts] = useState("");
+
+  // ── Load draft data on mount ──
+  const hasLoadedDraft = useRef(false);
+  useEffect(() => {
+    const id = draftId || draftIdParam;
+    if (!id || hasLoadedDraft.current) return;
+    const draft = getDraft(id);
+    if (!draft) return;
+    hasLoadedDraft.current = true;
+    if (draft.title) setTitle(draft.title);
+    if (draft.destination) setDestination(draft.destination);
+    if (draft.category) setCategory(draft.category);
+    if (draft.summary) setSummary(draft.summary);
+    if (draft.startDate) setStartDate(draft.startDate);
+    if (draft.endDate) setEndDate(draft.endDate);
+    const fd = draft.formData || {};
+    if (fd.bookingCloseDate) setBookingCloseDate(fd.bookingCloseDate);
+    if (fd.totalSeats) setTotalSeats(fd.totalSeats);
+    if (fd.minSeats) setMinSeats(fd.minSeats);
+    if (fd.accessType) setAccessType(fd.accessType);
+    if (fd.currency) setCurrency(fd.currency);
+    if (fd.totalPrice) setTotalPrice(fd.totalPrice);
+    if (fd.earlyBirdPrice) setEarlyBirdPrice(fd.earlyBirdPrice);
+    if (fd.earlyBirdSeats) setEarlyBirdSeats(fd.earlyBirdSeats);
+    if (fd.paymentTerms) setPaymentTerms(fd.paymentTerms);
+    if (fd.advanceAmount) setAdvanceAmount(fd.advanceAmount);
+    if (fd.highlights) setHighlights(fd.highlights);
+    if (fd.itinerary) setItinerary(fd.itinerary);
+    if (fd.includedItems) setIncludedItems(fd.includedItems);
+    if (fd.notIncludedItems) setNotIncludedItems(fd.notIncludedItems);
+    if (fd.accommodationType) setAccommodationType(fd.accommodationType);
+    if (fd.roomSharing) setRoomSharing(fd.roomSharing);
+    if (fd.stayName) setStayName(fd.stayName);
+    if (fd.stayDescription) setStayDescription(fd.stayDescription);
+    if (fd.amenities) setAmenities(fd.amenities);
+    if (fd.thingsToCarry) setThingsToCarry(fd.thingsToCarry);
+    if (fd.experienceLevel) setExperienceLevel(fd.experienceLevel);
+    if (fd.fitnessLevel) setFitnessLevel(fd.fitnessLevel);
+    if (fd.suitableFor) setSuitableFor(fd.suitableFor);
+    if (fd.tripVibes) setTripVibes(fd.tripVibes);
+    if (fd.codeOfConduct) setCodeOfConduct(fd.codeOfConduct);
+    if (fd.generalPolicy) setGeneralPolicy(fd.generalPolicy);
+    if (fd.cancellationPolicy) setCancellationPolicy(fd.cancellationPolicy);
+    if (fd.faqs) setFaqs(fd.faqs);
+    if (fd.contactPreferences) setContactPreferences(fd.contactPreferences);
+    if (fd.hosts) setHosts(fd.hosts);
+  }, [draftId, draftIdParam, getDraft]);
 
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -315,7 +381,36 @@ const CreateTrip = () => {
     setFaqs(prev => { const arr = [...prev]; const [item] = arr.splice(from, 1); arr.splice(to, 0, item); return arr; });
   };
 
-  const handleSaveDraft = useCallback(() => { setSavedDraft(true); toast.success("Draft saved!"); setTimeout(() => setSavedDraft(false), 2000); }, []);
+  const saveDraftData = useCallback(() => {
+    const id = draftId || draftIdParam;
+    if (!id) return;
+    updateDraft(id, {
+      title, destination, category, summary, startDate, endDate,
+      formData: {
+        bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice,
+        earlyBirdPrice, earlyBirdSeats, paymentTerms, advanceAmount, highlights,
+        itinerary, includedItems, notIncludedItems, accommodationType, roomSharing,
+        stayName, stayDescription, amenities, thingsToCarry, experienceLevel,
+        fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
+        generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
+        medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
+      },
+    });
+  }, [draftId, draftIdParam, updateDraft, title, destination, category, summary, startDate, endDate,
+      bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice, earlyBirdPrice,
+      earlyBirdSeats, paymentTerms, advanceAmount, highlights, itinerary, includedItems, notIncludedItems,
+      accommodationType, roomSharing, stayName, stayDescription, amenities, thingsToCarry,
+      experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
+      generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact, medicalDetails,
+      emergencyDetails, faqs, contactPreferences, hosts]);
+
+  // Auto-save every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => { saveDraftData(); }, 10000);
+    return () => clearInterval(interval);
+  }, [saveDraftData]);
+
+  const handleSaveDraft = useCallback(() => { saveDraftData(); setSavedDraft(true); toast.success("Draft saved!"); setTimeout(() => setSavedDraft(false), 2000); }, [saveDraftData]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -337,9 +432,12 @@ const CreateTrip = () => {
     if (!isAuthenticated) { toast.info("Please log in to create a trip"); navigate("/login"); return; }
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
+    saveDraftData();
+    const id = draftId || draftIdParam;
+    if (id) publishDraft(id);
     await new Promise(r => setTimeout(r, 1500));
     toast.success("Trip published! 🎉");
-    navigate("/trips");
+    navigate("/my-trips");
     setLoading(false);
   };
 

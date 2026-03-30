@@ -9,9 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, Settings, User, LogOut } from "lucide-react";
+import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, Settings, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import CreateTripModal from "@/components/CreateTripModal";
 
 const notifications = [
   { id: 1, icon: "👤", message: "Rahul joined your trip", time: "2 min ago", unread: true },
@@ -24,6 +25,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -33,6 +35,7 @@ const Navbar = () => {
   const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
+    <>
     <nav className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="text-xl font-bold tracking-tight text-primary">
@@ -92,6 +95,9 @@ const Navbar = () => {
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <User className="mr-2 h-4 w-4" /> My Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/my-trips")}>
+                  <MapPinIcon className="mr-2 h-4 w-4" /> My Trips
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/inbox")}>
                   <Inbox className="mr-2 h-4 w-4" /> Inbox
@@ -156,6 +162,12 @@ const Navbar = () => {
           </Button>
           {isAuthenticated ? (
             <>
+              <Button variant="ghost" className="justify-start" onClick={() => { setCreateModalOpen(true); setMobileOpen(false); }}>
+                Create Trip
+              </Button>
+              <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
+                <Link to="/my-trips">My Trips</Link>
+              </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/profile">My Profile</Link>
               </Button>
@@ -180,6 +192,8 @@ const Navbar = () => {
         </div>
       )}
     </nav>
+    <CreateTripModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
+    </>
   );
 };
 
