@@ -191,6 +191,8 @@ const Navbar = () => {
         </div>
       )}
     </nav>
+    <CreateTripModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
+    </>
   );
 };
 
