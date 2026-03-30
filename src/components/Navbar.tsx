@@ -9,9 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, Settings, User, LogOut } from "lucide-react";
+import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, Settings, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import CreateTripModal from "@/components/CreateTripModal";
 
 const notifications = [
   { id: 1, icon: "👤", message: "Rahul joined your trip", time: "2 min ago", unread: true },
