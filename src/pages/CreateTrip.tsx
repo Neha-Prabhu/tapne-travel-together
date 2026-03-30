@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDrafts } from "@/contexts/DraftContext";
 import { toast } from "sonner";
 import {
   Loader2, Plus, Trash2, GripVertical, MapPin, Calendar, Users, DollarSign,
