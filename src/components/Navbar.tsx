@@ -161,6 +161,12 @@ const Navbar = () => {
           </Button>
           {isAuthenticated ? (
             <>
+              <Button variant="ghost" className="justify-start" onClick={() => { setCreateModalOpen(true); setMobileOpen(false); }}>
+                Create Trip
+              </Button>
+              <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
+                <Link to="/my-trips">My Trips</Link>
+              </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/profile">My Profile</Link>
               </Button>
