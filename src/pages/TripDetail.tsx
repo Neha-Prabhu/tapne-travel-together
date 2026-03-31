@@ -72,19 +72,11 @@ const TripDetail = () => {
   const handleAction = () => {
     if (!isAuthenticated) { toast.info("Please log in first"); return; }
     if (accessType === "apply") { setApplyModalOpen(true); return; }
-    if (accessType === "invite") { toast.success("Invite request sent to the host!"); return; }
-    toast.success("You've booked the trip! 🎉");
+    if (accessType === "invite") { toast.info("This trip is invite-only. Request sent to host!"); return; }
+    setBookingModalOpen(true);
   };
 
-  const handleApplySubmit = async () => {
-    setApplyLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setApplyLoading(false);
-    setApplyModalOpen(false);
-    toast.success("Application submitted! The host will review it soon.");
-  };
-
-  const ctaLabel = isHost ? "Edit Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
+  const ctaLabel = isHost ? "Manage Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
     accessType === "apply" ? "Apply to Join" : accessType === "invite" ? "Request Invite" : "Book Now";
   const ctaDisabled = isJoined;
 
