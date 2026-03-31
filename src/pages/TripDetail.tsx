@@ -41,10 +41,8 @@ const TripDetail = () => {
   const { id } = useParams();
   const { user, isAuthenticated } = useAuth();
   const trip = getTripById(id || "");
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
-  const [applyLoading, setApplyLoading] = useState(false);
-  const [applyReason, setApplyReason] = useState("");
-  const [applyExperience, setApplyExperience] = useState("");
 
   if (!trip) {
     return (
