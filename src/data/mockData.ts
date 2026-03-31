@@ -30,6 +30,48 @@ export interface FAQ {
   answer: string;
 }
 
+export type ApplicationQuestionType = "short" | "long" | "multiple_choice" | "single_select";
+
+export interface ApplicationQuestion {
+  id: string;
+  question: string;
+  type: ApplicationQuestionType;
+  required: boolean;
+  options?: string[]; // for multiple_choice / single_select
+}
+
+export interface ApplicationConfig {
+  customQuestions: ApplicationQuestion[];
+  autoApprove: boolean;
+}
+
+export interface TripApplication {
+  id: string;
+  tripId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userEmail: string;
+  userPhone: string;
+  userAge: string;
+  userGender: string;
+  answers: Record<string, string | string[]>;
+  status: "pending" | "approved" | "rejected";
+  submittedAt: string;
+}
+
+export interface TripBooking {
+  id: string;
+  tripId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  status: "confirmed" | "pending";
+  bookedAt: string;
+  amountPaid: number;
+}
+
 export interface Trip {
   id: string;
   title: string;
