@@ -301,7 +301,12 @@ const CreateTrip = () => {
     ? Math.max(0, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000))
     : 0;
 
-  const completedSections = SECTIONS.filter(s => {
+  const visibleSections = SECTIONS.filter(s => {
+    if (s.id === "application") return accessType === "apply";
+    return true;
+  });
+
+  const completedSections = visibleSections.filter(s => {
     switch (s.id) {
       case "overview": return title && destination && category && summary && startDate && endDate && totalSeats;
       case "pricing": return totalPrice;
@@ -311,11 +316,12 @@ const CreateTrip = () => {
       case "notIncluded": return notIncludedItems.length > 0;
       case "experience": return experienceLevel;
       case "safety": return cancellationPolicy.trim().length > 0;
+      case "application": return customQuestions.length > 0 && customQuestions.some(q => q.question.trim());
       case "host": return true;
       default: return false;
     }
   });
-  const progressPercent = Math.round((completedSections.length / SECTIONS.length) * 100);
+  const progressPercent = Math.round((completedSections.length / visibleSections.length) * 100);
 
   const isInputFocusedRef = useRef(false);
 
