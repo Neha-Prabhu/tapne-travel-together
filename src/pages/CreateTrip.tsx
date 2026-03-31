@@ -290,6 +290,8 @@ const CreateTrip = () => {
     if (fd.faqs) setFaqs(fd.faqs);
     if (fd.contactPreferences) setContactPreferences(fd.contactPreferences);
     if (fd.hosts) setHosts(fd.hosts);
+    if (fd.customQuestions) setCustomQuestions(fd.customQuestions);
+    if (fd.autoApprove !== undefined) setAutoApprove(fd.autoApprove);
   }, [draftId, draftIdParam, getDraft]);
 
   // Errors
