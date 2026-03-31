@@ -637,43 +637,10 @@ const TripDetail = () => {
       </main>
       <Footer />
 
-      {/* ─── Apply Modal ─── */}
-      <Dialog open={applyModalOpen} onOpenChange={setApplyModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Apply to Join</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Why do you want to join? *</label>
-              <Textarea
-                rows={3}
-                placeholder="Tell the host why you'd be a great fit for this trip..."
-                value={applyReason}
-                onChange={e => setApplyReason(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Experience level</label>
-              <Select value={applyExperience} onValueChange={setApplyExperience}>
-                <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="moderate">Moderate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApplyModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleApplySubmit} disabled={!applyReason.trim() || applyLoading}>
-              {applyLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
-              Submit Application
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Booking Modal */}
+      <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />
+      {/* Application Modal */}
+      <ApplicationModal open={applyModalOpen} onOpenChange={setApplyModalOpen} trip={trip} />
     </div>
   );
 };
