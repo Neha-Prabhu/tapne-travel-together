@@ -279,6 +279,15 @@ export const trips: Trip[] = [
       { question: "What if weather is bad?", answer: "We monitor conditions closely. Route may be adjusted for safety." },
     ],
     contactPreference: "In-app only",
+    applicationConfig: {
+      customQuestions: [
+        { id: "q1", question: "Why do you want to join this trek?", type: "long", required: true },
+        { id: "q2", question: "Have you done similar treks before?", type: "short", required: true },
+        { id: "q3", question: "What's your fitness routine?", type: "long", required: false },
+        { id: "q4", question: "Preferred trekking pace", type: "single_select", required: true, options: ["Slow & steady", "Moderate", "Fast & intense"] },
+      ],
+      autoApprove: false,
+    },
   },
   {
     id: "t3",
