@@ -20,8 +20,10 @@ import {
   Loader2, Plus, Trash2, GripVertical, MapPin, Calendar, Users, DollarSign,
   Image, Star, Route, CheckCircle2, XCircle, Backpack, Hotel,
   Heart, Shield, HelpCircle, UserCircle, ChevronDown, ChevronUp, Eye, Save,
-  Send, Sparkles, Mountain, Globe, X
+  Send, Sparkles, Mountain, Globe, X, ClipboardList
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ApplicationQuestion, ApplicationQuestionType } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 
 // ─── CONSTANTS ───
