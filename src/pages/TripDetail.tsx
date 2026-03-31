@@ -547,6 +547,11 @@ const TripDetail = () => {
                 </Section>
               )}
 
+              {/* Host Application Management */}
+              {isHost && accessType === "apply" && (
+                <ApplicationManager trip={trip} />
+              )}
+
               {/* 14. Participants */}
               <section className="scroll-mt-24">
                 <Card>
