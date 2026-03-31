@@ -57,6 +57,7 @@ const SECTIONS = [
   { id: "thingsToCarry", label: "Things to Carry", icon: Backpack },
   { id: "experience", label: "Experience & Vibe", icon: Heart },
   { id: "safety", label: "Safety & Policies", icon: Shield },
+  { id: "application", label: "Application Settings", icon: ClipboardList },
   { id: "faqs", label: "FAQs", icon: HelpCircle },
   { id: "host", label: "Host Info", icon: UserCircle },
 ];
