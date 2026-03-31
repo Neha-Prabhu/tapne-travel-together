@@ -1124,7 +1124,7 @@ const CreateTrip = () => {
 
               {/* Bottom Actions */}
               <div className="flex flex-col gap-3 rounded-xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm text-muted-foreground">{completedSections.length} of {SECTIONS.length} sections • {progressPercent}%</div>
+                <div className="text-sm text-muted-foreground">{completedSections.length} of {visibleSections.length} sections • {progressPercent}%</div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
                   <Button variant="outline"><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
