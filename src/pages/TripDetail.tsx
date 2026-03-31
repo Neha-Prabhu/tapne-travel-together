@@ -3,15 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TripCard from "@/components/TripCard";
+import BookingModal from "@/components/BookingModal";
+import ApplicationModal from "@/components/ApplicationModal";
+import ApplicationManager from "@/components/ApplicationManager";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { getTripById, getUserById, getSimilarTrips, getTripsByHost } from "@/data/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -42,10 +41,8 @@ const TripDetail = () => {
   const { id } = useParams();
   const { user, isAuthenticated } = useAuth();
   const trip = getTripById(id || "");
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
-  const [applyLoading, setApplyLoading] = useState(false);
-  const [applyReason, setApplyReason] = useState("");
-  const [applyExperience, setApplyExperience] = useState("");
 
   if (!trip) {
     return (
@@ -75,19 +72,11 @@ const TripDetail = () => {
   const handleAction = () => {
     if (!isAuthenticated) { toast.info("Please log in first"); return; }
     if (accessType === "apply") { setApplyModalOpen(true); return; }
-    if (accessType === "invite") { toast.success("Invite request sent to the host!"); return; }
-    toast.success("You've booked the trip! 🎉");
+    if (accessType === "invite") { toast.info("This trip is invite-only. Request sent to host!"); return; }
+    setBookingModalOpen(true);
   };
 
-  const handleApplySubmit = async () => {
-    setApplyLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setApplyLoading(false);
-    setApplyModalOpen(false);
-    toast.success("Application submitted! The host will review it soon.");
-  };
-
-  const ctaLabel = isHost ? "Edit Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
+  const ctaLabel = isHost ? "Manage Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
     accessType === "apply" ? "Apply to Join" : accessType === "invite" ? "Request Invite" : "Book Now";
   const ctaDisabled = isJoined;
 
@@ -558,6 +547,11 @@ const TripDetail = () => {
                 </Section>
               )}
 
+              {/* Host Application Management */}
+              {isHost && accessType === "apply" && (
+                <ApplicationManager trip={trip} />
+              )}
+
               {/* 14. Participants */}
               <section className="scroll-mt-24">
                 <Card>
@@ -648,43 +642,10 @@ const TripDetail = () => {
       </main>
       <Footer />
 
-      {/* ─── Apply Modal ─── */}
-      <Dialog open={applyModalOpen} onOpenChange={setApplyModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Apply to Join</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Why do you want to join? *</label>
-              <Textarea
-                rows={3}
-                placeholder="Tell the host why you'd be a great fit for this trip..."
-                value={applyReason}
-                onChange={e => setApplyReason(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Experience level</label>
-              <Select value={applyExperience} onValueChange={setApplyExperience}>
-                <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="moderate">Moderate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApplyModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleApplySubmit} disabled={!applyReason.trim() || applyLoading}>
-              {applyLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
-              Submit Application
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Booking Modal */}
+      <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />
+      {/* Application Modal */}
+      <ApplicationModal open={applyModalOpen} onOpenChange={setApplyModalOpen} trip={trip} />
     </div>
   );
 };

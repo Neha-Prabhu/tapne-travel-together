@@ -30,6 +30,48 @@ export interface FAQ {
   answer: string;
 }
 
+export type ApplicationQuestionType = "short" | "long" | "multiple_choice" | "single_select";
+
+export interface ApplicationQuestion {
+  id: string;
+  question: string;
+  type: ApplicationQuestionType;
+  required: boolean;
+  options?: string[]; // for multiple_choice / single_select
+}
+
+export interface ApplicationConfig {
+  customQuestions: ApplicationQuestion[];
+  autoApprove: boolean;
+}
+
+export interface TripApplication {
+  id: string;
+  tripId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  userEmail: string;
+  userPhone: string;
+  userAge: string;
+  userGender: string;
+  answers: Record<string, string | string[]>;
+  status: "pending" | "approved" | "rejected";
+  submittedAt: string;
+}
+
+export interface TripBooking {
+  id: string;
+  tripId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  status: "confirmed" | "pending";
+  bookedAt: string;
+  amountPaid: number;
+}
+
 export interface Trip {
   id: string;
   title: string;
@@ -93,6 +135,9 @@ export interface Trip {
 
   // Host
   contactPreference?: string;
+
+  // Application config (for apply-to-join trips)
+  applicationConfig?: ApplicationConfig;
 }
 
 export const TRIP_TYPES = [
@@ -234,6 +279,15 @@ export const trips: Trip[] = [
       { question: "What if weather is bad?", answer: "We monitor conditions closely. Route may be adjusted for safety." },
     ],
     contactPreference: "In-app only",
+    applicationConfig: {
+      customQuestions: [
+        { id: "q1", question: "Why do you want to join this trek?", type: "long", required: true },
+        { id: "q2", question: "Have you done similar treks before?", type: "short", required: true },
+        { id: "q3", question: "What's your fitness routine?", type: "long", required: false },
+        { id: "q4", question: "Preferred trekking pace", type: "single_select", required: true, options: ["Slow & steady", "Moderate", "Fast & intense"] },
+      ],
+      autoApprove: false,
+    },
   },
   {
     id: "t3",
@@ -445,6 +499,14 @@ export const trips: Trip[] = [
       { question: "Can I bring my own bike?", answer: "Yes! Or we can arrange Royal Enfield rentals at additional cost." },
     ],
     contactPreference: "WhatsApp",
+    applicationConfig: {
+      customQuestions: [
+        { id: "q1", question: "Why do you want to join this road trip?", type: "long", required: true },
+        { id: "q2", question: "Do you have high-altitude experience?", type: "short", required: true },
+        { id: "q3", question: "Instagram handle", type: "short", required: false },
+      ],
+      autoApprove: false,
+    },
   },
 ];
 
