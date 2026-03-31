@@ -528,7 +528,7 @@ const CreateTrip = () => {
             <aside className="hidden w-60 shrink-0 lg:block">
               <div className="sticky top-36">
                 <nav className="space-y-0.5 rounded-xl border bg-card p-2">
-                  {SECTIONS.map(section => {
+                  {visibleSections.map(section => {
                     const Icon = section.icon;
                     const isActive = activeSection === section.id;
                     const isComplete = completedSections.some(s => s.id === section.id);
