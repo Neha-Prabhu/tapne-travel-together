@@ -241,6 +241,10 @@ const CreateTrip = () => {
   const [contactPreferences, setContactPreferences] = useState<string[]>(["In-app chat"]);
   const [hosts, setHosts] = useState("");
 
+  // Application Settings (for apply-to-join)
+  const [customQuestions, setCustomQuestions] = useState<ApplicationQuestion[]>([]);
+  const [autoApprove, setAutoApprove] = useState(false);
+
   // ── Load draft data on mount ──
   const hasLoadedDraft = useRef(false);
   useEffect(() => {
