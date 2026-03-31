@@ -403,6 +403,7 @@ const CreateTrip = () => {
         fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
         generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
         medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
+        customQuestions, autoApprove,
       },
     });
   }, [draftId, draftIdParam, updateDraft, title, destination, category, summary, startDate, endDate,
@@ -411,7 +412,7 @@ const CreateTrip = () => {
       accommodationType, roomSharing, stayName, stayDescription, amenities, thingsToCarry,
       experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
       generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact, medicalDetails,
-      emergencyDetails, faqs, contactPreferences, hosts]);
+      emergencyDetails, faqs, contactPreferences, hosts, customQuestions, autoApprove]);
 
   // Auto-save every 10 seconds
   useEffect(() => {
