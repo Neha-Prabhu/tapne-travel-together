@@ -925,6 +925,138 @@ const CreateTrip = () => {
                 )}
               </Card>
 
+              {/* APPLICATION SETTINGS (only for Apply to Join) */}
+              {accessType === "apply" && (
+                <Card id="application" ref={(el) => { sectionRefs.current.application = el; }}>
+                  {renderSectionHeader("application", ClipboardList, "Application Settings", "Configure what applicants need to submit.")}
+                  {!collapsedSections.has("application") && (
+                    <CardContent className="space-y-5 pt-0">
+                      {/* Auto-collected fields notice */}
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <p className="text-sm font-medium text-foreground mb-2">Auto-collected from applicants</p>
+                        <div className="flex flex-wrap gap-2">
+                          {["Full Name", "Email", "Phone", "Age", "Gender (optional)"].map(f => (
+                            <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">These fields are always included in the application form.</p>
+                      </div>
+
+                      {/* Custom Questions */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Custom Questions</Label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCustomQuestions(prev => [...prev, {
+                              id: `cq-${Date.now()}`,
+                              question: "",
+                              type: "short" as ApplicationQuestionType,
+                              required: true,
+                            }])}
+                          >
+                            <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Question
+                          </Button>
+                        </div>
+
+                        {customQuestions.length === 0 && (
+                          <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+                            <ClipboardList className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                            <p className="text-sm">No custom questions yet</p>
+                            <p className="text-xs">Add questions to learn more about applicants</p>
+                          </div>
+                        )}
+
+                        {customQuestions.map((q, i) => (
+                          <div key={q.id} className="group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="cursor-grab active:cursor-grabbing text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+                                  <GripVertical className="h-5 w-5" />
+                                </div>
+                                <Badge variant="secondary" className="text-xs">Q{i + 1}</Badge>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                                  <Switch
+                                    checked={q.required}
+                                    onCheckedChange={v => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, required: v } : cq))}
+                                    className="scale-75"
+                                  />
+                                  Required
+                                </label>
+                                <Button variant="ghost" size="icon" onClick={() => setCustomQuestions(prev => prev.filter((_, idx) => idx !== i))} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </div>
+                            </div>
+                            <Input
+                              value={q.question}
+                              onChange={e => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, question: e.target.value } : cq))}
+                              placeholder="e.g. Why do you want to join this trip?"
+                            />
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                              {([
+                                { value: "short", label: "Short text" },
+                                { value: "long", label: "Long text" },
+                                { value: "single_select", label: "Single select" },
+                                { value: "multiple_choice", label: "Multi choice" },
+                              ] as { value: ApplicationQuestionType; label: string }[]).map(opt => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, type: opt.value } : cq))}
+                                  className={cn(
+                                    "rounded-md border px-2 py-1.5 text-xs transition-all",
+                                    q.type === opt.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-muted-foreground hover:border-primary/40"
+                                  )}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            {(q.type === "single_select" || q.type === "multiple_choice") && (
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">Options (comma-separated)</Label>
+                                <Input
+                                  value={(q.options || []).join(", ")}
+                                  onChange={e => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: e.target.value.split(",").map(o => o.trim()).filter(Boolean) } : cq))}
+                                  placeholder="Option 1, Option 2, Option 3"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Approval Settings */}
+                      <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                        <p className="text-sm font-medium text-foreground">Approval Settings</p>
+                        <label className="flex items-center justify-between cursor-pointer">
+                          <div>
+                            <p className="text-sm text-foreground">Auto-approve applications</p>
+                            <p className="text-xs text-muted-foreground">Automatically accept all applicants (not recommended for curated trips)</p>
+                          </div>
+                          <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
+                        </label>
+                        {!autoApprove && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Shield className="h-3 w-3" /> You'll manually review and approve each application
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Capacity note */}
+                      <div className="rounded-lg bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+                        <Sparkles className="inline h-4 w-4 mr-1.5 text-primary" />
+                        Only approved applicants count toward seat capacity. Pending applications do not block seats.
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              )}
+
               {/* 11. FAQs (with reorder) */}
               <Card id="faqs" ref={(el) => { sectionRefs.current.faqs = el; }}>
                 {renderSectionHeader("faqs", HelpCircle, "FAQs", "Answer common questions upfront.")}
