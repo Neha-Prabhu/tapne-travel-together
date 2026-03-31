@@ -135,6 +135,9 @@ export interface Trip {
 
   // Host
   contactPreference?: string;
+
+  // Application config (for apply-to-join trips)
+  applicationConfig?: ApplicationConfig;
 }
 
 export const TRIP_TYPES = [
