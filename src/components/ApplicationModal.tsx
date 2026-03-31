@@ -137,18 +137,13 @@ const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) =
                 </SelectContent>
               </Select>
             </div>
-            <Button className="w-full" onClick={() => setStep(hasQuestions ? 1 : step)} disabled={!canProceedStep1}>
+            <Button className="w-full" onClick={() => setStep(1)} disabled={!canProceedStep1}>
               {hasQuestions ? (
                 <>Continue <ArrowRight className="ml-1.5 h-4 w-4" /></>
               ) : (
                 <>Review & Submit <ArrowRight className="ml-1.5 h-4 w-4" /></>
               )}
             </Button>
-            {!hasQuestions && canProceedStep1 && (
-              <Button className="w-full" onClick={() => { setStep(hasQuestions ? 1 : 1); }}>
-                Review & Submit <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
-            )}
           </div>
         )}
 
