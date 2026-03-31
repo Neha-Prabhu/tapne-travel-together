@@ -499,6 +499,14 @@ export const trips: Trip[] = [
       { question: "Can I bring my own bike?", answer: "Yes! Or we can arrange Royal Enfield rentals at additional cost." },
     ],
     contactPreference: "WhatsApp",
+    applicationConfig: {
+      customQuestions: [
+        { id: "q1", question: "Why do you want to join this road trip?", type: "long", required: true },
+        { id: "q2", question: "Do you have high-altitude experience?", type: "short", required: true },
+        { id: "q3", question: "Instagram handle", type: "short", required: false },
+      ],
+      autoApprove: false,
+    },
   },
 ];
 
