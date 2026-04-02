@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,18 +10,40 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDrafts } from "@/contexts/DraftContext";
-import { getTripsByHost } from "@/data/mockData";
+import { apiGet } from "@/lib/api";
+import type { TripData, MyTripsResponse } from "@/types/api";
 import TripCard from "@/components/TripCard";
 import {
   Plus, Edit, Trash2, Copy, MapPin, Calendar, FileText, Clock,
-  AlertTriangle
+  AlertTriangle, Loader2
 } from "lucide-react";
 
 const MyTrips = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { drafts, deleteDraft, duplicateDraft } = useDrafts();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { drafts, deleteDraft, duplicateDraft, loading: draftsLoading } = useDrafts();
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [publishedTrips, setPublishedTrips] = useState<TripData[]>([]);
+  const [pastTrips, setPastTrips] = useState<TripData[]>([]);
+  const [tabCounts, setTabCounts] = useState({ created: 0, joined: 0, past: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (!cfg?.api?.my_trips) { setLoading(false); return; }
+    apiGet<MyTripsResponse>(cfg.api.my_trips)
+      .then((data) => {
+        const now = new Date();
+        const published = data.trips.filter(t => !t.is_draft && t.is_published);
+        const past = data.trips.filter(t => t.ends_at && new Date(t.ends_at) < now);
+        setPublishedTrips(published);
+        setPastTrips(past);
+        setTabCounts(data.tab_counts || { created: 0, joined: 0, past: 0 });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [isAuthenticated]);
 
   if (!isAuthenticated || !user) {
     navigate("/login");
@@ -29,8 +51,6 @@ const MyTrips = () => {
   }
 
   const userDrafts = drafts.filter(d => d.status === "draft");
-  const publishedDrafts = drafts.filter(d => d.status === "published");
-  const publishedTrips = getTripsByHost(user.id);
 
   const formatDate = (iso: string) => {
     if (!iso) return "";
@@ -63,15 +83,15 @@ const MyTrips = () => {
     return Math.round((filled / total) * 100);
   };
 
-  const handleDelete = () => {
-    if (deleteId) {
-      deleteDraft(deleteId);
+  const handleDelete = async () => {
+    if (deleteId != null) {
+      await deleteDraft(deleteId);
       setDeleteId(null);
     }
   };
 
-  const handleDuplicate = (id: string) => {
-    duplicateDraft(id);
+  const handleDuplicate = async (id: number) => {
+    await duplicateDraft(id);
   };
 
   return (
@@ -95,14 +115,16 @@ const MyTrips = () => {
                 Drafts {userDrafts.length > 0 && <Badge variant="secondary" className="ml-2 text-xs">{userDrafts.length}</Badge>}
               </TabsTrigger>
               <TabsTrigger value="published">
-                Published {(publishedTrips.length + publishedDrafts.length) > 0 && <Badge variant="secondary" className="ml-2 text-xs">{publishedTrips.length + publishedDrafts.length}</Badge>}
+                Published {publishedTrips.length > 0 && <Badge variant="secondary" className="ml-2 text-xs">{publishedTrips.length}</Badge>}
               </TabsTrigger>
               <TabsTrigger value="past">Past Trips</TabsTrigger>
             </TabsList>
 
             {/* Drafts Tab */}
             <TabsContent value="drafts">
-              {userDrafts.length === 0 ? (
+              {draftsLoading ? (
+                <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : userDrafts.length === 0 ? (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-16">
                     <FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />
@@ -121,7 +143,6 @@ const MyTrips = () => {
                       <Card key={draft.id} className="overflow-hidden transition-shadow hover:shadow-md">
                         <CardContent className="p-0">
                           <div className="flex flex-col sm:flex-row">
-                            {/* Left info */}
                             <div className="flex-1 p-5">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 flex-1">
@@ -149,7 +170,6 @@ const MyTrips = () => {
                                 </Badge>
                               </div>
 
-                              {/* Progress */}
                               <div className="mt-4">
                                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
                                   <span>Completion</span>
@@ -158,7 +178,6 @@ const MyTrips = () => {
                                 <Progress value={progress} className="h-1.5" />
                               </div>
 
-                              {/* Actions */}
                               <div className="mt-4 flex items-center gap-2">
                                 <Button size="sm" onClick={() => navigate(`/create-trip?draft=${draft.id}`)}>
                                   <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Draft
@@ -182,7 +201,9 @@ const MyTrips = () => {
 
             {/* Published Tab */}
             <TabsContent value="published">
-              {publishedTrips.length === 0 && publishedDrafts.length === 0 ? (
+              {loading ? (
+                <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : publishedTrips.length === 0 ? (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-16">
                     <FileText className="h-12 w-12 text-muted-foreground/40 mb-4" />
@@ -199,13 +220,21 @@ const MyTrips = () => {
 
             {/* Past Trips Tab */}
             <TabsContent value="past">
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <Calendar className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-1">No past trips</h3>
-                  <p className="text-muted-foreground text-sm">Completed trips will appear here.</p>
-                </CardContent>
-              </Card>
+              {loading ? (
+                <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : pastTrips.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Calendar className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-1">No past trips</h3>
+                    <p className="text-muted-foreground text-sm">Completed trips will appear here.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {pastTrips.map(t => <TripCard key={t.id} trip={t} />)}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -213,7 +242,7 @@ const MyTrips = () => {
       <Footer />
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <Dialog open={deleteId != null} onOpenChange={() => setDeleteId(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
