@@ -8,7 +8,8 @@ import TripCard from "@/components/TripCard";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { trips, users } from "@/data/mockData";
-import { Search, MapPin, ChevronLeft, ChevronRight, Calendar, ArrowRight, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Search, MapPin, ChevronLeft, ChevronRight, Calendar, ArrowRight, User, Star } from "lucide-react";
 
 // ─── Extract unique destinations ───
 const getDestinations = () => {
