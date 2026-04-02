@@ -72,6 +72,21 @@ export interface TripBooking {
   amountPaid: number;
 }
 
+export interface TripReview {
+  id: string;
+  tripId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  rating: number;
+  loved: string;
+  improve?: string;
+  travelAgain: "Yes" | "Maybe" | "No";
+  tags: string[];
+  photos?: string[];
+  createdAt: string;
+}
+
 export interface Trip {
   id: string;
   title: string;
@@ -510,6 +525,36 @@ export const trips: Trip[] = [
   },
 ];
 
+// ─── Mock Reviews ───
+export const tripReviews: TripReview[] = [
+  {
+    id: "r1", tripId: "t1", userId: "u2", userName: "Priya Sharma", userAvatar: "https://i.pravatar.cc/150?img=5",
+    rating: 5, loved: "The group vibes were incredible and the beach bonfire was unforgettable!", improve: "",
+    travelAgain: "Yes", tags: ["Great people", "Good vibes", "Amazing itinerary"],
+    photos: ["https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=200&q=60"],
+    createdAt: "2026-03-24",
+  },
+  {
+    id: "r2", tripId: "t1", userId: "u4", userName: "Ananya Desai", userAvatar: "https://i.pravatar.cc/150?img=9",
+    rating: 4, loved: "Scooter rides through South Goa were the highlight of my trip.", improve: "Could have had more free time in the evenings.",
+    travelAgain: "Yes", tags: ["Well organized", "Worth the money", "Good vibes"],
+    createdAt: "2026-03-25",
+  },
+  {
+    id: "r3", tripId: "t3", userId: "u1", userName: "Arjun Mehta", userAvatar: "https://i.pravatar.cc/150?img=11",
+    rating: 5, loved: "Bali was magical and the group felt like family by day 3.",
+    travelAgain: "Yes", tags: ["Great people", "Amazing itinerary", "Worth the money", "Helpful host"],
+    photos: ["https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=200&q=60"],
+    createdAt: "2026-05-12",
+  },
+  {
+    id: "r4", tripId: "t3", userId: "u6", userName: "Meera Nair", userAvatar: "https://i.pravatar.cc/150?img=20",
+    rating: 4, loved: "The sunset dinner and Nusa Penida snorkeling were breathtaking.", improve: "Yoga session timings could be better.",
+    travelAgain: "Maybe", tags: ["Well organized", "Good vibes"],
+    createdAt: "2026-05-13",
+  },
+];
+
 export function getUserById(id: string): User | undefined {
   return users.find((u) => u.id === id);
 }
@@ -530,4 +575,23 @@ export function getSimilarTrips(trip: Trip, limit = 3): Trip[] {
   return trips
     .filter(t => t.id !== trip.id && (t.tripType === trip.tripType || t.destination === trip.destination))
     .slice(0, limit);
+}
+
+export function getReviewsForTrip(tripId: string): TripReview[] {
+  return tripReviews.filter(r => r.tripId === tripId);
+}
+
+export function getAverageRating(tripId: string): number {
+  const reviews = getReviewsForTrip(tripId);
+  if (reviews.length === 0) return 0;
+  return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+}
+
+export function getTagsSummary(tripId: string): { tag: string; count: number }[] {
+  const reviews = getReviewsForTrip(tripId);
+  const tagMap = new Map<string, number>();
+  reviews.forEach(r => r.tags.forEach(t => tagMap.set(t, (tagMap.get(t) || 0) + 1)));
+  return Array.from(tagMap.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
 }

@@ -8,7 +8,8 @@ import TripCard from "@/components/TripCard";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { trips, users } from "@/data/mockData";
-import { Search, MapPin, ChevronLeft, ChevronRight, Calendar, ArrowRight, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Search, MapPin, ChevronLeft, ChevronRight, Calendar, ArrowRight, User, Star } from "lucide-react";
 
 // ─── Extract unique destinations ───
 const getDestinations = () => {
@@ -69,8 +70,17 @@ const mockBlogs = [
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+
+  // Check for trips the user can review (ended + participant)
+  const reviewableTrips = isAuthenticated && user
+    ? trips.filter(t =>
+        t.participantIds.includes(user.id) &&
+        new Date(t.endDate) < new Date()
+      )
+    : [];
 
   const destinations = useMemo(getDestinations, []);
 
@@ -93,6 +103,27 @@ const Index = () => {
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
+        {/* ─── Post-trip review banner ─── */}
+        {reviewableTrips.length > 0 && (
+          <div className="bg-primary/5 border-b border-primary/10">
+            <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Star className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    Your trip to {reviewableTrips[0].destination.split(",")[0]} just ended ✨
+                  </p>
+                  <p className="text-xs text-muted-foreground">Tell others how your trip was</p>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" asChild className="shrink-0">
+                <Link to={`/trips/${reviewableTrips[0].id}`}>Write Review</Link>
+              </Button>
+            </div>
+          </div>
+        )}
         {/* ─── Hero ─── */}
         <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-accent/30 to-background px-4 py-20 md:py-28">
           <div className="mx-auto max-w-3xl text-center">
