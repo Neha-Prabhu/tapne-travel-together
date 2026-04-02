@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { getTripById, getUserById, getSimilarTrips, getTripsByHost } from "@/data/mockData";
+import { getTripById, getUserById, getSimilarTrips, getTripsByHost, getReviewsForTrip, getAverageRating, getTagsSummary } from "@/data/mockData";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Calendar, MapPin, IndianRupee, Users, ArrowLeft, Clock, Star,
