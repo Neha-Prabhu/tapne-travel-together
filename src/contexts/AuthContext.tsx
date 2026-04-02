@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { users, User } from "@/data/mockData";
 
 interface AuthContextType {
