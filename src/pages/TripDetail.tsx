@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { getTripById, getUserById, getSimilarTrips, getTripsByHost, getReviewsForTrip, getAverageRating, getTagsSummary } from "@/data/mockData";
+import { apiGet } from "@/lib/api";
+import type { TripData, TripDetailResponse } from "@/types/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Calendar, MapPin, IndianRupee, Users, ArrowLeft, Clock, Star,
@@ -20,7 +21,6 @@ import {
   DollarSign, Sparkles, Heart, UserCircle, Eye, Lock, Send,
   AlertTriangle, Loader2
 } from "lucide-react";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -35,17 +35,46 @@ const SECTIONS = [
   { id: "carry", label: "Packing" },
   { id: "policies", label: "Policies" },
   { id: "faqs", label: "FAQs" },
-  { id: "reviews", label: "Reviews" },
   { id: "host", label: "Host" },
 ];
 
 const TripDetail = () => {
   const { id } = useParams();
   const { user, isAuthenticated } = useAuth();
-  const trip = getTripById(id || "");
+  const [trip, setTrip] = useState<TripData | null>(null);
+  const [canManage, setCanManage] = useState(false);
+  const [similarTrips, setSimilarTrips] = useState<TripData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (!cfg?.api?.trips) { setLoading(false); return; }
+    setLoading(true);
+    apiGet<TripDetailResponse>(`${cfg.api.trips}${id}/`)
+      .then((data) => {
+        setTrip(data.trip);
+        setCanManage(data.can_manage_trip);
+        setSimilarTrips(data.similar_trips || []);
+      })
+      .catch(() => setTrip(null))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex flex-1 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!trip) {
     return (
@@ -61,32 +90,29 @@ const TripDetail = () => {
     );
   }
 
-  const host = getUserById(trip.hostId);
-  const spotsLeft = trip.maxGroupSize - trip.participantIds.length;
+  const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
   const isFull = spotsLeft <= 0;
-  const isJoined = user ? trip.participantIds.includes(user.id) : false;
-  const isHost = user?.id === trip.hostId;
-  const accessType = trip.accessType || "open";
-  const duration = Math.max(0, Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / 86400000));
-  const hostTripsCount = host ? getTripsByHost(host.id).length : 0;
-  const similarTrips = getSimilarTrips(trip, 3);
-  const price = trip.pricePerPerson || trip.budget;
-  const reviews = getReviewsForTrip(trip.id);
-  const avgRating = getAverageRating(trip.id);
-  const tagsSummary = getTagsSummary(trip.id);
-  const tripEnded = new Date(trip.endDate) < new Date();
-  const canReview = isJoined && tripEnded;
+  const isHost = canManage;
+  const accessType = trip.trip_type === "invite" ? "invite" : "open"; // simplified
+  const duration = trip.duration_days || (trip.starts_at && trip.ends_at
+    ? Math.max(0, Math.ceil((new Date(trip.ends_at).getTime() - new Date(trip.starts_at).getTime()) / 86400000))
+    : 0);
+  const price = trip.price_per_person || trip.total_trip_price || 0;
+
+  const joinStatus = trip.join_request_status;
+  const isJoined = joinStatus === "approved";
 
   const handleAction = () => {
     if (!isAuthenticated) { toast.info("Please log in first"); return; }
-    if (accessType === "apply") { setApplyModalOpen(true); return; }
-    if (accessType === "invite") { toast.info("This trip is invite-only. Request sent to host!"); return; }
     setBookingModalOpen(true);
   };
 
   const ctaLabel = isHost ? "Manage Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
-    accessType === "apply" ? "Apply to Join" : accessType === "invite" ? "Request Invite" : "Book Now";
-  const ctaDisabled = isJoined;
+    joinStatus === "pending" ? "Application Pending" : "Book Now";
+  const ctaDisabled = isJoined || joinStatus === "pending";
+
+  const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+  const fmtDateFull = (iso?: string) => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
 
   // ─── Sticky CTA Card (desktop sidebar) ───
   const BookingSidebar = () => (
@@ -96,31 +122,30 @@ const TripDetail = () => {
           <div className="mb-1 text-sm text-muted-foreground">Price per person</div>
           <div className="mb-1 flex items-baseline gap-2">
             <span className="text-3xl font-bold text-foreground">₹{price.toLocaleString()}</span>
-            {trip.earlyBirdPrice && (
-              <Badge variant="secondary" className="text-xs">Early bird: ₹{trip.earlyBirdPrice.toLocaleString()}</Badge>
+            {trip.early_bird_price && (
+              <Badge variant="secondary" className="text-xs">Early bird: ₹{trip.early_bird_price.toLocaleString()}</Badge>
             )}
           </div>
-          {trip.paymentTerms === "partial" && trip.advanceAmount && (
-            <p className="mb-3 text-xs text-muted-foreground">Advance: ₹{trip.advanceAmount.toLocaleString()} to confirm</p>
-          )}
 
           <div className="mb-4 space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Dates</span>
-              <span className="font-medium">{format(new Date(trip.startDate), "MMM d")} – {format(new Date(trip.endDate), "MMM d")}</span>
-            </div>
+            {trip.starts_at && trip.ends_at && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Dates</span>
+                <span className="font-medium">{fmtDate(trip.starts_at)} – {fmtDate(trip.ends_at)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Duration</span>
               <span className="font-medium">{duration}D / {Math.max(0, duration - 1)}N</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Spots left</span>
-              <span className={cn("font-medium", spotsLeft <= 3 ? "text-destructive" : "text-foreground")}>{spotsLeft} of {trip.maxGroupSize}</span>
+              <span className={cn("font-medium", spotsLeft <= 3 ? "text-destructive" : "text-foreground")}>{spotsLeft} of {trip.total_seats || "?"}</span>
             </div>
-            {trip.bookingCloseDate && (
+            {trip.booking_closes_at && (
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Book before</span>
-                <span className="font-medium">{format(new Date(trip.bookingCloseDate), "MMM d, yyyy")}</span>
+                <span className="font-medium">{fmtDateFull(trip.booking_closes_at)}</span>
               </div>
             )}
           </div>
@@ -151,18 +176,17 @@ const TripDetail = () => {
       </Card>
 
       {/* Host mini card */}
-      {host && (
+      {trip.host_display_name && (
         <Card>
           <CardContent className="p-4">
             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Hosted by</p>
             <div className="flex items-center gap-3">
               <Avatar className="h-11 w-11 border-2 border-primary/20">
-                <AvatarImage src={host.avatar} />
-                <AvatarFallback>{host.name[0]}</AvatarFallback>
+                <AvatarFallback>{trip.host_display_name[0]}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{host.name}</p>
-                <p className="text-xs text-muted-foreground">{hostTripsCount} trip{hostTripsCount !== 1 ? "s" : ""} hosted</p>
+                <p className="font-semibold text-foreground">{trip.host_display_name}</p>
+                {trip.host_location && <p className="text-xs text-muted-foreground">{trip.host_location}</p>}
               </div>
             </div>
           </CardContent>
@@ -195,7 +219,7 @@ const TripDetail = () => {
         {/* ─── HERO ─── */}
         <div className="relative">
           <div className="aspect-[21/9] max-h-[480px] w-full overflow-hidden sm:aspect-[3/1]">
-            <img src={trip.coverImage} alt={trip.title} className="h-full w-full object-cover" />
+            {trip.banner_image_url && <img src={trip.banner_image_url} alt={trip.title} className="h-full w-full object-cover" />}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </div>
           <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl px-4 pb-6 md:pb-8">
@@ -203,32 +227,27 @@ const TripDetail = () => {
               <Link to="/trips"><ArrowLeft className="mr-1 h-4 w-4" /> Back</Link>
             </Button>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge className="bg-primary text-primary-foreground">{trip.tripType}</Badge>
-              {trip.tripVibes?.map(v => (
+              {trip.trip_type && <Badge className="bg-primary text-primary-foreground">{trip.trip_type}</Badge>}
+              {trip.trip_vibe?.map(v => (
                 <Badge key={v} variant="secondary" className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">{v}</Badge>
               ))}
-              {accessType === "invite" && <Badge variant="outline" className="border-white/40 text-white text-xs"><Lock className="mr-1 h-3 w-3" />Invite Only</Badge>}
             </div>
             <h1 className="text-2xl font-bold text-white md:text-4xl lg:text-5xl">{trip.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-white/80 md:text-base">
-              <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{trip.destination}</span>
-              <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{format(new Date(trip.startDate), "MMM d")} – {format(new Date(trip.endDate), "MMM d, yyyy")}</span>
+              {trip.destination && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{trip.destination}</span>}
+              {trip.starts_at && trip.ends_at && <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{fmtDate(trip.starts_at)} – {fmtDateFull(trip.ends_at)}</span>}
               <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{duration}D/{Math.max(0, duration - 1)}N</span>
               <span className="flex items-center gap-1"><Users className="h-4 w-4" />{spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left</span>
             </div>
           </div>
         </div>
 
-        {/* ─── Section Nav (horizontal scroll) ─── */}
+        {/* ─── Section Nav ─── */}
         <div className="sticky top-16 z-20 border-b bg-card/95 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl">
             <nav className="flex gap-1 overflow-x-auto px-4 py-1.5 no-scrollbar">
               {SECTIONS.map(s => (
-                <a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
+                <a key={s.id} href={`#${s.id}`} className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                   {s.label}
                 </a>
               ))}
@@ -242,48 +261,50 @@ const TripDetail = () => {
             {/* Main Content */}
             <div className="min-w-0 flex-1 space-y-5">
 
-              {/* 2. Quick Snapshot */}
+              {/* Quick Snapshot */}
               <Section id="snapshot" icon={Eye} title="Quick Overview">
                 <p className="mb-4 text-muted-foreground leading-relaxed">{trip.summary || trip.description}</p>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {trip.suitableFor && trip.suitableFor.length > 0 && (
+                  {trip.suitable_for && trip.suitable_for.length > 0 && (
                     <div className="rounded-lg bg-muted/50 p-3">
                       <p className="text-xs text-muted-foreground mb-0.5">Ideal for</p>
-                      <p className="text-sm font-medium">{trip.suitableFor.join(", ")}</p>
+                      <p className="text-sm font-medium">{trip.suitable_for.join(", ")}</p>
                     </div>
                   )}
-                  {trip.experienceLevel && (
+                  {trip.difficulty_level && (
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Experience</p>
-                      <p className="text-sm font-medium">{trip.experienceLevel}</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">Difficulty</p>
+                      <p className="text-sm font-medium">{trip.difficulty_level}</p>
                     </div>
                   )}
-                  {trip.fitnessLevel && (
+                  {trip.pace_level && (
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Fitness</p>
-                      <p className="text-sm font-medium">{trip.fitnessLevel}</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">Pace</p>
+                      <p className="text-sm font-medium">{trip.pace_level}</p>
                     </div>
                   )}
-                  {trip.accommodationType && (
+                  {trip.group_size_label && (
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Stay type</p>
-                      <p className="text-sm font-medium">{trip.accommodationType}</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">Group size</p>
+                      <p className="text-sm font-medium">{trip.group_size_label}</p>
                     </div>
                   )}
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <p className="text-xs text-muted-foreground mb-0.5">Group size</p>
-                    <p className="text-sm font-medium">Max {trip.maxGroupSize} travelers</p>
-                  </div>
-                  {trip.bookingCloseDate && (
+                  {trip.total_seats && (
+                    <div className="rounded-lg bg-muted/50 p-3">
+                      <p className="text-xs text-muted-foreground mb-0.5">Total seats</p>
+                      <p className="text-sm font-medium">Max {trip.total_seats} travelers</p>
+                    </div>
+                  )}
+                  {trip.booking_closes_at && (
                     <div className="rounded-lg bg-muted/50 p-3">
                       <p className="text-xs text-muted-foreground mb-0.5">Book before</p>
-                      <p className="text-sm font-medium">{format(new Date(trip.bookingCloseDate), "MMM d, yyyy")}</p>
+                      <p className="text-sm font-medium">{fmtDateFull(trip.booking_closes_at)}</p>
                     </div>
                   )}
                 </div>
               </Section>
 
-              {/* 3. Highlights */}
+              {/* Highlights */}
               {trip.highlights && trip.highlights.length > 0 && (
                 <Section id="highlights" icon={Star} title="Highlights">
                   <ul className="space-y-2.5">
@@ -297,21 +318,21 @@ const TripDetail = () => {
                 </Section>
               )}
 
-              {/* 4. Itinerary */}
-              {trip.itinerary && trip.itinerary.length > 0 && (
+              {/* Itinerary */}
+              {trip.itinerary_days && trip.itinerary_days.length > 0 && (
                 <Section id="itinerary" icon={Calendar} title="Day-by-Day Itinerary">
                   {/* Desktop: timeline */}
                   <div className="hidden md:block">
                     <div className="relative border-l-2 border-primary/20 pl-6 space-y-6">
-                      {trip.itinerary.map((day, i) => (
+                      {trip.itinerary_days.map((day, i) => (
                         <div key={i} className="relative">
                           <div className="absolute -left-[33px] flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                            {i + 1}
+                            {day.day_number || i + 1}
                           </div>
                           <div className="rounded-lg border bg-card p-4">
                             <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-foreground">Day {i + 1}: {day.title}</h4>
-                              {day.isFlexible && <Badge variant="outline" className="text-xs">Flexible</Badge>}
+                              <h4 className="font-semibold text-foreground">Day {day.day_number || i + 1}: {day.title}</h4>
+                              {day.is_flexible && <Badge variant="outline" className="text-xs">Flexible</Badge>}
                             </div>
                             <p className="text-sm text-muted-foreground mb-2">{day.description}</p>
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -327,12 +348,12 @@ const TripDetail = () => {
                   {/* Mobile: accordion */}
                   <div className="md:hidden">
                     <Accordion type="single" collapsible>
-                      {trip.itinerary.map((day, i) => (
+                      {trip.itinerary_days.map((day, i) => (
                         <AccordionItem key={i} value={`day-${i}`}>
                           <AccordionTrigger className="text-sm">
                             <span className="flex items-center gap-2">
-                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{i + 1}</span>
-                              Day {i + 1}: {day.title}
+                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{day.day_number || i + 1}</span>
+                              Day {day.day_number || i + 1}: {day.title}
                             </span>
                           </AccordionTrigger>
                           <AccordionContent>
@@ -350,35 +371,11 @@ const TripDetail = () => {
                 </Section>
               )}
 
-              {/* 5. Stay */}
-              {(trip.accommodationType || trip.stayDescription) && (
-                <Section id="stay" icon={Hotel} title="Stay & Accommodation">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      {trip.accommodationType && <Badge variant="secondary">{trip.accommodationType}</Badge>}
-                      {trip.roomSharing && <Badge variant="outline">{trip.roomSharing}</Badge>}
-                    </div>
-                    {trip.stayName && <p className="font-medium text-foreground">{trip.stayName}</p>}
-                    {trip.stayDescription && <p className="text-sm text-muted-foreground leading-relaxed">{trip.stayDescription}</p>}
-                    {trip.amenities && trip.amenities.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">Amenities</p>
-                        <div className="flex flex-wrap gap-2">
-                          {trip.amenities.map(a => (
-                            <Badge key={a} variant="outline" className="text-xs">{a}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </Section>
-              )}
-
-              {/* 6 & 7. Included / Not Included */}
-              {(trip.includedItems || trip.notIncludedItems) && (
+              {/* Included / Not Included */}
+              {(trip.included_items || trip.not_included_items) && (
                 <section id="included" className="scroll-mt-24">
                   <div className="grid gap-5 sm:grid-cols-2">
-                    {trip.includedItems && trip.includedItems.length > 0 && (
+                    {trip.included_items && trip.included_items.length > 0 && (
                       <Card>
                         <CardHeader className="pb-3">
                           <div className="flex items-center gap-2.5">
@@ -390,7 +387,7 @@ const TripDetail = () => {
                         </CardHeader>
                         <CardContent>
                           <ul className="space-y-2">
-                            {trip.includedItems.map((item, i) => (
+                            {trip.included_items.map((item, i) => (
                               <li key={i} className="flex items-center gap-2 text-sm">
                                 <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
                                 <span>{item}</span>
@@ -400,7 +397,7 @@ const TripDetail = () => {
                         </CardContent>
                       </Card>
                     )}
-                    {trip.notIncludedItems && trip.notIncludedItems.length > 0 && (
+                    {trip.not_included_items && trip.not_included_items.length > 0 && (
                       <Card>
                         <CardHeader className="pb-3">
                           <div className="flex items-center gap-2.5">
@@ -412,7 +409,7 @@ const TripDetail = () => {
                         </CardHeader>
                         <CardContent>
                           <ul className="space-y-2">
-                            {trip.notIncludedItems.map((item, i) => (
+                            {trip.not_included_items.map((item, i) => (
                               <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <XCircle className="h-4 w-4 shrink-0 text-destructive/60" />
                                 <span>{item}</span>
@@ -426,60 +423,33 @@ const TripDetail = () => {
                 </section>
               )}
 
-              {/* 8. Price Breakdown */}
+              {/* Price Breakdown */}
               <Section id="pricing" icon={DollarSign} title="Price Breakdown">
                 <div className="space-y-3">
                   <div className="flex items-baseline justify-between rounded-lg bg-primary/5 p-3">
                     <span className="font-medium">Total price per person</span>
                     <span className="text-xl font-bold text-primary">₹{price.toLocaleString()}</span>
                   </div>
-                  {trip.earlyBirdPrice && (
+                  {trip.early_bird_price && (
                     <div className="flex items-center justify-between rounded-lg bg-accent/50 p-3 text-sm">
                       <span>Early bird price</span>
-                      <span className="font-semibold text-accent-foreground">₹{trip.earlyBirdPrice.toLocaleString()}</span>
+                      <span className="font-semibold text-accent-foreground">₹{trip.early_bird_price.toLocaleString()}</span>
                     </div>
                   )}
-                  {trip.paymentTerms === "partial" && trip.advanceAmount && (
+                  {trip.payment_terms === "partial" && (
                     <div className="flex items-center justify-between p-3 text-sm border rounded-lg">
-                      <span className="text-muted-foreground">Advance to confirm</span>
-                      <span className="font-medium">₹{trip.advanceAmount.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {trip.breakdown && (
-                    <Accordion type="single" collapsible>
-                      <AccordionItem value="breakdown">
-                        <AccordionTrigger className="text-sm">Cost breakdown</AccordionTrigger>
-                        <AccordionContent>
-                          <div className="space-y-2 text-sm">
-                            {Object.entries(trip.breakdown).filter(([, v]) => v && v !== "0").map(([key, val]) => (
-                              <div key={key} className="flex justify-between">
-                                <span className="capitalize text-muted-foreground">{key}</span>
-                                <span className="font-medium">₹{Number(val).toLocaleString()}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  )}
-                  {(trip.flightCostRange || trip.optionalActivitiesCost || trip.bufferBudget) && (
-                    <div className="border-t pt-3 mt-2">
-                      <p className="text-sm font-medium mb-2 text-muted-foreground">Estimated extra expenses</p>
-                      <div className="space-y-1.5 text-sm">
-                        {trip.flightCostRange && <div className="flex justify-between"><span className="text-muted-foreground">Flights</span><span>{trip.flightCostRange}</span></div>}
-                        {trip.optionalActivitiesCost && <div className="flex justify-between"><span className="text-muted-foreground">Optional activities</span><span>{trip.optionalActivitiesCost}</span></div>}
-                        {trip.bufferBudget && <div className="flex justify-between"><span className="text-muted-foreground">Buffer budget</span><span>{trip.bufferBudget}</span></div>}
-                      </div>
+                      <span className="text-muted-foreground">Payment type</span>
+                      <span className="font-medium">Partial advance</span>
                     </div>
                   )}
                 </div>
               </Section>
 
-              {/* 9. Things to Carry */}
-              {trip.thingsToCarry && trip.thingsToCarry.length > 0 && (
+              {/* Things to Carry */}
+              {trip.things_to_carry && trip.things_to_carry.length > 0 && (
                 <Section id="carry" icon={Backpack} title="Things to Carry">
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {trip.thingsToCarry.map((item, i) => (
+                    {trip.things_to_carry.map((item, i) => (
                       <div key={i} className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
                         <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
                         {item}
@@ -489,31 +459,19 @@ const TripDetail = () => {
                 </Section>
               )}
 
-              {/* 10 & 11. Policies & Safety */}
-              {(trip.cancellationPolicy || trip.codeOfConduct || trip.medicalDeclaration) && (
+              {/* Policies & Safety */}
+              {trip.cancellation_policy && (
                 <Section id="policies" icon={Shield} title="Policies & Safety">
                   <div className="space-y-4">
-                    {trip.cancellationPolicy && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-1">Cancellation Policy</h4>
-                        <p className="text-sm text-muted-foreground">{trip.cancellationPolicy}</p>
-                      </div>
-                    )}
-                    {trip.codeOfConduct && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-1">Code of Conduct</h4>
-                        <p className="text-sm text-muted-foreground">{trip.codeOfConduct}</p>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      {trip.medicalDeclaration && <Badge variant="outline" className="text-xs">Medical declaration required</Badge>}
-                      {trip.emergencyContact && <Badge variant="outline" className="text-xs">Emergency contact required</Badge>}
+                    <div>
+                      <h4 className="text-sm font-semibold mb-1">Cancellation Policy</h4>
+                      <p className="text-sm text-muted-foreground">{trip.cancellation_policy}</p>
                     </div>
                   </div>
                 </Section>
               )}
 
-              {/* 12. FAQs */}
+              {/* FAQs */}
               {trip.faqs && trip.faqs.length > 0 && (
                 <Section id="faqs" icon={HelpCircle} title="Frequently Asked Questions">
                   <Accordion type="single" collapsible>
@@ -529,185 +487,28 @@ const TripDetail = () => {
                 </Section>
               )}
 
-              {/* Reviews Section */}
-              <section id="reviews" className="scroll-mt-24">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                          <Star className="h-4 w-4 text-primary" />
-                        </div>
-                        <CardTitle className="text-lg">
-                          Reviews {reviews.length > 0 && `(${reviews.length})`}
-                        </CardTitle>
-                      </div>
-                      {canReview && (
-                        <Button size="sm" onClick={() => setReviewModalOpen(true)}>
-                          Write Review
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {reviews.length === 0 ? (
-                      <div className="text-center py-6">
-                        <p className="text-muted-foreground text-sm">No reviews yet. Be the first to share your experience!</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-5">
-                        {/* Rating summary */}
-                        <div className="flex items-center gap-4 rounded-lg bg-muted/50 p-4">
-                          <div className="text-center">
-                            <p className="text-3xl font-bold text-foreground">{avgRating.toFixed(1)}</p>
-                            <div className="flex mt-1">
-                              {[1, 2, 3, 4, 5].map(s => (
-                                <Star key={s} className={cn("h-3.5 w-3.5", s <= Math.round(avgRating) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
-                              ))}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</p>
-                          </div>
-                          {tagsSummary.length > 0 && (
-                            <div className="flex-1">
-                              <div className="flex flex-wrap gap-1.5">
-                                {tagsSummary.slice(0, 5).map(({ tag, count }) => (
-                                  <Badge key={tag} variant="secondary" className="text-xs">
-                                    {tag} ({count})
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Individual reviews */}
-                        {reviews.map(review => (
-                          <div key={review.id} className="border-t pt-4 first:border-0 first:pt-0">
-                            <div className="flex items-center gap-3 mb-2">
-                              <Avatar className="h-9 w-9">
-                                <AvatarImage src={review.userAvatar} />
-                                <AvatarFallback>{review.userName[0]}</AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium">{review.userName}</p>
-                                <div className="flex items-center gap-2">
-                                  <div className="flex">
-                                    {[1, 2, 3, 4, 5].map(s => (
-                                      <Star key={s} className={cn("h-3 w-3", s <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
-                                    ))}
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <p className="text-sm text-foreground mb-1">{review.loved}</p>
-                            {review.improve && (
-                              <p className="text-sm text-muted-foreground italic">"{review.improve}"</p>
-                            )}
-                            {review.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {review.tags.map(tag => (
-                                  <Badge key={tag} variant="outline" className="text-[10px] py-0">{tag}</Badge>
-                                ))}
-                              </div>
-                            )}
-                            {review.photos && review.photos.length > 0 && (
-                              <div className="flex gap-2 mt-2">
-                                {review.photos.map((url, i) => (
-                                  <img key={i} src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </section>
-
-              {/* 13. Host */}
-              {host && (
+              {/* Host */}
+              {trip.host_display_name && (
                 <Section id="host" icon={UserCircle} title="Meet Your Host">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-16 w-16 border-2 border-primary/20">
-                      <AvatarImage src={host.avatar} />
-                      <AvatarFallback className="text-lg">{host.name[0]}</AvatarFallback>
+                      <AvatarFallback className="text-lg">{trip.host_display_name[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-foreground">{host.name}</h4>
-                      <p className="text-sm text-muted-foreground mb-1">{host.location}</p>
-                      <p className="text-sm text-muted-foreground mb-2">{host.bio}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{hostTripsCount} trip{hostTripsCount !== 1 ? "s" : ""} hosted</span>
-                        {trip.contactPreference && (
-                          <span>Contact: {trip.contactPreference}</span>
-                        )}
-                      </div>
-                      <Button variant="outline" size="sm" className="mt-3" asChild>
-                        <Link to="/profile">View Profile</Link>
-                      </Button>
+                      <h4 className="text-lg font-semibold text-foreground">{trip.host_display_name}</h4>
+                      {trip.host_location && <p className="text-sm text-muted-foreground mb-1">{trip.host_location}</p>}
+                      {trip.host_bio && <p className="text-sm text-muted-foreground mb-2">{trip.host_bio}</p>}
                     </div>
                   </div>
                 </Section>
               )}
 
               {/* Host Application Management */}
-              {isHost && accessType === "apply" && (
-                <ApplicationManager trip={trip} />
+              {isHost && (
+                <ApplicationManager tripId={trip.id} />
               )}
 
-              {/* 14. Participants */}
-              <section className="scroll-mt-24">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                          <Users className="h-4 w-4 text-primary" />
-                        </div>
-                        <CardTitle className="text-lg">
-                          Travelers ({trip.participantIds.length}/{trip.maxGroupSize})
-                        </CardTitle>
-                      </div>
-                      {trip.participantIds.length > 1 && (
-                        <Badge variant="secondary" className="text-xs">{trip.participantIds.length} joined</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-3">
-                      {trip.participantIds.map((pid) => {
-                        const p = getUserById(pid);
-                        if (!p) return null;
-                        return (
-                          <div key={pid} className="flex items-center gap-2 rounded-full bg-muted/50 px-3 py-1.5">
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={p.avatar} />
-                              <AvatarFallback className="text-xs">{p.name[0]}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">{p.name}</span>
-                            {pid === trip.hostId && <Badge variant="outline" className="text-[10px] h-4 px-1.5">Host</Badge>}
-                          </div>
-                        );
-                      })}
-                      {Array.from({ length: spotsLeft }).map((_, i) => (
-                        <div key={`empty-${i}`} className="flex items-center gap-2 rounded-full border border-dashed border-border px-3 py-1.5">
-                          <div className="h-7 w-7 rounded-full bg-muted" />
-                          <span className="text-sm text-muted-foreground">Open spot</span>
-                        </div>
-                      )).slice(0, 4)}
-                      {spotsLeft > 4 && (
-                        <div className="flex items-center px-2 text-sm text-muted-foreground">+{spotsLeft - 4} more spots</div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </section>
-
-              {/* 15. Similar Trips */}
+              {/* Similar Trips */}
               {similarTrips.length > 0 && (
                 <section className="scroll-mt-24">
                   <h2 className="text-xl font-bold text-foreground mb-4">Similar Trips</h2>
@@ -744,7 +545,6 @@ const TripDetail = () => {
             </Button>
           </div>
         </div>
-        {/* spacer for mobile sticky CTA */}
         <div className="h-20 lg:hidden" />
       </main>
       <Footer />

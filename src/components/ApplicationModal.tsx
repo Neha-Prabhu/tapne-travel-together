@@ -5,10 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Trip, ApplicationQuestion } from "@/data/mockData";
+import type { TripData } from "@/types/api";
+import { apiPost } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -19,10 +18,10 @@ import {
 interface ApplicationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trip: Trip;
+  trip: TripData;
 }
 
-const STEPS = ["Your Details", "Questions", "Submit"];
+const STEPS = ["Your Details", "Submit"];
 
 const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) => {
   const { user } = useAuth();
@@ -31,71 +30,52 @@ const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) =
 
   // Auto fields
   const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
 
-  // Custom question answers
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
-
-  const questions = trip.applicationConfig?.customQuestions || [];
-  const hasQuestions = questions.length > 0;
-
-  const updateAnswer = (qId: string, val: string | string[]) => {
-    setAnswers(prev => ({ ...prev, [qId]: val }));
-  };
-
-  const toggleMultiAnswer = (qId: string, option: string) => {
-    setAnswers(prev => {
-      const current = (prev[qId] as string[]) || [];
-      const updated = current.includes(option)
-        ? current.filter(o => o !== option)
-        : [...current, option];
-      return { ...prev, [qId]: updated };
-    });
-  };
-
   const canProceedStep1 = name.trim() && email.trim() && phone.trim() && age.trim();
-
-  const canProceedStep2 = questions.every(q => {
-    if (!q.required) return true;
-    const a = answers[q.id];
-    if (Array.isArray(a)) return a.length > 0;
-    return a && (a as string).trim().length > 0;
-  });
 
   const handleSubmit = async () => {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setLoading(false);
-    setStep(hasQuestions ? 3 : 2); // success
-    toast.success("Application submitted! 🎉");
+    try {
+      const message = `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nAge: ${age}\nGender: ${gender || "Not specified"}`;
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPost(`${cfg.api.trips}${trip.id}/join-request/`, { message });
+      setStep(2); // success
+      toast.success("Application submitted! 🎉");
+    } catch (err: any) {
+      if (err?.error === "already_requested") {
+        toast.error("You already have a pending application");
+      } else {
+        toast.error(err?.error || "Something went wrong");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetAndClose = () => {
     setStep(0);
-    setAnswers({});
     onOpenChange(false);
   };
-
-  const successStep = hasQuestions ? 3 : 2;
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        {step < successStep && (
+        {step < 2 && (
           <>
             <DialogHeader>
               <DialogTitle className="text-xl">Apply to Join</DialogTitle>
             </DialogHeader>
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
-                {(hasQuestions ? STEPS : ["Your Details", "Submit"]).map((s, i) => (
+                {STEPS.map((s, i) => (
                   <span key={s} className={cn("font-medium", i <= step ? "text-primary" : "")}>{s}</span>
                 ))}
               </div>
-              <Progress value={((step + 1) / (hasQuestions ? STEPS.length : 2)) * 100} className="h-1.5" />
+              <Progress value={((step + 1) / STEPS.length) * 100} className="h-1.5" />
             </div>
             <div className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
               <span className="font-medium">{trip.title}</span>
@@ -138,78 +118,13 @@ const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) =
               </Select>
             </div>
             <Button className="w-full" onClick={() => setStep(1)} disabled={!canProceedStep1}>
-              {hasQuestions ? (
-                <>Continue <ArrowRight className="ml-1.5 h-4 w-4" /></>
-              ) : (
-                <>Review & Submit <ArrowRight className="ml-1.5 h-4 w-4" /></>
-              )}
+              Review & Submit <ArrowRight className="ml-1.5 h-4 w-4" />
             </Button>
           </div>
         )}
 
-        {/* Step 2: Custom Questions (only if questions exist) */}
-        {step === 1 && hasQuestions && (
-          <div className="space-y-4">
-            {questions.map((q) => (
-              <div key={q.id} className="space-y-1.5">
-                <Label className="text-sm font-medium">
-                  {q.question} {q.required && <span className="text-destructive">*</span>}
-                </Label>
-                {q.type === "short" && (
-                  <Input
-                    value={(answers[q.id] as string) || ""}
-                    onChange={e => updateAnswer(q.id, e.target.value)}
-                    placeholder="Your answer..."
-                  />
-                )}
-                {q.type === "long" && (
-                  <Textarea
-                    rows={3}
-                    value={(answers[q.id] as string) || ""}
-                    onChange={e => updateAnswer(q.id, e.target.value)}
-                    placeholder="Your answer..."
-                  />
-                )}
-                {q.type === "single_select" && q.options && (
-                  <Select value={(answers[q.id] as string) || ""} onValueChange={v => updateAnswer(q.id, v)}>
-                    <SelectTrigger><SelectValue placeholder="Select an option" /></SelectTrigger>
-                    <SelectContent>
-                      {q.options.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-                {q.type === "multiple_choice" && q.options && (
-                  <div className="flex flex-wrap gap-2">
-                    {q.options.map(opt => {
-                      const selected = ((answers[q.id] as string[]) || []).includes(opt);
-                      return (
-                        <Badge
-                          key={opt}
-                          variant={selected ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => toggleMultiAnswer(q.id, opt)}
-                        >
-                          {opt}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
-                <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
-              </Button>
-              <Button onClick={() => setStep(2)} disabled={!canProceedStep2} className="flex-1">
-                Review <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* Submit review step */}
-        {((step === 1 && !hasQuestions) || (step === 2 && hasQuestions)) && (
+        {step === 1 && (
           <div className="space-y-4">
             <div className="rounded-lg border p-4 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span className="font-medium">{name}</span></div>
@@ -219,29 +134,13 @@ const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) =
               {gender && <div className="flex justify-between"><span className="text-muted-foreground">Gender</span><span className="font-medium capitalize">{gender}</span></div>}
             </div>
 
-            {hasQuestions && Object.keys(answers).length > 0 && (
-              <div className="rounded-lg border p-4 space-y-2 text-sm">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Your Answers</p>
-                {questions.map(q => {
-                  const a = answers[q.id];
-                  if (!a || (Array.isArray(a) && a.length === 0)) return null;
-                  return (
-                    <div key={q.id}>
-                      <p className="text-xs text-muted-foreground">{q.question}</p>
-                      <p className="font-medium">{Array.isArray(a) ? a.join(", ") : a}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
             <div className="rounded-lg bg-primary/5 p-3 text-sm text-muted-foreground">
               <ClipboardList className="inline h-4 w-4 mr-1.5 text-primary" />
               The host will review your application and get back to you.
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(hasQuestions ? 1 : 0)} className="flex-1">
+              <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
                 <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
               </Button>
               <Button onClick={handleSubmit} disabled={loading} className="flex-1">
@@ -253,7 +152,7 @@ const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) =
         )}
 
         {/* Success */}
-        {step === successStep && (
+        {step === 2 && (
           <div className="py-6 text-center space-y-4">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
               <CheckCircle2 className="h-8 w-8 text-primary" />

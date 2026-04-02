@@ -154,16 +154,17 @@ const CreateTrip = () => {
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
 
   // If no draft param, create one and redirect
-  const [draftId, setDraftId] = useState<string>(() => {
-    if (draftIdParam) return draftIdParam;
-    return "";
+  const [draftId, setDraftId] = useState<number | null>(() => {
+    if (draftIdParam) return Number(draftIdParam);
+    return null;
   });
 
   useEffect(() => {
-    if (!draftId && !draftIdParam) {
-      const id = createDraft();
-      setDraftId(id);
-      window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+    if (draftId == null && !draftIdParam) {
+      createDraft().then((id) => {
+        setDraftId(id);
+        window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+      });
     }
   }, [draftId, draftIdParam, createDraft]);
 
@@ -248,9 +249,9 @@ const CreateTrip = () => {
   // ── Load draft data on mount ──
   const hasLoadedDraft = useRef(false);
   useEffect(() => {
-    const id = draftId || draftIdParam;
-    if (!id || hasLoadedDraft.current) return;
-    const draft = getDraft(id);
+    const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
+    if (!numId || hasLoadedDraft.current) return;
+    const draft = getDraft(numId);
     if (!draft) return;
     hasLoadedDraft.current = true;
     if (draft.title) setTitle(draft.title);
@@ -397,7 +398,7 @@ const CreateTrip = () => {
   };
 
   const saveDraftData = useCallback(() => {
-    const id = draftId || draftIdParam;
+    const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
     if (!id) return;
     updateDraft(id, {
       title, destination, category, summary, startDate, endDate,
@@ -449,8 +450,8 @@ const CreateTrip = () => {
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
     saveDraftData();
-    const id = draftId || draftIdParam;
-    if (id) publishDraft(id);
+    const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
+    if (numId) await publishDraft(numId);
     await new Promise(r => setTimeout(r, 1500));
     toast.success("Trip published! 🎉");
     navigate("/my-trips");

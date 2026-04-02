@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Trip } from "@/data/mockData";
+import type { TripData } from "@/types/api";
+import { apiPost } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   Calendar, MapPin, Users, IndianRupee, CheckCircle2, Loader2,
@@ -19,7 +19,7 @@ import {
 interface BookingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trip: Trip;
+  trip: TripData;
 }
 
 const STEPS = ["Summary", "Your Details", "Confirm"];
@@ -31,23 +31,39 @@ const BookingModal = ({ open, onOpenChange, trip }: BookingModalProps) => {
   const [agreed, setAgreed] = useState(false);
 
   const [name, setName] = useState(user?.name || "");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState("");
 
-  const price = trip.pricePerPerson || trip.budget;
-  const isPartial = trip.paymentTerms === "partial" && trip.advanceAmount;
-  const payableNow = isPartial ? trip.advanceAmount! : price;
-  const duration = Math.max(0, Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / 86400000));
+  const price = trip.price_per_person || trip.total_trip_price || 0;
+  const isPartial = trip.payment_terms === "partial";
+  const payableNow = price; // server handles partial logic
+  const duration = trip.duration_days || (trip.starts_at && trip.ends_at
+    ? Math.max(0, Math.ceil((new Date(trip.ends_at).getTime() - new Date(trip.starts_at).getTime()) / 86400000))
+    : 0);
+  const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
+
+  const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 
   const handleConfirm = async () => {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setLoading(false);
-    setStep(3); // success
-    toast.success("Booking confirmed! 🎉");
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPost(`${cfg.api.trips}${trip.id}/join-request/`, {
+        message: `${name} | ${phone}`,
+      });
+      setStep(3);
+      toast.success("Booking confirmed! 🎉");
+    } catch (err: any) {
+      if (err?.error === "already_requested") {
+        toast.error("You already have a pending application");
+      } else {
+        toast.error(err?.error || "Something went wrong");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const canProceedStep1 = true;
   const canProceedStep2 = name.trim() && email.trim() && phone.trim();
 
   const resetAndClose = () => {
@@ -64,7 +80,6 @@ const BookingModal = ({ open, onOpenChange, trip }: BookingModalProps) => {
             <DialogHeader>
               <DialogTitle className="text-xl">Book Your Trip</DialogTitle>
             </DialogHeader>
-            {/* Progress */}
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
                 {STEPS.map((s, i) => (
@@ -88,11 +103,13 @@ const BookingModal = ({ open, onOpenChange, trip }: BookingModalProps) => {
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Calendar className="h-3.5 w-3.5" />{duration}D / {Math.max(0, duration - 1)}N
                 </div>
+                {trip.starts_at && trip.ends_at && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />{fmtDate(trip.starts_at)} – {fmtDate(trip.ends_at)}
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Calendar className="h-3.5 w-3.5" />{format(new Date(trip.startDate), "MMM d")} – {format(new Date(trip.endDate), "MMM d")}
-                </div>
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Users className="h-3.5 w-3.5" />{trip.maxGroupSize - trip.participantIds.length} spots left
+                  <Users className="h-3.5 w-3.5" />{spotsLeft} spots left
                 </div>
               </div>
             </div>
@@ -102,20 +119,14 @@ const BookingModal = ({ open, onOpenChange, trip }: BookingModalProps) => {
                 <span className="text-muted-foreground">Price per person</span>
                 <span className="font-semibold">₹{price.toLocaleString()}</span>
               </div>
-              {isPartial && (
+              {isPartial ? (
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Payment type</span>
                     <Badge variant="secondary" className="text-xs">Partial advance</Badge>
                   </div>
-                  <div className="flex justify-between text-sm border-t pt-2">
-                    <span className="font-medium">Pay now (advance)</span>
-                    <span className="font-bold text-primary">₹{payableNow.toLocaleString()}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Remaining ₹{(price - payableNow).toLocaleString()} due before trip start</p>
                 </>
-              )}
-              {!isPartial && (
+              ) : (
                 <div className="flex justify-between text-sm border-t pt-2">
                   <span className="font-medium">Total payable</span>
                   <span className="font-bold text-primary">₹{price.toLocaleString()}</span>
@@ -170,12 +181,12 @@ const BookingModal = ({ open, onOpenChange, trip }: BookingModalProps) => {
               </div>
             </div>
 
-            {trip.cancellationPolicy && (
+            {trip.cancellation_policy && (
               <div className="rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5 mb-1 font-medium text-foreground">
                   <Shield className="h-3.5 w-3.5" /> Cancellation Policy
                 </div>
-                {trip.cancellationPolicy}
+                {trip.cancellation_policy}
               </div>
             )}
 
@@ -208,7 +219,9 @@ const BookingModal = ({ open, onOpenChange, trip }: BookingModalProps) => {
             </div>
             <div className="rounded-lg border p-4 text-sm text-left space-y-1.5">
               <div className="flex justify-between"><span className="text-muted-foreground">Trip</span><span className="font-medium">{trip.title}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Dates</span><span className="font-medium">{format(new Date(trip.startDate), "MMM d")} – {format(new Date(trip.endDate), "MMM d")}</span></div>
+              {trip.starts_at && trip.ends_at && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Dates</span><span className="font-medium">{fmtDate(trip.starts_at)} – {fmtDate(trip.ends_at)}</span></div>
+              )}
               <div className="flex justify-between"><span className="text-muted-foreground">Amount paid</span><span className="font-bold text-primary">₹{payableNow.toLocaleString()}</span></div>
             </div>
             <p className="text-xs text-muted-foreground">A confirmation has been sent to your email.</p>

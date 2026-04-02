@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { getTripsByHost, getTripsJoinedByUser } from "@/data/mockData";
+import { apiGet } from "@/lib/api";
+import type { ProfileData, TripData, MyTripsResponse } from "@/types/api";
 import TripCard from "@/components/TripCard";
-import { MapPin, Edit } from "lucide-react";
+import { MapPin, Edit, Loader2 } from "lucide-react";
 
 const Profile = () => {
   const { user, isAuthenticated, updateProfile } = useAuth();
@@ -22,13 +23,30 @@ const Profile = () => {
   const [editBio, setEditBio] = useState("");
   const [editLocation, setEditLocation] = useState("");
 
+  const [createdTrips, setCreatedTrips] = useState<TripData[]>([]);
+  const [joinedTrips, setJoinedTrips] = useState<TripData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (!cfg?.api?.my_trips) { setLoading(false); return; }
+    apiGet<MyTripsResponse>(cfg.api.my_trips)
+      .then((data) => {
+        // Split by tab or by is_draft
+        const created = data.trips.filter(t => !t.is_draft && t.can_manage);
+        const joined = data.trips.filter(t => !t.is_draft && !t.can_manage);
+        setCreatedTrips(created);
+        setJoinedTrips(joined);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [isAuthenticated]);
+
   if (!isAuthenticated || !user) {
     navigate("/login");
     return null;
   }
-
-  const created = getTripsByHost(user.id);
-  const joined = getTripsJoinedByUser(user.id);
 
   const openEdit = () => {
     setEditName(user.name);
@@ -83,21 +101,25 @@ const Profile = () => {
           {/* Tabs */}
           <Tabs defaultValue="created">
             <TabsList className="mb-6">
-              <TabsTrigger value="created">Trips Created ({created.length})</TabsTrigger>
-              <TabsTrigger value="joined">Trips Joined ({joined.length})</TabsTrigger>
+              <TabsTrigger value="created">Trips Created ({createdTrips.length})</TabsTrigger>
+              <TabsTrigger value="joined">Trips Joined ({joinedTrips.length})</TabsTrigger>
             </TabsList>
             <TabsContent value="created">
-              {created.length === 0 ? (
+              {loading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : createdTrips.length === 0 ? (
                 <p className="py-12 text-center text-muted-foreground">You haven't created any trips yet.</p>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{created.map((t) => <TripCard key={t.id} trip={t} />)}</div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{createdTrips.map((t) => <TripCard key={t.id} trip={t} />)}</div>
               )}
             </TabsContent>
             <TabsContent value="joined">
-              {joined.length === 0 ? (
+              {loading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : joinedTrips.length === 0 ? (
                 <p className="py-12 text-center text-muted-foreground">You haven't joined any trips yet.</p>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{joined.map((t) => <TripCard key={t.id} trip={t} />)}</div>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{joinedTrips.map((t) => <TripCard key={t.id} trip={t} />)}</div>
               )}
             </TabsContent>
           </Tabs>

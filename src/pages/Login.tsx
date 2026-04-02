@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, lastAuthError } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +24,7 @@ const Login = () => {
     const ok = await login(email, password);
     setLoading(false);
     if (ok) navigate("/");
-    else setError("Invalid credentials");
+    else setError(lastAuthError || "Invalid credentials");
   };
 
   return (

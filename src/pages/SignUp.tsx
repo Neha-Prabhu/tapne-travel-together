@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
 const SignUp = () => {
-  const { signup } = useAuth();
+  const { signup, lastAuthError } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,7 +26,7 @@ const SignUp = () => {
     const ok = await signup(name, email, password);
     setLoading(false);
     if (ok) navigate("/");
-    else setError("Something went wrong");
+    else setError(lastAuthError || "Something went wrong");
   };
 
   return (
