@@ -6,6 +6,7 @@ import TripCard from "@/components/TripCard";
 import BookingModal from "@/components/BookingModal";
 import ApplicationModal from "@/components/ApplicationModal";
 import ApplicationManager from "@/components/ApplicationManager";
+import ReviewModal from "@/components/ReviewModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
