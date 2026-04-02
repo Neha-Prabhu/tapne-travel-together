@@ -249,9 +249,9 @@ const CreateTrip = () => {
   // ── Load draft data on mount ──
   const hasLoadedDraft = useRef(false);
   useEffect(() => {
-    const id = draftId || draftIdParam;
-    if (!id || hasLoadedDraft.current) return;
-    const draft = getDraft(id);
+    const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
+    if (!numId || hasLoadedDraft.current) return;
+    const draft = getDraft(numId);
     if (!draft) return;
     hasLoadedDraft.current = true;
     if (draft.title) setTitle(draft.title);
