@@ -28,13 +28,13 @@ const CreateTripModal = ({ open, onOpenChange }: CreateTripModalProps) => {
     return `${days}d ago`;
   };
 
-  const handleNewTrip = () => {
-    const id = createDraft();
+  const handleNewTrip = async () => {
+    const id = await createDraft();
     onOpenChange(false);
     navigate(`/create-trip?draft=${id}`);
   };
 
-  const handleContinueDraft = (id: string) => {
+  const handleContinueDraft = (id: number) => {
     onOpenChange(false);
     navigate(`/create-trip?draft=${id}`);
   };
@@ -47,7 +47,6 @@ const CreateTripModal = ({ open, onOpenChange }: CreateTripModalProps) => {
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
-          {/* New Trip */}
           <Button onClick={handleNewTrip} className="w-full justify-start gap-3 h-14 text-base">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-foreground/20">
               <Plus className="h-5 w-5" />
@@ -55,7 +54,6 @@ const CreateTripModal = ({ open, onOpenChange }: CreateTripModalProps) => {
             Start a New Trip
           </Button>
 
-          {/* Recent Drafts */}
           {recentDrafts.length > 0 && (
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-3">Continue a Draft</p>
