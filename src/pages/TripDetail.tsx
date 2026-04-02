@@ -753,6 +753,8 @@ const TripDetail = () => {
       <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />
       {/* Application Modal */}
       <ApplicationModal open={applyModalOpen} onOpenChange={setApplyModalOpen} trip={trip} />
+      {/* Review Modal */}
+      <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} />
     </div>
   );
 };
