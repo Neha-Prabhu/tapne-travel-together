@@ -398,7 +398,7 @@ const CreateTrip = () => {
   };
 
   const saveDraftData = useCallback(() => {
-    const id = draftId || draftIdParam;
+    const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
     if (!id) return;
     updateDraft(id, {
       title, destination, category, summary, startDate, endDate,
