@@ -450,8 +450,8 @@ const CreateTrip = () => {
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
     saveDraftData();
-    const id = draftId || draftIdParam;
-    if (id) publishDraft(id);
+    const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
+    if (numId) await publishDraft(numId);
     await new Promise(r => setTimeout(r, 1500));
     toast.success("Trip published! 🎉");
     navigate("/my-trips");
