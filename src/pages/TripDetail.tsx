@@ -45,6 +45,7 @@ const TripDetail = () => {
   const trip = getTripById(id || "");
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   if (!trip) {
     return (
