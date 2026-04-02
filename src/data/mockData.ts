@@ -72,6 +72,21 @@ export interface TripBooking {
   amountPaid: number;
 }
 
+export interface TripReview {
+  id: string;
+  tripId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  rating: number;
+  loved: string;
+  improve?: string;
+  travelAgain: "Yes" | "Maybe" | "No";
+  tags: string[];
+  photos?: string[];
+  createdAt: string;
+}
+
 export interface Trip {
   id: string;
   title: string;
