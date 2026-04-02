@@ -529,6 +529,105 @@ const TripDetail = () => {
                 </Section>
               )}
 
+              {/* Reviews Section */}
+              <section id="reviews" className="scroll-mt-24">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                          <Star className="h-4 w-4 text-primary" />
+                        </div>
+                        <CardTitle className="text-lg">
+                          Reviews {reviews.length > 0 && `(${reviews.length})`}
+                        </CardTitle>
+                      </div>
+                      {canReview && (
+                        <Button size="sm" onClick={() => setReviewModalOpen(true)}>
+                          Write Review
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {reviews.length === 0 ? (
+                      <div className="text-center py-6">
+                        <p className="text-muted-foreground text-sm">No reviews yet. Be the first to share your experience!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        {/* Rating summary */}
+                        <div className="flex items-center gap-4 rounded-lg bg-muted/50 p-4">
+                          <div className="text-center">
+                            <p className="text-3xl font-bold text-foreground">{avgRating.toFixed(1)}</p>
+                            <div className="flex mt-1">
+                              {[1, 2, 3, 4, 5].map(s => (
+                                <Star key={s} className={cn("h-3.5 w-3.5", s <= Math.round(avgRating) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                              ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</p>
+                          </div>
+                          {tagsSummary.length > 0 && (
+                            <div className="flex-1">
+                              <div className="flex flex-wrap gap-1.5">
+                                {tagsSummary.slice(0, 5).map(({ tag, count }) => (
+                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                    {tag} ({count})
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Individual reviews */}
+                        {reviews.map(review => (
+                          <div key={review.id} className="border-t pt-4 first:border-0 first:pt-0">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={review.userAvatar} />
+                                <AvatarFallback>{review.userName[0]}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">{review.userName}</p>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex">
+                                    {[1, 2, 3, 4, 5].map(s => (
+                                      <Star key={s} className={cn("h-3 w-3", s <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-sm text-foreground mb-1">{review.loved}</p>
+                            {review.improve && (
+                              <p className="text-sm text-muted-foreground italic">"{review.improve}"</p>
+                            )}
+                            {review.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {review.tags.map(tag => (
+                                  <Badge key={tag} variant="outline" className="text-[10px] py-0">{tag}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            {review.photos && review.photos.length > 0 && (
+                              <div className="flex gap-2 mt-2">
+                                {review.photos.map((url, i) => (
+                                  <img key={i} src={url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </section>
+
               {/* 13. Host */}
               {host && (
                 <Section id="host" icon={UserCircle} title="Meet Your Host">
