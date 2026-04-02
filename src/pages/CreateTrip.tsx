@@ -154,16 +154,17 @@ const CreateTrip = () => {
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
 
   // If no draft param, create one and redirect
-  const [draftId, setDraftId] = useState<string>(() => {
-    if (draftIdParam) return draftIdParam;
-    return "";
+  const [draftId, setDraftId] = useState<number | null>(() => {
+    if (draftIdParam) return Number(draftIdParam);
+    return null;
   });
 
   useEffect(() => {
-    if (!draftId && !draftIdParam) {
-      const id = createDraft();
-      setDraftId(id);
-      window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+    if (draftId == null && !draftIdParam) {
+      createDraft().then((id) => {
+        setDraftId(id);
+        window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+      });
     }
   }, [draftId, draftIdParam, createDraft]);
 
