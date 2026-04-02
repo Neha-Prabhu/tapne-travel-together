@@ -71,6 +71,11 @@ const TripDetail = () => {
   const hostTripsCount = host ? getTripsByHost(host.id).length : 0;
   const similarTrips = getSimilarTrips(trip, 3);
   const price = trip.pricePerPerson || trip.budget;
+  const reviews = getReviewsForTrip(trip.id);
+  const avgRating = getAverageRating(trip.id);
+  const tagsSummary = getTagsSummary(trip.id);
+  const tripEnded = new Date(trip.endDate) < new Date();
+  const canReview = isJoined && tripEnded;
 
   const handleAction = () => {
     if (!isAuthenticated) { toast.info("Please log in first"); return; }
