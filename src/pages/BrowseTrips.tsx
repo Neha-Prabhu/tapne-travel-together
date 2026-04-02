@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -7,9 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { trips, TRIP_TYPES, getUserById } from "@/data/mockData";
-import { Search, MapPin, Calendar, Users, IndianRupee, ArrowRight } from "lucide-react";
-import { format } from "date-fns";
+import { apiGet } from "@/lib/api";
+import type { TripData, TripListResponse } from "@/types/api";
+import TripCard from "@/components/TripCard";
+import { Search, MapPin, Calendar, Users, IndianRupee, ArrowRight, Loader2 } from "lucide-react";
+
+const TRIP_TYPES = [
+  "Backpacking", "Trek", "Social", "Road Trip", "Beach", "Cultural", "Adventure", "Wellness",
+];
 
 const BrowseTrips = () => {
   const [searchParams] = useSearchParams();
@@ -17,16 +22,22 @@ const BrowseTrips = () => {
 
   const [search, setSearch] = useState(destinationFilter);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [trips, setTrips] = useState<TripData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = useMemo(() => {
-    return trips
-      .filter((t) => {
-        const matchSearch = t.destination.toLowerCase().includes(search.toLowerCase()) ||
-          t.title.toLowerCase().includes(search.toLowerCase());
-        const matchType = typeFilter === "all" || t.tripType === typeFilter;
-        return matchSearch && matchType;
-      })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  useEffect(() => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (!cfg?.api?.trips) { setLoading(false); return; }
+    const params = new URLSearchParams();
+    if (search) params.set("destination", search);
+    if (typeFilter !== "all") params.set("trip_type", typeFilter);
+    const qs = params.toString();
+    const url = qs ? `${cfg.api.trips}?${qs}` : cfg.api.trips;
+    setLoading(true);
+    apiGet<TripListResponse>(url)
+      .then((data) => setTrips(data.trips || []))
+      .catch(() => setTrips([]))
+      .finally(() => setLoading(false));
   }, [search, typeFilter]);
 
   return (
@@ -60,30 +71,37 @@ const BrowseTrips = () => {
             </Select>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : trips.length === 0 ? (
             <div className="py-20 text-center">
               <p className="text-xl font-medium text-foreground">No trips found</p>
               <p className="mt-2 text-muted-foreground">Try adjusting your search or filters.</p>
             </div>
           ) : (
             <div className="flex flex-col gap-8">
-              {filtered.map((trip) => {
-                const host = getUserById(trip.hostId);
-                const spotsLeft = trip.maxGroupSize - trip.participantIds.length;
+              {trips.map((trip) => {
+                const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
                 return (
                   <Link key={trip.id} to={`/trips/${trip.id}`} className="block">
                     <Card className="group overflow-hidden transition-shadow hover:shadow-lg h-[200px] sm:h-[220px]">
                       <div className="flex h-full flex-col sm:flex-row">
                         {/* Left: Image */}
                         <div className="relative hidden sm:block sm:w-72 md:w-80 lg:w-96 h-full overflow-hidden shrink-0">
-                          <img
-                            src={trip.coverImage}
-                            alt={trip.title}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                          <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground">
-                            {trip.tripType}
-                          </Badge>
+                          {trip.banner_image_url && (
+                            <img
+                              src={trip.banner_image_url}
+                              alt={trip.title}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          )}
+                          {trip.trip_type && (
+                            <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground">
+                              {trip.trip_type}
+                            </Badge>
+                          )}
                         </div>
                         {/* Right: Info */}
                         <div className="flex flex-1 flex-col justify-between p-5 sm:p-6">
@@ -91,37 +109,44 @@ const BrowseTrips = () => {
                             <h3 className="mb-1 text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                               {trip.title}
                             </h3>
-                            <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {trip.destination}
-                            </div>
+                            {trip.destination && (
+                              <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {trip.destination}
+                              </div>
+                            )}
                             <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
                               {trip.summary || trip.description}
                             </p>
                             <div className="flex flex-wrap gap-1.5 mb-3">
-                              {trip.tripVibes?.slice(0, 3).map(v => (
+                              {trip.trip_vibe?.slice(0, 3).map((v) => (
                                 <Badge key={v} variant="outline" className="text-xs">{v}</Badge>
                               ))}
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {format(new Date(trip.startDate), "MMM d")} – {format(new Date(trip.endDate), "MMM d")}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <IndianRupee className="h-3.5 w-3.5" />
-                                {trip.budget.toLocaleString()}
-                              </span>
-                              <span className={`flex items-center gap-1 ${spotsLeft <= 2 ? "font-medium text-destructive" : ""}`}>
-                                <Users className="h-3.5 w-3.5" />
-                                {spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left
-                              </span>
-                              {host && (
+                              {trip.starts_at && trip.ends_at && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {new Date(trip.starts_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – {new Date(trip.ends_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                </span>
+                              )}
+                              {trip.price_per_person != null && (
+                                <span className="flex items-center gap-1">
+                                  <IndianRupee className="h-3.5 w-3.5" />
+                                  {trip.price_per_person.toLocaleString()}
+                                </span>
+                              )}
+                              {trip.spots_left != null && (
+                                <span className={`flex items-center gap-1 ${spotsLeft <= 2 ? "font-medium text-destructive" : ""}`}>
+                                  <Users className="h-3.5 w-3.5" />
+                                  {spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left
+                                </span>
+                              )}
+                              {trip.host_display_name && (
                                 <span className="flex items-center gap-1.5">
-                                  <img src={host.avatar} alt={host.name} className="h-5 w-5 rounded-full object-cover" />
-                                  {host.name.split(" ")[0]}
+                                  {trip.host_display_name.split(" ")[0]}
                                 </span>
                               )}
                             </div>
