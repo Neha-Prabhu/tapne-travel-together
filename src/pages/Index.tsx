@@ -70,8 +70,17 @@ const mockBlogs = [
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+
+  // Check for trips the user can review (ended + participant)
+  const reviewableTrips = isAuthenticated && user
+    ? trips.filter(t =>
+        t.participantIds.includes(user.id) &&
+        new Date(t.endDate) < new Date()
+      )
+    : [];
 
   const destinations = useMemo(getDestinations, []);
 
