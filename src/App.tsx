@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
 import Blogs from "./pages/Blogs";
+import ManageTrip from "./pages/ManageTrip";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
