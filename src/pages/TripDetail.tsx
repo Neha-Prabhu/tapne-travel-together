@@ -101,6 +101,8 @@ const TripDetail = () => {
 
   const joinStatus = trip.join_request_status;
   const isJoined = joinStatus === "approved";
+  const isTripPast = trip.ends_at ? new Date(trip.ends_at) < new Date() : false;
+  const canReview = isAuthenticated && isJoined && isTripPast;
 
   const handleAction = () => {
     if (!isAuthenticated) { toast.info("Please log in first"); return; }
@@ -166,6 +168,16 @@ const TripDetail = () => {
           >
             {isHost ? <Link to="/create-trip">{ctaLabel}</Link> : <span>{ctaLabel}</span>}
           </Button>
+
+          {canReview && (
+            <Button
+              variant="outline"
+              className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
+              onClick={() => setReviewModalOpen(true)}
+            >
+              <Star className="mr-2 h-4 w-4" /> Write a Review
+            </Button>
+          )}
 
           {!isAuthenticated && (
             <p className="mt-2 text-center text-xs text-muted-foreground">
