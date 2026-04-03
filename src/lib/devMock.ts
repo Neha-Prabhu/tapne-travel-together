@@ -78,6 +78,56 @@ function mockTripToTripData(trip: typeof mockTrips[0], idx: number): TripData {
 }
 
 const MOCK_TRIPS: TripData[] = mockTrips.map(mockTripToTripData);
+
+// Add a past trip so the dev user can test review flows
+const PAST_TRIP: TripData = {
+  id: 99,
+  title: "Kerala Backwaters Retreat",
+  summary: "A relaxing 5-day houseboat and village experience through Kerala's backwaters.",
+  destination: "Alleppey, Kerala",
+  banner_image_url: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800&q=80",
+  host_username: "priya_sharma",
+  host_display_name: "Priya Sharma",
+  host_bio: "Beach bum & culture enthusiast.",
+  host_location: "Delhi, India",
+  host_website: "",
+  starts_at: "2025-12-01",
+  ends_at: "2025-12-06",
+  duration_days: 5,
+  trip_type: "Social",
+  budget_tier: "mid",
+  difficulty_level: "Beginner",
+  pace_level: "Low",
+  group_size_label: "Up to 8",
+  total_seats: 8,
+  minimum_seats: 4,
+  spots_left: 0,
+  price_per_person: 18000,
+  total_trip_price: 144000,
+  payment_terms: "full",
+  highlights: ["Houseboat cruise", "Village walk", "Cooking class", "Sunset kayaking"],
+  itinerary_days: [
+    { day_number: 1, title: "Arrival & Houseboat", description: "Board the houseboat in Alleppey.", stay: "Houseboat", meals: "Dinner", activities: "Cruise" },
+    { day_number: 2, title: "Village Walk", description: "Explore local villages and toddy shops.", stay: "Houseboat", meals: "All meals", activities: "Walking tour" },
+    { day_number: 3, title: "Cooking Class", description: "Learn Kerala cuisine with a local family.", stay: "Homestay", meals: "All meals", activities: "Cooking" },
+    { day_number: 4, title: "Kayaking", description: "Sunset kayaking through narrow canals.", stay: "Homestay", meals: "All meals", activities: "Kayaking" },
+    { day_number: 5, title: "Departure", description: "Farewell breakfast and departure.", stay: "", meals: "Breakfast", activities: "Farewell" },
+  ],
+  included_items: ["Houseboat (2 nights)", "Homestay (2 nights)", "All meals", "Kayaking gear", "Cooking class"],
+  not_included_items: ["Travel to Alleppey", "Personal expenses", "Travel insurance"],
+  things_to_carry: ["Sunscreen", "Mosquito repellent", "Light clothes", "Camera"],
+  suitable_for: ["Solo travelers", "Couples", "Friends"],
+  trip_vibe: ["Chill", "Cultural", "Explorer"],
+  cancellation_policy: "Full refund 14+ days before. No refund within 14 days.",
+  faqs: [{ question: "Is swimming required?", answer: "No, life jackets provided for kayaking." }],
+  is_draft: false,
+  is_published: true,
+  can_manage: false,
+  join_request_status: "approved",
+  description: "Experience the serene beauty of Kerala's backwaters on a traditional houseboat, explore charming villages, learn authentic Kerala cooking, and kayak through palm-lined canals at sunset.",
+};
+MOCK_TRIPS.push(PAST_TRIP);
+
 const MOCK_SESSION_USERS: SessionUser[] = mockUsers.map(mockUserToSessionUser);
 
 let _devUser: SessionUser | null = null;
