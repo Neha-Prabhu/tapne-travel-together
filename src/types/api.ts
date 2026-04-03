@@ -117,6 +117,27 @@ export interface TripData {
   can_manage?: boolean;
   join_request_status?: "pending" | "approved" | "denied" | null;
   description?: string;
+  booking_status?: "open" | "closed" | "full";
+  status?: "active" | "cancelled";
+  participants_count?: number;
+  applications_count?: number;
+  access_type?: "open" | "apply" | "invite";
+}
+
+export interface ParticipantData {
+  id: number;
+  user_id: number;
+  username: string;
+  display_name: string;
+  avatar_url?: string;
+  status: "confirmed";
+  joined_at: string;
+}
+
+export interface ManageTripResponse {
+  trip: TripData;
+  participants: ParticipantData[];
+  applications: EnrollmentRequestData[];
 }
 
 export interface TripListResponse {
