@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDrafts } from "@/contexts/DraftContext";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import type { TripData, MyTripsResponse } from "@/types/api";
-import TripCard from "@/components/TripCard";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Plus, Edit, Trash2, Copy, MapPin, Calendar, FileText, Clock,
-  AlertTriangle, Loader2
+  AlertTriangle, Loader2, Eye, Settings, Lock, Unlock, MoreVertical,
+  Users, CheckCircle2,
 } from "lucide-react";
 
 const MyTrips = () => {
@@ -25,7 +30,6 @@ const MyTrips = () => {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [publishedTrips, setPublishedTrips] = useState<TripData[]>([]);
   const [pastTrips, setPastTrips] = useState<TripData[]>([]);
-  const [tabCounts, setTabCounts] = useState({ created: 0, joined: 0, past: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,11 +39,10 @@ const MyTrips = () => {
     apiGet<MyTripsResponse>(cfg.api.my_trips)
       .then((data) => {
         const now = new Date();
-        const published = data.trips.filter(t => !t.is_draft && t.is_published);
-        const past = data.trips.filter(t => t.ends_at && new Date(t.ends_at) < now);
+        const published = data.trips.filter(t => !t.is_draft && t.is_published && (!t.ends_at || new Date(t.ends_at) >= now));
+        const past = data.trips.filter(t => !t.is_draft && t.ends_at && new Date(t.ends_at) < now);
         setPublishedTrips(published);
         setPastTrips(past);
-        setTabCounts(data.tab_counts || { created: 0, joined: 0, past: 0 });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -92,7 +95,177 @@ const MyTrips = () => {
 
   const handleDuplicate = async (id: number) => {
     await duplicateDraft(id);
+    toast.success("Draft duplicated");
   };
+
+  const handleDuplicatePublished = async (tripId: number) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    try {
+      await apiPost(`${cfg.api.trips}${tripId}/duplicate/`, {});
+      toast.success("Trip duplicated as new draft");
+      // Refresh
+      window.location.reload();
+    } catch { toast.error("Failed to duplicate"); }
+  };
+
+  const handleBookingToggle = async (tripId: number, current: string) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const newStatus = current === "open" ? "closed" : "open";
+    try {
+      await apiPost(`${cfg.api.manage_trip}${tripId}/booking-status/`, { status: newStatus });
+      setPublishedTrips(prev => prev.map(t => t.id === tripId ? { ...t, booking_status: newStatus as any } : t));
+      toast.success(newStatus === "closed" ? "Bookings closed" : "Bookings reopened");
+    } catch { toast.error("Failed to update"); }
+  };
+
+  const getStatusBadge = (trip: TripData) => {
+    const bs = trip.booking_status || (trip.spots_left === 0 ? "full" : "open");
+    if (bs === "full") return <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Full</Badge>;
+    if (bs === "closed") return <Badge variant="secondary" className="text-xs">Closed</Badge>;
+    return <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">Open</Badge>;
+  };
+
+  const PublishedTripCard = ({ trip }: { trip: TripData }) => {
+    const seatsFilled = (trip.total_seats || 0) - (trip.spots_left ?? 0);
+    const bs = trip.booking_status || (trip.spots_left === 0 ? "full" : "open");
+
+    return (
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardContent className="p-0">
+          <div className="flex flex-col sm:flex-row">
+            {/* Image */}
+            {trip.banner_image_url && (
+              <div className="relative w-full sm:w-48 h-36 sm:h-auto overflow-hidden shrink-0">
+                <img src={trip.banner_image_url} alt={trip.title} className="h-full w-full object-cover" />
+              </div>
+            )}
+            <div className="flex-1 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-base font-semibold text-foreground truncate">{trip.title}</h3>
+                    {getStatusBadge(trip)}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                    {trip.destination && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5" /> {trip.destination}
+                      </span>
+                    )}
+                    {trip.starts_at && trip.ends_at && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {formatDate(trip.starts_at)} – {formatDate(trip.ends_at)}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5" />
+                      {seatsFilled}/{trip.total_seats || "?"} seats
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => navigate(`/trips/${trip.id}`)}>
+                      <Eye className="mr-2 h-4 w-4" /> Preview Trip
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/create-trip?draft=${trip.id}`)}>
+                      <Edit className="mr-2 h-4 w-4" /> Edit Trip
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/manage-trip/${trip.id}`)}>
+                      <Settings className="mr-2 h-4 w-4" /> Manage Trip
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleBookingToggle(trip.id, bs)}>
+                      {bs === "open" ? (
+                        <><Lock className="mr-2 h-4 w-4" /> Close Bookings</>
+                      ) : (
+                        <><Unlock className="mr-2 h-4 w-4" /> Reopen Bookings</>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDuplicatePublished(trip.id)}>
+                      <Copy className="mr-2 h-4 w-4" /> Duplicate
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Quick actions row */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => navigate(`/manage-trip/${trip.id}`)}>
+                  <Settings className="mr-1 h-3.5 w-3.5" /> Manage
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs" asChild>
+                  <Link to={`/trips/${trip.id}`}><Eye className="mr-1 h-3.5 w-3.5" /> Preview</Link>
+                </Button>
+                {trip.applications_count != null && trip.applications_count > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {trip.applications_count} pending app{trip.applications_count !== 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const CompletedTripCard = ({ trip }: { trip: TripData }) => (
+    <Card className="overflow-hidden opacity-80">
+      <CardContent className="p-0">
+        <div className="flex flex-col sm:flex-row">
+          {trip.banner_image_url && (
+            <div className="relative w-full sm:w-48 h-36 sm:h-auto overflow-hidden shrink-0">
+              <img src={trip.banner_image_url} alt={trip.title} className="h-full w-full object-cover grayscale-[30%]" />
+            </div>
+          )}
+          <div className="flex-1 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-semibold text-foreground truncate">{trip.title}</h3>
+                  <Badge variant="secondary" className="text-xs"><CheckCircle2 className="mr-1 h-3 w-3" /> Completed</Badge>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                  {trip.destination && (
+                    <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {trip.destination}</span>
+                  )}
+                  {trip.starts_at && trip.ends_at && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" /> {formatDate(trip.starts_at)} – {formatDate(trip.ends_at)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={() => navigate(`/trips/${trip.id}`)}>
+                    <Eye className="mr-2 h-4 w-4" /> View Trip
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDuplicatePublished(trip.id)}>
+                    <Copy className="mr-2 h-4 w-4" /> Duplicate
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -117,7 +290,9 @@ const MyTrips = () => {
               <TabsTrigger value="published">
                 Published {publishedTrips.length > 0 && <Badge variant="secondary" className="ml-2 text-xs">{publishedTrips.length}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="past">Past Trips</TabsTrigger>
+              <TabsTrigger value="completed">
+                Completed {pastTrips.length > 0 && <Badge variant="secondary" className="ml-2 text-xs">{pastTrips.length}</Badge>}
+              </TabsTrigger>
             </TabsList>
 
             {/* Drafts Tab */}
@@ -212,27 +387,27 @@ const MyTrips = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {publishedTrips.map(t => <TripCard key={t.id} trip={t} />)}
+                <div className="space-y-4">
+                  {publishedTrips.map(t => <PublishedTripCard key={t.id} trip={t} />)}
                 </div>
               )}
             </TabsContent>
 
-            {/* Past Trips Tab */}
-            <TabsContent value="past">
+            {/* Completed Tab */}
+            <TabsContent value="completed">
               {loading ? (
                 <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
               ) : pastTrips.length === 0 ? (
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-16">
                     <Calendar className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-1">No past trips</h3>
-                    <p className="text-muted-foreground text-sm">Completed trips will appear here.</p>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">No completed trips</h3>
+                    <p className="text-muted-foreground text-sm">Completed trips will appear here after the end date passes.</p>
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {pastTrips.map(t => <TripCard key={t.id} trip={t} />)}
+                <div className="space-y-4">
+                  {pastTrips.map(t => <CompletedTripCard key={t.id} trip={t} />)}
                 </div>
               )}
             </TabsContent>

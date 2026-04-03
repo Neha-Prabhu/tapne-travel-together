@@ -2,6 +2,7 @@ import { trips as mockTrips, users as mockUsers } from "@/data/mockData";
 import type {
   TripData, TripDetailResponse, TripListResponse, HomeResponse,
   SessionUser, SessionResponse, MyTripsResponse, BlogData,
+  ParticipantData, ManageTripResponse, EnrollmentRequestData,
 } from "@/types/api";
 
 function mockUserToSessionUser(u: typeof mockUsers[0], idx: number): SessionUser {
@@ -74,6 +75,7 @@ function mockTripToTripData(trip: typeof mockTrips[0], idx: number): TripData {
     can_manage: false,
     join_request_status: null,
     description: trip.description,
+    access_type: trip.accessType || "open",
   };
 }
 
@@ -125,6 +127,7 @@ const PAST_TRIP: TripData = {
   can_manage: false,
   join_request_status: "approved",
   description: "Experience the serene beauty of Kerala's backwaters on a traditional houseboat, explore charming villages, learn authentic Kerala cooking, and kayak through palm-lined canals at sunset.",
+  access_type: "open",
 };
 MOCK_TRIPS.push(PAST_TRIP);
 
@@ -133,6 +136,31 @@ const MOCK_SESSION_USERS: SessionUser[] = mockUsers.map(mockUserToSessionUser);
 let _devUser: SessionUser | null = null;
 const _devDrafts = new Map<number, TripData>();
 let _devDraftCounter = 5000;
+
+// Track booking status per trip
+const _tripBookingStatus = new Map<number, "open" | "closed" | "full">();
+
+// Mock participants for host's trips
+function getMockParticipants(tripId: number): ParticipantData[] {
+  const trip = MOCK_TRIPS.find(t => t.id === tripId);
+  if (!trip) return [];
+  // Generate some fake participants
+  return [
+    { id: 1, user_id: 2, username: "priya_sharma", display_name: "Priya Sharma", status: "confirmed", joined_at: "2026-02-15T10:00:00Z" },
+    { id: 2, user_id: 4, username: "ananya_desai", display_name: "Ananya Desai", status: "confirmed", joined_at: "2026-02-18T14:30:00Z" },
+    { id: 3, user_id: 6, username: "meera_nair", display_name: "Meera Nair", status: "confirmed", joined_at: "2026-02-20T09:15:00Z" },
+  ];
+}
+
+function getMockApplications(tripId: number): EnrollmentRequestData[] {
+  const trip = MOCK_TRIPS.find(t => t.id === tripId);
+  if (!trip || trip.access_type !== "apply") return [];
+  return [
+    { id: 101, trip_id: tripId, trip_title: trip.title, requester_username: "karan_singh", requester_display_name: "Karan Singh", message: "I've been trekking for 3 years and would love to join this group!", status: "pending", created_at: "2026-03-01T08:00:00Z" },
+    { id: 102, trip_id: tripId, trip_title: trip.title, requester_username: "meera_nair", requester_display_name: "Meera Nair", message: "Experienced hiker, done Roopkund and Kedarkantha.", status: "approved", created_at: "2026-02-25T12:00:00Z", reviewed_at: "2026-02-26T10:00:00Z" },
+    { id: 103, trip_id: tripId, trip_title: trip.title, requester_username: "dev_user", requester_display_name: "Dev User", message: "First time trekker but very fit.", status: "denied", created_at: "2026-02-20T16:00:00Z", reviewed_at: "2026-02-21T09:00:00Z" },
+  ];
+}
 
 export function resolveMockRequest(method: string, url: string, body?: unknown): unknown {
   const path = url.replace("/__devmock__", "").replace(/\?.*$/, "");
@@ -183,10 +211,11 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "GET" && tripDetailMatch) {
     const id = parseInt(tripDetailMatch[1]);
     const trip = MOCK_TRIPS.find(t => t.id === id) ?? MOCK_TRIPS[0];
+    const isHost = _devUser && trip.host_username === _devUser.username;
     const resp: TripDetailResponse = {
-      trip,
-      can_manage_trip: false,
-      mode: "view",
+      trip: { ...trip, booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open") },
+      can_manage_trip: !!isHost,
+      mode: isHost ? "manage" : "view",
       similar_trips: MOCK_TRIPS.filter(t => t.id !== trip.id).slice(0, 3),
     };
     return resp;
@@ -200,12 +229,76 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── My Trips ──
   if (method === "GET" && path === "/my-trips/") {
     const draftList = Array.from(_devDrafts.values());
+    // Also include mock trips hosted by current user as published trips
+    const hostUsername = _devUser?.username;
+    const hostedTrips = hostUsername
+      ? MOCK_TRIPS.filter(t => t.host_username === hostUsername).map(t => ({
+          ...t,
+          can_manage: true,
+          booking_status: _tripBookingStatus.get(t.id) || (t.spots_left === 0 ? "full" : "open") as "open" | "closed" | "full",
+          participants_count: getMockParticipants(t.id).length,
+          applications_count: getMockApplications(t.id).filter(a => a.status === "pending").length,
+        }))
+      : [];
+    const allTrips = [...draftList, ...hostedTrips];
+    const now = new Date();
     const resp: MyTripsResponse = {
-      trips: draftList,
+      trips: allTrips,
       active_tab: "created",
-      tab_counts: { created: draftList.filter(d => !d.is_draft).length, joined: 0, past: 0 },
+      tab_counts: {
+        created: hostedTrips.filter(t => !t.ends_at || new Date(t.ends_at) >= now).length + draftList.length,
+        joined: 0,
+        past: hostedTrips.filter(t => t.ends_at && new Date(t.ends_at) < now).length,
+      },
     };
     return resp;
+  }
+
+  // ── Manage Trip ──
+  const manageTripMatch = path.match(/^\/manage-trip\/(\d+)\/$/);
+  if (method === "GET" && manageTripMatch) {
+    const id = parseInt(manageTripMatch[1]);
+    const trip = MOCK_TRIPS.find(t => t.id === id) || Array.from(_devDrafts.values()).find(t => t.id === id);
+    if (!trip) return { error: "Trip not found" };
+    const resp: ManageTripResponse = {
+      trip: {
+        ...trip,
+        can_manage: true,
+        booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open"),
+        participants_count: getMockParticipants(id).length,
+        applications_count: getMockApplications(id).filter(a => a.status === "pending").length,
+      },
+      participants: getMockParticipants(id),
+      applications: getMockApplications(id),
+    };
+    return resp;
+  }
+
+  // ── Booking status toggle ──
+  const bookingStatusMatch = path.match(/^\/manage-trip\/(\d+)\/booking-status\/$/);
+  if (method === "POST" && bookingStatusMatch) {
+    const id = parseInt(bookingStatusMatch[1]);
+    const b = body as any;
+    _tripBookingStatus.set(id, b?.status || "open");
+    return { ok: true };
+  }
+
+  // ── Cancel trip ──
+  const cancelTripMatch = path.match(/^\/manage-trip\/(\d+)\/cancel\/$/);
+  if (method === "POST" && cancelTripMatch) {
+    return { ok: true };
+  }
+
+  // ── Remove participant ──
+  const removeParticipantMatch = path.match(/^\/manage-trip\/(\d+)\/participants\/(\d+)\/remove\/$/);
+  if (method === "POST" && removeParticipantMatch) {
+    return { ok: true };
+  }
+
+  // ── Message participants ──
+  const messageMatch = path.match(/^\/manage-trip\/(\d+)\/message\/$/);
+  if (method === "POST" && messageMatch) {
+    return { ok: true };
   }
 
   // ── Draft CRUD ──
@@ -244,6 +337,27 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return {};
   }
 
+  // ── Duplicate trip (published/completed) ──
+  const duplicateTripMatch = path.match(/^\/trips\/(\d+)\/duplicate\/$/);
+  if (method === "POST" && duplicateTripMatch) {
+    const id = parseInt(duplicateTripMatch[1]);
+    const original = MOCK_TRIPS.find(t => t.id === id);
+    if (!original) return { error: "Not found" };
+    const newId = ++_devDraftCounter;
+    const newDraft: TripData = {
+      ...original,
+      id: newId,
+      title: `Copy of ${original.title}`,
+      is_draft: true,
+      is_published: false,
+      can_manage: true,
+      join_request_status: null,
+      spots_left: original.total_seats,
+    };
+    _devDrafts.set(newId, newDraft);
+    return { draft: newDraft };
+  }
+
   // ── Profile ──
   if (method === "GET" && path === "/accounts/me/") {
     return { profile: _devUser ? { username: _devUser.username, display_name: _devUser.display_name, bio: _devUser.bio, location: _devUser.location, website: _devUser.website, created_trips: 0, joined_trips: 0 } : null };
@@ -269,6 +383,12 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   const joinMatch = path.match(/^\/trips\/(\d+)\/join-request\/$/);
   if (method === "POST" && joinMatch) {
     return { ok: true, status: "pending" };
+  }
+
+  // ── Application decision ──
+  const decisionMatch = path.match(/^\/hosting-requests\/(\d+)\/decision\/$/);
+  if (method === "POST" && decisionMatch) {
+    return { ok: true };
   }
 
   return {};
