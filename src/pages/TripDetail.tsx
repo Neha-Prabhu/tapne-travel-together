@@ -101,6 +101,8 @@ const TripDetail = () => {
 
   const joinStatus = trip.join_request_status;
   const isJoined = joinStatus === "approved";
+  const isTripPast = trip.ends_at ? new Date(trip.ends_at) < new Date() : false;
+  const canReview = isAuthenticated && isJoined && isTripPast;
 
   const handleAction = () => {
     if (!isAuthenticated) { toast.info("Please log in first"); return; }
