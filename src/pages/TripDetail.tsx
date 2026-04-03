@@ -169,6 +169,16 @@ const TripDetail = () => {
             {isHost ? <Link to="/create-trip">{ctaLabel}</Link> : <span>{ctaLabel}</span>}
           </Button>
 
+          {canReview && (
+            <Button
+              variant="outline"
+              className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
+              onClick={() => setReviewModalOpen(true)}
+            >
+              <Star className="mr-2 h-4 w-4" /> Write a Review
+            </Button>
+          )}
+
           {!isAuthenticated && (
             <p className="mt-2 text-center text-xs text-muted-foreground">
               <Link to="/login" className="text-primary hover:underline">Log in</Link> to continue
