@@ -20,6 +20,7 @@ export interface TapneRuntimeConfig {
     settings: string;
     hosting_inbox: string;
     dm_inbox: string;
+    manage_trip: string;
   };
   csrf: {
     cookie_name: string;
