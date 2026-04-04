@@ -453,9 +453,35 @@ const Inbox = () => {
       <main className="flex flex-1 overflow-hidden" style={{ height: "calc(100vh - 64px)" }}>
         {/* Desktop: two-column */}
         <div className="hidden w-full md:flex">
-          <div className="w-80 shrink-0 border-r bg-card">
+          <div className="shrink-0 border-r bg-card overflow-hidden" style={{ width: sidebarWidth }}>
             <SidebarContent />
           </div>
+          {/* Resizable divider */}
+          <div
+            className={cn(
+              "w-1 cursor-col-resize transition-colors hover:bg-primary/30",
+              isResizing && "bg-primary/40"
+            )}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsResizing(true);
+              resizeRef.current = { startX: e.clientX, startW: sidebarWidth };
+              const onMove = (ev: MouseEvent) => {
+                if (!resizeRef.current) return;
+                const delta = ev.clientX - resizeRef.current.startX;
+                const next = Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, resizeRef.current.startW + delta));
+                setSidebarWidth(next);
+              };
+              const onUp = () => {
+                setIsResizing(false);
+                resizeRef.current = null;
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", onUp);
+              };
+              document.addEventListener("mousemove", onMove);
+              document.addEventListener("mouseup", onUp);
+            }}
+          />
           <div className="flex-1 bg-background">
             <ChatWindow />
           </div>
