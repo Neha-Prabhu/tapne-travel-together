@@ -178,6 +178,7 @@ const CreateTrip = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [destination, setDestination] = useState("");
+  const [originCity, setOriginCity] = useState("");
   const [category, setCategory] = useState("");
   const [summary, setSummary] = useState("");
   const [startDate, setStartDate] = useState("");
