@@ -25,19 +25,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ─── Section nav items ───
-const SECTIONS = [
-  { id: "snapshot", label: "Overview" },
-  { id: "highlights", label: "Highlights" },
-  { id: "itinerary", label: "Itinerary" },
-  { id: "stay", label: "Stay" },
-  { id: "included", label: "Included" },
-  { id: "pricing", label: "Pricing" },
-  { id: "carry", label: "Packing" },
-  { id: "policies", label: "Policies" },
-  { id: "faqs", label: "FAQs" },
-  { id: "reviews", label: "Reviews" },
-  { id: "host", label: "Host" },
-];
+// Sections are built dynamically based on trip data — see visibleSections below
 
 const TripDetail = () => {
   const { id } = useParams();
