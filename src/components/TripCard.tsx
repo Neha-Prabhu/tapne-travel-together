@@ -11,24 +11,24 @@ interface TripCardProps {
 
 const TripCard = ({ trip }: TripCardProps) => {
   const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
+  const DEFAULT_HERO = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
+  const heroImg = trip.banner_image_url || DEFAULT_HERO;
 
   return (
     <Link to={`/trips/${trip.id}`}>
       <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
-        {trip.banner_image_url && (
-          <div className="relative aspect-[16/10] overflow-hidden">
-            <img
-              src={trip.banner_image_url}
-              alt={trip.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            {trip.trip_type && (
-              <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground">
-                {trip.trip_type}
-              </Badge>
-            )}
-          </div>
-        )}
+        <div className="relative aspect-[16/10] overflow-hidden">
+          <img
+            src={heroImg}
+            alt={trip.title}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          {trip.trip_type && (
+            <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground">
+              {trip.trip_type}
+            </Badge>
+          )}
+        </div>
         <CardContent className="p-4">
           <h3 className="mb-0.5 truncate text-lg font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
             {trip.title}

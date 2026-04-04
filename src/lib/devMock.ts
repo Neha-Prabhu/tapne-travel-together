@@ -452,6 +452,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return {
       profile: {
         username: su.username,
+        email: su.email,
         display_name: su.display_name,
         bio: su.bio || mu?.bio || "",
         location: su.location || mu?.location || "",
@@ -480,9 +481,10 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const b = body as any;
     if (_devUser) {
       if (b?.display_name) _devUser = { ..._devUser, display_name: b.display_name };
-      if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
+    if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
       if (b?.location !== undefined) _devUser = { ..._devUser, location: b.location };
       if (b?.website !== undefined) _devUser = { ..._devUser, website: b.website };
+      if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
     }
     return { profile: _devUser };
   }

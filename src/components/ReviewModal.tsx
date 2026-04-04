@@ -3,8 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Star, Camera, ArrowLeft, ArrowRight, Check, Heart, X } from "lucide-react";
+import { Star, Camera, ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { TripData } from "@/types/api";
@@ -41,6 +40,10 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
   const handleSubmit = () => {
     toast.success("Thanks for sharing your experience ❤️");
     onOpenChange(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
     setStep(0);
     setRating(0);
     setLoved("");
@@ -52,29 +55,25 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
 
   const ratingLabels = ["", "Poor", "Fair", "Good", "Great", "Amazing"];
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        {/* Step 0: Intro */}
-        {step === 0 && (
-          <div className="py-6 text-center space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Heart className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-bold text-foreground">How was your trip?</h3>
-            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              Your experience helps others find the right people and trips.
-            </p>
-            <Button onClick={() => setStep(1)} className="w-full">Write Review</Button>
-          </div>
-        )}
+  const totalSteps = 4; // 0: rating, 1: feedback, 2: tags, 3: photos+summary
+  const currentProgress = step + 1;
 
-        {/* Step 1: Rating */}
-        {step === 1 && (
-          <div className="space-y-6 py-4">
+  return (
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) resetForm(); }}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Progress indicator */}
+        <div className="flex gap-1.5 mb-2">
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div key={i} className={cn("h-1 flex-1 rounded-full transition-colors", i < currentProgress ? "bg-primary" : "bg-muted")} />
+          ))}
+        </div>
+
+        {/* Step 0: Rating (main entry — no intermediate screen) */}
+        {step === 0 && (
+          <div className="space-y-6 py-2">
             <div className="text-center">
-              <h3 className="text-lg font-semibold mb-1">How was your overall experience?</h3>
-              <p className="text-xs text-muted-foreground">Don't overthink it — just your gut feeling</p>
+              <h3 className="text-lg font-semibold text-foreground">How was your overall experience?</h3>
+              <p className="text-xs text-muted-foreground mt-1">Don't overthink it — just your gut feeling</p>
             </div>
             <div className="flex justify-center gap-2">
               {[1, 2, 3, 4, 5].map(s => (
@@ -86,15 +85,15 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
             </div>
             {rating > 0 && <p className="text-center text-sm font-medium text-primary">{ratingLabels[rating]}</p>}
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(0)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(2)} disabled={rating === 0} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Cancel</Button>
+              <Button onClick={() => setStep(1)} disabled={rating === 0} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Feedback */}
-        {step === 2 && (
-          <div className="space-y-4 py-4">
+        {/* Step 1: Feedback */}
+        {step === 1 && (
+          <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">What did you love the most? *</label>
               <Textarea rows={3} value={loved} onChange={e => setLoved(e.target.value)} placeholder="The people, the places, the vibe..." />
@@ -113,15 +112,15 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(3)} disabled={loved.length < 10} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
+              <Button variant="outline" onClick={() => setStep(0)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
+              <Button onClick={() => setStep(2)} disabled={loved.length < 10} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Tags */}
-        {step === 3 && (
-          <div className="space-y-4 py-4">
+        {/* Step 2: Tags */}
+        {step === 2 && (
+          <div className="space-y-4 py-2">
             <h3 className="text-lg font-semibold text-center">Quick tags</h3>
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Positive</p>
@@ -140,43 +139,47 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(2)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(4)} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
+              <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
+              <Button onClick={() => setStep(3)} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
             </div>
           </div>
         )}
 
-        {/* Step 4: Photos */}
-        {step === 4 && (
-          <div className="space-y-4 py-4">
-            <div className="text-center">
-              <Camera className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-              <h3 className="text-lg font-semibold">Add photos from your trip</h3>
-              <p className="text-xs text-muted-foreground">Optional — builds authenticity</p>
-            </div>
-            <div className="flex gap-3 justify-center">
-              {photos.map((url, i) => (
-                <div key={i} className="relative h-20 w-20">
-                  <img src={url} alt="" className="h-full w-full rounded-lg object-cover" />
-                  <button onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5"><X className="h-3 w-3 text-white" /></button>
+        {/* Step 3: Photos + Summary + Submit */}
+        {step === 3 && (
+          <div className="space-y-5 py-2">
+            {/* Photos (optional) */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Camera className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <h3 className="text-sm font-semibold">Add photos <span className="text-xs font-normal text-muted-foreground">(optional)</span></h3>
                 </div>
-              ))}
-              <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary/50">
-                <Camera className="h-6 w-6 text-muted-foreground" />
-              </label>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                {photos.map((url, i) => (
+                  <div key={i} className="relative h-16 w-16">
+                    <img src={url} alt="" className="h-full w-full rounded-lg object-cover" />
+                    <button onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5"><X className="h-3 w-3 text-white" /></button>
+                  </div>
+                ))}
+                <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary/50">
+                  <Camera className="h-5 w-5 text-muted-foreground" />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setPhotos(prev => [...prev, reader.result as string]);
+                    reader.readAsDataURL(file);
+                    e.target.value = "";
+                  }} />
+                </label>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(3)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(5)} className="flex-1">Review <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
-            </div>
-          </div>
-        )}
 
-        {/* Step 5: Summary */}
-        {step === 5 && (
-          <div className="space-y-4 py-4">
-            <h3 className="text-lg font-semibold text-center">Review Summary</h3>
+            {/* Review summary */}
             <div className="rounded-lg border p-4 space-y-3 text-sm">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Review Summary</p>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Rating:</span>
                 <div className="flex">{[1, 2, 3, 4, 5].map(s => <Star key={s} className={cn("h-4 w-4", s <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />)}</div>
@@ -188,9 +191,10 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
                 <div className="flex flex-wrap gap-1">{selectedTags.map(t => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}</div>
               )}
             </div>
+
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(4)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={handleSubmit} className="flex-1"><Check className="mr-1.5 h-4 w-4" /> Submit Review</Button>
+              <Button variant="outline" onClick={() => setStep(2)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
+              <Button onClick={handleSubmit} className="flex-1"><Check className="mr-1.5 h-4 w-4" /> Post Review</Button>
             </div>
           </div>
         )}
