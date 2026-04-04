@@ -603,6 +603,11 @@ const CreateTrip = () => {
                       <Field label="Destination" error={errors.destination} required>
                         <div className="relative"><MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="e.g. Manali, Himachal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
                       </Field>
+                      <Field label="Origin City" hint="Where participants start from (optional)">
+                        <div className="relative"><MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="e.g. Bangalore, Mumbai" value={originCity} onChange={e => setOriginCity(e.target.value)} /></div>
+                      </Field>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Trip Category" error={errors.category} required>
                         <Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{TRIP_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                       </Field>
