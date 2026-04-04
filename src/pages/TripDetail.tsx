@@ -108,6 +108,7 @@ const TripDetail = () => {
     ...(trip.host_display_name ? [{ id: "host", label: "Host" }] : []),
   ];
 
+  const { requireAuth } = useAuth();
 
   const handleAction = () => {
     requireAuth(() => setBookingModalOpen(true));
