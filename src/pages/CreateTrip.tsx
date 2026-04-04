@@ -197,6 +197,12 @@ const CreateTrip = () => {
   const [paymentMethod, setPaymentMethod] = useState<"direct_contact" | "show_payment_details">("direct_contact");
   const [paymentDetails, setPaymentDetails] = useState("");
 
+  // Hero & Gallery images
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
   // Highlights
   const [highlights, setHighlights] = useState<string[]>([""]);
 
