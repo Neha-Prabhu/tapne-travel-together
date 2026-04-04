@@ -114,7 +114,11 @@ const Profile = () => {
 
     const url = `${cfg.api.base}/profile/${profileId}/`;
     apiGet<ProfileResponse>(url)
-      .then(setProfileData)
+      .then((data) => {
+        setProfileData(data);
+        setIsFollowing(data.profile?.is_following ?? false);
+        setFollowersCount(data.profile?.followers_count ?? 0);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [userId, user]);
