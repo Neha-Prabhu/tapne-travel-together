@@ -193,6 +193,8 @@ const CreateTrip = () => {
   const [earlyBirdSeats, setEarlyBirdSeats] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("full");
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"direct_contact" | "show_payment_details">("direct_contact");
+  const [paymentDetails, setPaymentDetails] = useState("");
 
   // Highlights
   const [highlights, setHighlights] = useState<string[]>([""]);
