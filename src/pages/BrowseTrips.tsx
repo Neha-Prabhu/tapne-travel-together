@@ -152,9 +152,10 @@ const BrowseTrips = () => {
                                 </span>
                               )}
                             </div>
-                            <Button variant="outline" size="sm" className="shrink-0">
-                              View Details <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                            </Button>
+                              <Button variant="outline" size="sm" className="shrink-0">
+                                View Details <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
