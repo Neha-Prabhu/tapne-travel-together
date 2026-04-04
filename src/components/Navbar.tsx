@@ -115,8 +115,8 @@ const Navbar = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button size="sm" asChild className="ml-1">
-              <Link to="/login">Login</Link>
+            <Button size="sm" className="ml-1" onClick={() => requireAuth()}>
+              Login
             </Button>
           )}
         </div>
