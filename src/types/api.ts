@@ -77,7 +77,7 @@ export interface FaqItem {
   answer: string;
 }
 
-export interface TripData {
+export interface TripData { 
   id: number;
   title: string;
   summary?: string;
