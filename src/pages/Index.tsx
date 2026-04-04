@@ -1,57 +1,32 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import TripCard from "@/components/TripCard";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import HeroSection from "@/components/home/HeroSection";
+import QuickFilters from "@/components/home/QuickFilters";
+import HorizontalCarousel from "@/components/home/HorizontalCarousel";
+import CommunitySection from "@/components/home/CommunitySection";
+import WhyTapne from "@/components/home/WhyTapne";
+import HostCTA from "@/components/home/HostCTA";
+import SocialProofStrip from "@/components/home/SocialProofStrip";
+import TestimonialsSection from "@/components/home/TestimonialsSection";
+import FAQSection from "@/components/home/FAQSection";
+import FinalCTA from "@/components/home/FinalCTA";
 import { apiGet } from "@/lib/api";
-import type { HomeResponse, TripData, BlogData } from "@/types/api";
-import { useAuth } from "@/contexts/AuthContext";
-import { Search, MapPin, ChevronLeft, ChevronRight, Calendar, ArrowRight, User, Star, Loader2 } from "lucide-react";
-
-// ─── Carousel Component ───
-const HorizontalCarousel = ({ children, className }: { children: React.ReactNode; className?: string }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: "left" | "right") => {
-    if (!scrollRef.current) return;
-    const amount = scrollRef.current.clientWidth * 0.8;
-    scrollRef.current.scrollBy({ left: direction === "left" ? -amount : amount, behavior: "smooth" });
-  };
-
-  return (
-    <div className={`group relative ${className || ""}`}>
-      <button
-        onClick={() => scroll("left")}
-        className="absolute -left-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-card shadow-md transition-opacity group-hover:flex hover:bg-muted"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-      <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
-        {children}
-      </div>
-      <button
-        onClick={() => scroll("right")}
-        className="absolute -right-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-card shadow-md transition-opacity group-hover:flex hover:bg-muted"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
-    </div>
-  );
-};
+import type { HomeResponse, TripData, BlogData, CommunityProfile, TestimonialData } from "@/types/api";
+import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
 
 const Index = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
-
   const [trips, setTrips] = useState<TripData[]>([]);
   const [blogs, setBlogs] = useState<BlogData[]>([]);
+  const [communityProfiles, setCommunityProfiles] = useState<CommunityProfile[]>([]);
+  const [testimonials, setTestimonials] = useState<TestimonialData[]>([]);
+  const [stats, setStats] = useState<{ travelers: number; trips_hosted: number; destinations: number } | undefined>();
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -60,113 +35,60 @@ const Index = () => {
       .then((data) => {
         setTrips(data.trips || []);
         setBlogs(data.blogs || []);
+        setCommunityProfiles(data.community_profiles || []);
+        setTestimonials(data.testimonials || []);
+        setStats(data.stats);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  // Extract unique destinations from API trips
+  // Filter trips by active filter (trip_type match)
+  const filteredTrips = useMemo(() => {
+    if (!activeFilter) return trips;
+    return trips.filter(
+      (t) => (t.trip_type || "").toLowerCase() === activeFilter.toLowerCase()
+    );
+  }, [trips, activeFilter]);
+
+  // Extract unique destinations
   const destinations = useMemo(() => {
-    const destMap = new Map<string, string>();
+    const destMap = new Map<string, { name: string; image: string; count: number }>();
     trips.forEach((t) => {
       const dest = t.destination || "";
       const key = dest.split(",")[0].trim().toLowerCase();
-      if (key && !destMap.has(key)) {
-        destMap.set(key, t.banner_image_url || "");
+      if (key) {
+        const existing = destMap.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          destMap.set(key, {
+            name: key.charAt(0).toUpperCase() + key.slice(1),
+            image: t.banner_image_url || "",
+            count: 1,
+          });
+        }
       }
     });
-    return Array.from(destMap.entries()).map(([name, image]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      image,
-      slug: name.replace(/\s+/g, "-"),
-    }));
+    return Array.from(destMap.values());
   }, [trips]);
-
-  // Search results
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return { trips: [] as TripData[] };
-    const q = searchQuery.toLowerCase();
-    return {
-      trips: trips
-        .filter(
-          (t) =>
-            (t.title || "").toLowerCase().includes(q) ||
-            (t.destination || "").toLowerCase().includes(q)
-        )
-        .slice(0, 5),
-    };
-  }, [searchQuery, trips]);
-
-  const hasResults = searchResults.trips.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
-        {/* ─── Hero ─── */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-accent/30 to-background px-4 py-20 md:py-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="mb-4 text-4xl font-bold leading-tight tracking-tight text-foreground md:text-6xl">
-              Find your kind of people.{" "}
-              <span className="text-primary">Then travel.</span>
-            </h1>
-            <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground md:text-xl">
-              Join community-led trips with like-minded travelers. Discover adventures, make friends, and explore the world together.
-            </p>
+        {/* Hero */}
+        <HeroSection trips={trips} stats={stats} />
 
-            {/* Search Bar */}
-            <div className="relative mx-auto max-w-xl">
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="h-14 rounded-full border-2 border-primary/20 bg-card pl-12 pr-4 text-base shadow-lg transition-all focus:border-primary focus:shadow-xl"
-                placeholder="Search trips..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-              />
+        {/* Quick Filters */}
+        <QuickFilters active={activeFilter} onSelect={setActiveFilter} />
 
-              {/* Search Dropdown */}
-              {searchFocused && searchQuery.trim() && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border bg-card p-2 shadow-xl">
-                  {!hasResults && (
-                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">No results found</p>
-                  )}
-                  {searchResults.trips.length > 0 && (
-                    <div>
-                      <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trips</p>
-                      {searchResults.trips.map((t) => (
-                        <button
-                          key={t.id}
-                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted"
-                          onMouseDown={() => navigate(`/trips/${t.id}`)}
-                        >
-                          {t.banner_image_url && (
-                            <img src={t.banner_image_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">{t.title}</p>
-                            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              {t.destination}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Section 1: Explore Trips ─── */}
-        <section className="mx-auto max-w-6xl px-4 py-14">
+        {/* Explore Trips */}
+        <section className="mx-auto max-w-6xl px-4 py-10">
           <div className="mb-6 flex items-end justify-between">
             <div>
               <h2 className="text-2xl font-bold text-foreground md:text-3xl">Explore Trips</h2>
-              <p className="mt-1 text-muted-foreground">Discover community trips created by travellers.</p>
+              <p className="mt-1 text-muted-foreground">Discover community trips created by travelers.</p>
             </div>
             <Button variant="ghost" asChild className="hidden sm:flex">
               <Link to="/trips">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
@@ -177,11 +99,13 @@ const Index = () => {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : trips.length === 0 ? (
-            <p className="py-12 text-center text-muted-foreground">No trips available yet.</p>
+          ) : filteredTrips.length === 0 ? (
+            <p className="py-12 text-center text-muted-foreground">
+              {activeFilter ? `No ${activeFilter} trips available.` : "No trips available yet."}
+            </p>
           ) : (
             <HorizontalCarousel>
-              {trips.slice(0, 6).map((trip) => (
+              {filteredTrips.slice(0, 6).map((trip) => (
                 <div key={trip.id} className="min-w-[300px] max-w-[320px] shrink-0">
                   <TripCard trip={trip} />
                 </div>
@@ -196,9 +120,15 @@ const Index = () => {
           </div>
         </section>
 
-        {/* ─── Section 2: Destinations ─── */}
+        {/* Community Profiles */}
+        <CommunitySection profiles={communityProfiles} />
+
+        {/* Why Tapne */}
+        <WhyTapne />
+
+        {/* Destinations */}
         {destinations.length > 0 && (
-          <section className="bg-muted/30 py-14">
+          <section className="py-14">
             <div className="mx-auto max-w-6xl px-4">
               <h2 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">Explore Destinations</h2>
               <p className="mb-6 text-muted-foreground">Find trips by destination.</p>
@@ -206,8 +136,8 @@ const Index = () => {
               <HorizontalCarousel>
                 {destinations.map((dest) => (
                   <Link
-                    key={dest.slug}
-                    to={`/trips?destination=${dest.slug}`}
+                    key={dest.name}
+                    to={`/trips?destination=${dest.name.toLowerCase().replace(/\s+/g, "-")}`}
                     className="group w-[220px] shrink-0 sm:w-[260px]"
                   >
                     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
@@ -225,6 +155,9 @@ const Index = () => {
                             <MapPin className="h-4 w-4" />
                             <span className="text-lg font-semibold">{dest.name}</span>
                           </div>
+                          <p className="mt-0.5 text-xs text-white/80">
+                            {dest.count} trip{dest.count !== 1 ? "s" : ""} available
+                          </p>
                         </div>
                       </div>
                     </Card>
@@ -235,23 +168,23 @@ const Index = () => {
           </section>
         )}
 
-        {/* ─── Section 3: Blogs ─── */}
+        {/* Blogs */}
         {blogs.length > 0 && (
-          <section className="mx-auto max-w-6xl px-4 py-14">
-            <div className="mb-6 flex items-end justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-foreground md:text-3xl">From the Community</h2>
-                <p className="mt-1 text-muted-foreground">Stories, tips, and experiences from fellow travelers.</p>
+          <section className="bg-muted/30 py-14">
+            <div className="mx-auto max-w-6xl px-4">
+              <div className="mb-6 flex items-end justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">From the Community</h2>
+                  <p className="mt-1 text-muted-foreground">Stories, tips, and experiences from fellow travelers.</p>
+                </div>
+                <Button variant="ghost" asChild className="hidden sm:flex">
+                  <Link to="/blogs">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                </Button>
               </div>
-              <Button variant="ghost" asChild className="hidden sm:flex">
-                <Link to="/blogs">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
-              </Button>
-            </div>
 
-            <HorizontalCarousel>
-              {blogs.slice(0, 6).map((blog) => (
-                <div key={blog.slug} className="min-w-[280px] max-w-[300px] shrink-0">
-                  <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {blogs.slice(0, 3).map((blog) => (
+                  <Card key={blog.slug} className="group overflow-hidden transition-shadow hover:shadow-lg">
                     {blog.cover_image_url && (
                       <div className="relative aspect-[16/10] overflow-hidden">
                         <img
@@ -262,9 +195,12 @@ const Index = () => {
                       </div>
                     )}
                     <CardContent className="p-4">
-                      <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+                      <h3 className="mb-1 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
                         {blog.title}
                       </h3>
+                      {blog.excerpt && (
+                        <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">{blog.excerpt}</p>
+                      )}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <User className="h-3 w-3" />
@@ -279,17 +215,26 @@ const Index = () => {
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              ))}
-            </HorizontalCarousel>
-
-            <div className="mt-6 text-center">
-              <Button variant="outline" asChild>
-                <Link to="/blogs">View All Blogs</Link>
-              </Button>
+                ))}
+              </div>
             </div>
           </section>
         )}
+
+        {/* Host CTA */}
+        <HostCTA />
+
+        {/* Social Proof Strip */}
+        <SocialProofStrip stats={stats} />
+
+        {/* Testimonials */}
+        <TestimonialsSection testimonials={testimonials} />
+
+        {/* FAQ */}
+        <FAQSection />
+
+        {/* Final CTA */}
+        <FinalCTA />
       </main>
       <Footer />
     </div>
