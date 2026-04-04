@@ -541,7 +541,7 @@ const CreateTrip = () => {
                 <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={savedDraft}>
                   <Save className="mr-1.5 h-3.5 w-3.5" />{savedDraft ? "Saved!" : "Save Draft"}
                 </Button>
-                <Button variant="outline" size="sm"><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
+                <Button variant="outline" size="sm" onClick={() => { saveDraftData(); const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null); if (id) navigate(`/trips/${id}`); }}><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
                 <Button size="sm" onClick={handleSubmit} disabled={loading}>
                   {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}Publish
                 </Button>
