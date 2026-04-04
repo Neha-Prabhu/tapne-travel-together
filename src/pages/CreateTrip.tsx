@@ -1280,7 +1280,7 @@ const CreateTrip = () => {
                 <div className="text-sm text-muted-foreground">{completedSections.length} of {visibleSections.length} sections • {progressPercent}%</div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
-                  <Button variant="outline"><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
+                  <Button variant="outline" onClick={() => { saveDraftData(); const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null); if (id) navigate(`/trips/${id}`); }}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
                   <Button onClick={handleSubmit} disabled={loading} className="transition-transform hover:scale-[1.02]">
                     {loading ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Publishing...</> : <><Send className="mr-1.5 h-4 w-4" /> Publish Trip</>}
                   </Button>
