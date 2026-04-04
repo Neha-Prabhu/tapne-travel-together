@@ -358,7 +358,57 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { draft: newDraft };
   }
 
-  // ── Profile ──
+  // ── Profile (public view) ──
+  const profileViewMatch = path.match(/^\/profile\/([^/]+)\/$/);
+  if (method === "GET" && profileViewMatch) {
+    const profileId = profileViewMatch[1];
+    // Find the mock user by username or id
+    const idx = MOCK_SESSION_USERS.findIndex(u => u.username === profileId || String(u.id) === profileId);
+    const su = idx >= 0 ? MOCK_SESSION_USERS[idx] : _devUser;
+    const mu = idx >= 0 ? mockUsers[idx] : null;
+
+    if (!su) return { profile: null, trips_hosted: [], trips_joined: [], reviews: [], gallery: [] };
+
+    const hostedTrips = MOCK_TRIPS.filter(t => t.host_username === su.username);
+    const joinedTrips = MOCK_TRIPS.filter(t => t.host_username !== su.username).slice(0, 2);
+
+    const mockReviews = [
+      { id: 1, reviewer_name: "Priya Sharma", reviewer_avatar: "https://i.pravatar.cc/150?img=5", rating: 5, text: "Amazing host! Made the entire trip so seamless and fun. Would definitely join again.", trip_title: "Goa Backpacking Adventure", created_at: "2026-02-10T10:00:00Z" },
+      { id: 2, reviewer_name: "Karan Singh", reviewer_avatar: "https://i.pravatar.cc/150?img=15", rating: 4, text: "Great itinerary planning and super friendly. Loved every moment of the trek.", trip_title: "Himachal Pradesh Trek", created_at: "2026-01-20T08:00:00Z" },
+    ];
+
+    const mockGallery = [
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80",
+      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&q=80",
+      "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400&q=80",
+      "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80",
+      "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=400&q=80",
+      "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80",
+    ];
+
+    return {
+      profile: {
+        username: su.username,
+        display_name: su.display_name,
+        bio: su.bio || mu?.bio || "",
+        location: su.location || mu?.location || "",
+        website: su.website,
+        avatar_url: mu?.avatar,
+        travel_tags: ["Mountains", "Backpacking", "Culture", "Photography"],
+        average_rating: hostedTrips.length > 0 ? 4.6 : undefined,
+        reviews_count: hostedTrips.length > 0 ? 12 : 0,
+        trips_hosted: hostedTrips.length,
+        travelers_hosted: hostedTrips.length * 6,
+        trips_joined: joinedTrips.length + 3,
+      },
+      trips_hosted: hostedTrips,
+      trips_joined: joinedTrips,
+      reviews: hostedTrips.length > 0 ? mockReviews : [],
+      gallery: mockGallery,
+    };
+  }
+
+  // ── Profile (own - me) ──
   if (method === "GET" && path === "/accounts/me/") {
     return { profile: _devUser ? { username: _devUser.username, display_name: _devUser.display_name, bio: _devUser.bio, location: _devUser.location, website: _devUser.website, created_trips: 0, joined_trips: 0 } : null };
   }
