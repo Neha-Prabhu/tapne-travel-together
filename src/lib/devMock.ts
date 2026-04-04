@@ -136,6 +136,9 @@ const MOCK_SESSION_USERS: SessionUser[] = mockUsers.map(mockUserToSessionUser);
 let _devUser: SessionUser | null = null;
 const _devDrafts = new Map<number, TripData>();
 let _devDraftCounter = 5000;
+const _bookmarkedTripIds = new Set<number>();
+const _followedUsers = new Set<string>();
+const _followerCounts = new Map<string, number>();
 
 // Track booking status per trip
 const _tripBookingStatus = new Map<number, "open" | "closed" | "full">();
@@ -421,6 +424,33 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { draft: newDraft };
   }
 
+  // ── Bookmarks ──
+  if (method === "GET" && path === "/bookmarks/") {
+    return { trips: _bookmarkedTripIds.size > 0 ? MOCK_TRIPS.filter(t => _bookmarkedTripIds.has(t.id)) : [] };
+  }
+  const bookmarkAddMatch = path.match(/^\/bookmarks\/(\d+)\/$/);
+  if (method === "POST" && bookmarkAddMatch) {
+    _bookmarkedTripIds.add(parseInt(bookmarkAddMatch[1]));
+    return { ok: true };
+  }
+  if (method === "DELETE" && bookmarkAddMatch) {
+    _bookmarkedTripIds.delete(parseInt(bookmarkAddMatch[1]));
+    return { ok: true };
+  }
+
+  // ── Follow ──
+  const followMatch = path.match(/^\/profile\/([^/]+)\/follow\/$/);
+  if (method === "POST" && followMatch) {
+    const username = followMatch[1];
+    _followedUsers.add(username);
+    return { ok: true, followers_count: (_followerCounts.get(username) ?? 12) + 1 };
+  }
+  if (method === "DELETE" && followMatch) {
+    const username = followMatch[1];
+    _followedUsers.delete(username);
+    return { ok: true, followers_count: Math.max(0, (_followerCounts.get(username) ?? 12) - 1) };
+  }
+
   // ── Profile (public view) ──
   const profileViewMatch = path.match(/^\/profile\/([^/]+)\/$/);
   if (method === "GET" && profileViewMatch) {
@@ -449,6 +479,9 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80",
     ];
 
+    const isFollowed = _followedUsers.has(su.username);
+    const baseFollowers = _followerCounts.get(su.username) ?? (hostedTrips.length > 0 ? 47 : 12);
+
     return {
       profile: {
         username: su.username,
@@ -464,6 +497,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         trips_hosted: hostedTrips.length,
         travelers_hosted: hostedTrips.length * 6,
         trips_joined: joinedTrips.length + 3,
+        followers_count: baseFollowers + (isFollowed ? 1 : 0),
+        is_following: isFollowed,
       },
       trips_hosted: hostedTrips,
       trips_joined: joinedTrips,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import BookmarkButton from "@/features/trip/components/BookmarkButton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TripCard from "@/components/TripCard";
@@ -189,6 +190,9 @@ const TripDetail = () => {
               Log in to book or review this trip
             </p>
           )}
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Saved by {Math.floor(Math.random() * 30 + 15)} travelers
+          </p>
         </CardContent>
       </Card>
 
@@ -257,7 +261,10 @@ const TripDetail = () => {
               <span className="flex items-center gap-1"><Users className="h-4 w-4" />{spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left</span>
             </div>
           </div>
-        </div>
+          </div>
+          <div className="absolute right-4 bottom-6 md:bottom-8">
+            <BookmarkButton tripId={trip.id} size="md" />
+          </div>
 
         {/* ─── Section Nav ─── */}
         <div className="sticky top-16 z-20 border-b bg-card/95 backdrop-blur-sm">

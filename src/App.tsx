@@ -23,6 +23,7 @@ import ExperienceEdit from "./pages/ExperienceEdit";
 import ManageTrip from "./pages/ManageTrip";
 import Travelers from "./pages/Travelers";
 import NotFound from "./pages/NotFound";
+import Bookmarks from "./pages/Bookmarks";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
             {/* Legacy blog routes redirect */}
             <Route path="/blogs" element={<Experiences />} />
             <Route path="/travelers" element={<Travelers />} />
+            <Route path="/bookmarks" element={<Bookmarks />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />

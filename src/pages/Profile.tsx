@@ -18,9 +18,10 @@ import TripCard from "@/components/TripCard";
 import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
-  AlertTriangle, Trash2, PauseCircle,
+  AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -41,6 +42,8 @@ interface ProfileResponse {
     trips_hosted?: number;
     travelers_hosted?: number;
     trips_joined?: number;
+    followers_count?: number;
+    is_following?: boolean;
   };
   trips_hosted: TripData[];
   trips_joined: TripData[];
@@ -68,7 +71,7 @@ const TRAVEL_TAG_OPTIONS = [
 
 const Profile = () => {
   const { userId } = useParams<{ userId: string }>();
-  const { user, isAuthenticated, updateProfile } = useAuth();
+  const { user, isAuthenticated, updateProfile, requireAuth } = useAuth();
   const navigate = useNavigate();
 
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
@@ -87,6 +90,8 @@ const Profile = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
 
   const isOwner = useMemo(() => {
     if (!user) return false;
@@ -109,7 +114,11 @@ const Profile = () => {
 
     const url = `${cfg.api.base}/profile/${profileId}/`;
     apiGet<ProfileResponse>(url)
-      .then(setProfileData)
+      .then((data) => {
+        setProfileData(data);
+        setIsFollowing(data.profile?.is_following ?? false);
+        setFollowersCount(data.profile?.followers_count ?? 0);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [userId, user]);
@@ -255,6 +264,13 @@ const Profile = () => {
                   ))}
                 </div>
               )}
+
+              {/* Follower count */}
+              {!isOwner && (
+                <p className="text-xs text-muted-foreground pt-1 flex items-center gap-1 justify-center sm:justify-start">
+                  <Users className="h-3 w-3" /> {followersCount} follower{followersCount !== 1 ? "s" : ""}
+                </p>
+              )}
             </div>
           </div>
 
@@ -288,16 +304,29 @@ const Profile = () => {
               </>
             ) : (
               <>
-                <Button size="sm">
+                <Button
+                  size="sm"
+                  variant={isFollowing ? "secondary" : "default"}
+                  onClick={() => {
+                    if (!isAuthenticated) { requireAuth(); return; }
+                    const cfg = window.TAPNE_RUNTIME_CONFIG;
+                    const url = `${cfg.api.base}/profile/${p.username}/follow/`;
+                    if (isFollowing) {
+                      setIsFollowing(false);
+                      setFollowersCount(c => c - 1);
+                      apiDelete(url).catch(() => { setIsFollowing(true); setFollowersCount(c => c + 1); });
+                    } else {
+                      setIsFollowing(true);
+                      setFollowersCount(c => c + 1);
+                      apiPost(url).catch(() => { setIsFollowing(false); setFollowersCount(c => c - 1); });
+                    }
+                  }}
+                >
+                  {isFollowing ? <><UserCheck className="mr-1 h-4 w-4" /> Following</> : <><UserPlus className="mr-1 h-4 w-4" /> Follow</>}
+                </Button>
+                <Button size="sm" variant="outline">
                   <MessageCircle className="mr-1 h-4 w-4" /> Message
                 </Button>
-                {isHost && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/trips?host=${p.username}`}>
-                      <Compass className="mr-1 h-4 w-4" /> View Trips
-                    </Link>
-                  </Button>
-                )}
               </>
             )}
           </div>

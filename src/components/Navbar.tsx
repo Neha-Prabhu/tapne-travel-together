@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, Settings, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
+import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
 import { useState } from "react";
 import CreateTripModal from "@/components/CreateTripModal";
 
@@ -107,9 +107,6 @@ const Navbar = () => {
                 <DropdownMenuItem onClick={() => navigate("/bookmarks")}>
                   <Bookmark className="mr-2 h-4 w-4" /> Bookmarks
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <Settings className="mr-2 h-4 w-4" /> Settings
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" /> Log Out
@@ -178,9 +175,6 @@ const Navbar = () => {
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/bookmarks">Bookmarks</Link>
-              </Button>
-              <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/settings">Settings</Link>
               </Button>
               <Button variant="ghost" className="justify-start text-destructive" onClick={() => { handleLogout(); setMobileOpen(false); }}>
                 Log Out
