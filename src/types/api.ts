@@ -223,6 +223,8 @@ export interface CommunityProfile {
   display_name: string;
   avatar_url?: string;
   travel_tags?: string[];
+  location?: string;
+  bio?: string;
 }
 
 export interface TestimonialData {
