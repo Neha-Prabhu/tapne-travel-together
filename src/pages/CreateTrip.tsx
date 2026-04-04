@@ -595,6 +595,9 @@ const CreateTrip = () => {
                       <Textarea rows={3} placeholder="A thrilling road trip through Spiti..." value={summary} onChange={e => setSummary(e.target.value)} maxLength={300} />
                       <p className="text-right text-xs text-muted-foreground">{summary.length}/300</p>
                     </Field>
+                    <Field label="Trip Description" hint="Detailed description of the trip (optional)">
+                      <Textarea rows={5} placeholder="Tell travelers everything about this trip — the vibe, what makes it special, what they can expect..." value={description} onChange={e => setDescription(e.target.value)} />
+                    </Field>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Destination" error={errors.destination} required>
                         <div className="relative"><MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="e.g. Manali, Himachal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
