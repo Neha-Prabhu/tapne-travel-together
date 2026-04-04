@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users, IndianRupee, Star } from "lucide-react";
 import type { TripData } from "@/types/api";
 import { cn } from "@/lib/utils";
+import BookmarkButton from "@/features/trip/components/BookmarkButton";
 
 interface TripCardProps {
   trip: TripData;
@@ -28,6 +29,11 @@ const TripCard = ({ trip }: TripCardProps) => {
               {trip.trip_type}
             </Badge>
           )}
+          <BookmarkButton
+            tripId={trip.id}
+            size="sm"
+            className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 md:opacity-0 max-md:opacity-100"
+          />
         </div>
         <CardContent className="p-4">
           <h3 className="mb-0.5 truncate text-lg font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">

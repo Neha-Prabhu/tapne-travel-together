@@ -136,6 +136,9 @@ const MOCK_SESSION_USERS: SessionUser[] = mockUsers.map(mockUserToSessionUser);
 let _devUser: SessionUser | null = null;
 const _devDrafts = new Map<number, TripData>();
 let _devDraftCounter = 5000;
+const _bookmarkedTripIds = new Set<number>();
+const _followedUsers = new Set<string>();
+const _followerCounts = new Map<string, number>();
 
 // Track booking status per trip
 const _tripBookingStatus = new Map<number, "open" | "closed" | "full">();
