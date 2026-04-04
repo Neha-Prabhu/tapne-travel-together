@@ -790,9 +790,19 @@ const CreateTrip = () => {
                       <div
                         key={day.id}
                         draggable
-                        onDragStart={() => { }}
-                        onDragOver={e => e.preventDefault()}
-                        className="group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm"
+                        onDragStart={() => setDraggingIndex(i)}
+                        onDragOver={e => { e.preventDefault(); dragOverIndexRef.current = i; }}
+                        onDragEnd={() => {
+                          if (draggingIndex !== null && dragOverIndexRef.current !== null && draggingIndex !== dragOverIndexRef.current) {
+                            moveItineraryDay(draggingIndex, dragOverIndexRef.current);
+                          }
+                          setDraggingIndex(null);
+                          dragOverIndexRef.current = null;
+                        }}
+                        className={cn(
+                          "group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm",
+                          draggingIndex === i && "opacity-50 border-primary shadow-md"
+                        )}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
