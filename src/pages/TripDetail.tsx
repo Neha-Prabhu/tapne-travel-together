@@ -93,7 +93,21 @@ const TripDetail = () => {
   const isTripPast = trip.ends_at ? new Date(trip.ends_at) < new Date() : false;
   const canReview = isAuthenticated && isJoined && isTripPast;
 
-  const { requireAuth } = useAuth();
+  // Build visible sections dynamically based on trip data
+  const visibleSections = [
+    { id: "snapshot", label: "Overview" },
+    ...(trip.highlights && trip.highlights.length > 0 ? [{ id: "highlights", label: "Highlights" }] : []),
+    ...(trip.itinerary_days && trip.itinerary_days.length > 0 ? [{ id: "itinerary", label: "Itinerary" }] : []),
+    ...((trip as any).stay_details || (trip as any).accommodation_type ? [{ id: "stay", label: "Stay" }] : []),
+    ...((trip.included_items && trip.included_items.length > 0) || (trip.not_included_items && trip.not_included_items.length > 0) ? [{ id: "included", label: "Included" }] : []),
+    { id: "pricing", label: "Pricing" },
+    ...(trip.things_to_carry && trip.things_to_carry.length > 0 ? [{ id: "carry", label: "Packing" }] : []),
+    ...(trip.cancellation_policy ? [{ id: "policies", label: "Policies" }] : []),
+    ...(trip.faqs && trip.faqs.length > 0 ? [{ id: "faqs", label: "FAQs" }] : []),
+    { id: "reviews", label: "Reviews" },
+    ...(trip.host_display_name ? [{ id: "host", label: "Host" }] : []),
+  ];
+
 
   const handleAction = () => {
     requireAuth(() => setBookingModalOpen(true));
