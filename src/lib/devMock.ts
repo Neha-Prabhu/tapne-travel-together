@@ -277,6 +277,12 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { blog: { slug: "new-experience", ...(body as any) } };
   }
 
+  // Blog update (PATCH)
+  const blogPatchMatch = path.match(/^\/blogs\/([^/]+)\/$/);
+  if (method === "PATCH" && blogPatchMatch) {
+    return { blog: { slug: blogPatchMatch[1], ...(body as any) } };
+  }
+
   // Blog delete
   const blogDeleteMatch = path.match(/^\/blogs\/([^/]+)\/$/);
   if (method === "DELETE" && blogDeleteMatch) {

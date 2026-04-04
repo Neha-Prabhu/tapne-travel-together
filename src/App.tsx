@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Experiences from "./pages/Experiences";
 import ExperienceDetail from "./pages/ExperienceDetail";
 import ExperienceCreate from "./pages/ExperienceCreate";
+import ExperienceEdit from "./pages/ExperienceEdit";
 import ManageTrip from "./pages/ManageTrip";
 import NotFound from "./pages/NotFound";
 
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/experiences" element={<Experiences />} />
             <Route path="/experiences/create" element={<ExperienceCreate />} />
             <Route path="/experiences/:slug" element={<ExperienceDetail />} />
+            <Route path="/experiences/:slug/edit" element={<ExperienceEdit />} />
             {/* Legacy blog routes redirect */}
             <Route path="/blogs" element={<Experiences />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
