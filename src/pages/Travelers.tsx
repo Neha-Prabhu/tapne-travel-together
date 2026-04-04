@@ -13,6 +13,7 @@ interface CommunityProfile {
   avatar_url?: string;
   travel_tags?: string[];
   location?: string;
+  bio?: string;
 }
 
 interface HomeResponse {
