@@ -25,19 +25,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ─── Section nav items ───
-const SECTIONS = [
-  { id: "snapshot", label: "Overview" },
-  { id: "highlights", label: "Highlights" },
-  { id: "itinerary", label: "Itinerary" },
-  { id: "stay", label: "Stay" },
-  { id: "included", label: "Included" },
-  { id: "pricing", label: "Pricing" },
-  { id: "carry", label: "Packing" },
-  { id: "policies", label: "Policies" },
-  { id: "faqs", label: "FAQs" },
-  { id: "reviews", label: "Reviews" },
-  { id: "host", label: "Host" },
-];
+// Sections are built dynamically based on trip data — see visibleSections below
 
 const TripDetail = () => {
   const { id } = useParams();
@@ -104,6 +92,21 @@ const TripDetail = () => {
   const isJoined = joinStatus === "approved";
   const isTripPast = trip.ends_at ? new Date(trip.ends_at) < new Date() : false;
   const canReview = isAuthenticated && isJoined && isTripPast;
+
+  // Build visible sections dynamically based on trip data
+  const visibleSections = [
+    { id: "snapshot", label: "Overview" },
+    ...(trip.highlights && trip.highlights.length > 0 ? [{ id: "highlights", label: "Highlights" }] : []),
+    ...(trip.itinerary_days && trip.itinerary_days.length > 0 ? [{ id: "itinerary", label: "Itinerary" }] : []),
+    ...((trip as any).stay_details || (trip as any).accommodation_type ? [{ id: "stay", label: "Stay" }] : []),
+    ...((trip.included_items && trip.included_items.length > 0) || (trip.not_included_items && trip.not_included_items.length > 0) ? [{ id: "included", label: "Included" }] : []),
+    { id: "pricing", label: "Pricing" },
+    ...(trip.things_to_carry && trip.things_to_carry.length > 0 ? [{ id: "carry", label: "Packing" }] : []),
+    ...(trip.cancellation_policy ? [{ id: "policies", label: "Policies" }] : []),
+    ...(trip.faqs && trip.faqs.length > 0 ? [{ id: "faqs", label: "FAQs" }] : []),
+    { id: "reviews", label: "Reviews" },
+    ...(trip.host_display_name ? [{ id: "host", label: "Host" }] : []),
+  ];
 
   const { requireAuth } = useAuth();
 
@@ -260,7 +263,7 @@ const TripDetail = () => {
         <div className="sticky top-16 z-20 border-b bg-card/95 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl">
             <nav className="flex gap-1 overflow-x-auto px-4 py-1.5 no-scrollbar">
-              {SECTIONS.map(s => (
+              {visibleSections.map(s => (
                 <a key={s.id} href={`#${s.id}`} className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                   {s.label}
                 </a>

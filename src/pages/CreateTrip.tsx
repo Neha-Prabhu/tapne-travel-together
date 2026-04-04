@@ -176,6 +176,7 @@ const CreateTrip = () => {
 
   // ─ Form State ─
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [destination, setDestination] = useState("");
   const [category, setCategory] = useState("");
   const [summary, setSummary] = useState("");
@@ -196,6 +197,12 @@ const CreateTrip = () => {
   const [paymentMethod, setPaymentMethod] = useState<"direct_contact" | "show_payment_details">("direct_contact");
   const [paymentDetails, setPaymentDetails] = useState("");
 
+  // Hero & Gallery images
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
   // Highlights
   const [highlights, setHighlights] = useState<string[]>([""]);
 
@@ -208,13 +215,32 @@ const CreateTrip = () => {
   const [includedItems, setIncludedItems] = useState<string[]>(["Accommodation", "Breakfast", "Local Transport"]);
   const [notIncludedItems, setNotIncludedItems] = useState<string[]>(["Flights", "Travel Insurance", "Personal Expenses"]);
 
-  // Stay & Accommodation
-  const [accommodationType, setAccommodationType] = useState("");
-  const [roomSharing, setRoomSharing] = useState("");
-  const [stayName, setStayName] = useState("");
-  const [stayDescription, setStayDescription] = useState("");
-  const [amenities, setAmenities] = useState<string[]>([]);
-  const [amenityInput, setAmenityInput] = useState("");
+  // Stay & Accommodation — supports multiple stays
+  interface StayEntry {
+    id: string;
+    accommodationType: string;
+    roomSharing: string;
+    stayName: string;
+    stayDescription: string;
+    amenities: string[];
+    amenityInput: string;
+  }
+  const [stays, setStays] = useState<StayEntry[]>([{
+    id: "s1", accommodationType: "", roomSharing: "", stayName: "", stayDescription: "", amenities: [], amenityInput: ""
+  }]);
+  // Keep backwards compat aliases for save
+  const accommodationType = stays[0]?.accommodationType || "";
+  const roomSharing = stays[0]?.roomSharing || "";
+  const stayName = stays[0]?.stayName || "";
+  const stayDescription = stays[0]?.stayDescription || "";
+  const amenities = stays[0]?.amenities || [];
+  const amenityInput = stays[0]?.amenityInput || "";
+  const setAccommodationType = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, accommodationType: v } : s));
+  const setRoomSharing = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, roomSharing: v } : s));
+  const setStayName = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, stayName: v } : s));
+  const setStayDescription = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, stayDescription: v } : s));
+  const setAmenities = (fn: React.SetStateAction<string[]>) => setStays(p => p.map((s, i) => i === 0 ? { ...s, amenities: typeof fn === "function" ? fn(s.amenities) : fn } : s));
+  const setAmenityInput = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, amenityInput: v } : s));
 
   // Things to carry (pill tags)
   const [thingsToCarry, setThingsToCarry] = useState<string[]>(["ID Proof", "Sunscreen", "Power Bank"]);
@@ -515,7 +541,7 @@ const CreateTrip = () => {
                 <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={savedDraft}>
                   <Save className="mr-1.5 h-3.5 w-3.5" />{savedDraft ? "Saved!" : "Save Draft"}
                 </Button>
-                <Button variant="outline" size="sm"><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
+                <Button variant="outline" size="sm" onClick={() => { saveDraftData(); const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null); if (id) navigate(`/trips/${id}`); }}><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
                 <Button size="sm" onClick={handleSubmit} disabled={loading}>
                   {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}Publish
                 </Button>
@@ -569,6 +595,9 @@ const CreateTrip = () => {
                       <Textarea rows={3} placeholder="A thrilling road trip through Spiti..." value={summary} onChange={e => setSummary(e.target.value)} maxLength={300} />
                       <p className="text-right text-xs text-muted-foreground">{summary.length}/300</p>
                     </Field>
+                    <Field label="Trip Description" hint="Detailed description of the trip (optional)">
+                      <Textarea rows={5} placeholder="Tell travelers everything about this trip — the vibe, what makes it special, what they can expect..." value={description} onChange={e => setDescription(e.target.value)} />
+                    </Field>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label="Destination" error={errors.destination} required>
                         <div className="relative"><MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" placeholder="e.g. Manali, Himachal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
@@ -616,15 +645,71 @@ const CreateTrip = () => {
                 {!collapsedSections.has("media") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Hero Image" required hint="Main cover photo">
-                      <div className="flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary/50 hover:bg-muted/50">
-                        <div className="text-center"><Image className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Drag & drop or click to upload</p><p className="text-xs text-muted-foreground">Recommended: 1920×1080px</p></div>
+                      <input ref={heroInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setHeroImage(reader.result as string);
+                        reader.readAsDataURL(file);
+                        e.target.value = "";
+                      }} />
+                      <div
+                        onClick={() => heroInputRef.current?.click()}
+                        onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-primary"); }}
+                        onDragLeave={e => e.currentTarget.classList.remove("border-primary")}
+                        onDrop={e => {
+                          e.preventDefault();
+                          e.currentTarget.classList.remove("border-primary");
+                          const file = e.dataTransfer.files[0];
+                          if (!file?.type.startsWith("image/")) return;
+                          const reader = new FileReader();
+                          reader.onload = () => setHeroImage(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }}
+                        className="flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary/50 hover:bg-muted/50 overflow-hidden"
+                      >
+                        {heroImage ? (
+                          <img src={heroImage} alt="Hero" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="text-center"><Image className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Drag & drop or click to upload</p><p className="text-xs text-muted-foreground">Recommended: 1920×1080px</p></div>
+                        )}
                       </div>
                     </Field>
                     <Field label="Gallery Images" hint="Multiple photos to showcase the trip">
+                      <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => {
+                        const files = e.target.files;
+                        if (!files) return;
+                        Array.from(files).forEach(file => {
+                          const reader = new FileReader();
+                          reader.onload = () => setGalleryImages(prev => [...prev, reader.result as string]);
+                          reader.readAsDataURL(file);
+                        });
+                        e.target.value = "";
+                      }} />
                       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                        {[1, 2, 3, 4].map(i => (
-                          <div key={i} className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 hover:border-primary/50"><Plus className="h-5 w-5 text-muted-foreground" /></div>
+                        {galleryImages.map((img, i) => (
+                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border">
+                            <img src={img} alt={`Gallery ${i + 1}`} className="h-full w-full object-cover" />
+                            <button type="button" onClick={() => setGalleryImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 rounded-full bg-background/80 p-1 hover:bg-destructive hover:text-destructive-foreground"><X className="h-3 w-3" /></button>
+                          </div>
                         ))}
+                        <div
+                          onClick={() => galleryInputRef.current?.click()}
+                          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-primary"); }}
+                          onDragLeave={e => e.currentTarget.classList.remove("border-primary")}
+                          onDrop={e => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove("border-primary");
+                            Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/")).forEach(file => {
+                              const reader = new FileReader();
+                              reader.onload = () => setGalleryImages(prev => [...prev, reader.result as string]);
+                              reader.readAsDataURL(file);
+                            });
+                          }}
+                          className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 hover:border-primary/50"
+                        >
+                          <Plus className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       </div>
                     </Field>
                     <Field label="Video Link" hint="YouTube or Instagram reel"><Input placeholder="https://youtube.com/watch?v=..." /></Field>
@@ -705,9 +790,19 @@ const CreateTrip = () => {
                       <div
                         key={day.id}
                         draggable
-                        onDragStart={() => { }}
-                        onDragOver={e => e.preventDefault()}
-                        className="group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm"
+                        onDragStart={() => setDraggingIndex(i)}
+                        onDragOver={e => { e.preventDefault(); dragOverIndexRef.current = i; }}
+                        onDragEnd={() => {
+                          if (draggingIndex !== null && dragOverIndexRef.current !== null && draggingIndex !== dragOverIndexRef.current) {
+                            moveItineraryDay(draggingIndex, dragOverIndexRef.current);
+                          }
+                          setDraggingIndex(null);
+                          dragOverIndexRef.current = null;
+                        }}
+                        className={cn(
+                          "group rounded-lg border bg-card p-4 space-y-3 transition-all hover:border-primary/30 hover:shadow-sm",
+                          draggingIndex === i && "opacity-50 border-primary shadow-md"
+                        )}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -735,78 +830,93 @@ const CreateTrip = () => {
                 )}
               </Card>
 
-              {/* 5b. STAY & ACCOMMODATION */}
+              {/* 5b. STAY & ACCOMMODATION (multiple stays) */}
               <Card id="stay" ref={(el) => { sectionRefs.current.stay = el; }}>
                 {renderSectionHeader("stay", Hotel, "Stay & Accommodation", "Where will participants stay during the trip?")}
                 {!collapsedSections.has("stay") && (
-                  <CardContent className="space-y-4 pt-0">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="Accommodation Type" hint="e.g. Hotel, Hostel, Camping, Villa, Homestay">
-                        <Select value={accommodationType} onValueChange={setAccommodationType}>
-                          <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                          <SelectContent>
-                            {["Hotel", "Hostel", "Camping", "Villa", "Homestay", "Resort", "Mixed"].map(t => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                  <CardContent className="space-y-6 pt-0">
+                    {stays.map((stay, si) => (
+                      <div key={stay.id} className="space-y-4 rounded-lg border bg-card p-4">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="secondary" className="font-semibold">Stay {si + 1}</Badge>
+                          {stays.length > 1 && (
+                            <Button variant="ghost" size="icon" onClick={() => setStays(prev => prev.filter((_, idx) => idx !== si))}>
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label="Accommodation Type" hint="e.g. Hotel, Hostel, Camping">
+                            <Select value={stay.accommodationType} onValueChange={v => setStays(p => p.map((s, i) => i === si ? { ...s, accommodationType: v } : s))}>
+                              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                              <SelectContent>
+                                {["Hotel", "Hostel", "Camping", "Villa", "Homestay", "Resort", "Mixed"].map(t => (
+                                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field label="Room Sharing">
+                            <Select value={stay.roomSharing} onValueChange={v => setStays(p => p.map((s, i) => i === si ? { ...s, roomSharing: v } : s))}>
+                              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                              <SelectContent>
+                                {["Private", "Twin Sharing", "Triple Sharing", "Dorm"].map(t => (
+                                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </div>
+                        <Field label="Stay Name" hint="Name of the property (if known)">
+                          <Input placeholder="e.g. Zostel Goa — Anjuna" value={stay.stayName} onChange={e => setStays(p => p.map((s, i) => i === si ? { ...s, stayName: e.target.value } : s))} />
+                        </Field>
+                        <Field label="Stay Description">
+                          <RichTextEditor value={stay.stayDescription} onChange={v => setStays(p => p.map((s, i) => i === si ? { ...s, stayDescription: v } : s))} placeholder="Describe the accommodation..." minHeight="80px" />
+                        </Field>
+                        <Field label="Amenities">
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {stay.amenities.map((item, ai) => (
+                              <Badge key={ai} variant="secondary" className="gap-1 py-1.5 px-3 text-sm">
+                                {item}
+                                <button type="button" onClick={() => setStays(p => p.map((s, i) => i === si ? { ...s, amenities: s.amenities.filter((_, idx) => idx !== ai) } : s))} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                              </Badge>
                             ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                      <Field label="Room Sharing" hint="How rooms are shared">
-                        <Select value={roomSharing} onValueChange={setRoomSharing}>
-                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                          <SelectContent>
-                            {["Private", "Twin Sharing", "Triple Sharing", "Dorm"].map(t => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                    </div>
-                    <Field label="Stay Name" hint="Name of the property (if known)">
-                      <Input placeholder="e.g. Zostel Goa — Anjuna" value={stayName} onChange={e => setStayName(e.target.value)} />
-                    </Field>
-                    <Field label="Stay Description" hint="Describe the accommodation, location, and vibe">
-                      <RichTextEditor value={stayDescription} onChange={setStayDescription} placeholder="A vibrant backpacker hostel just 5 minutes from the beach..." minHeight="80px" />
-                    </Field>
-                    <Field label="Amenities">
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {amenities.map((item, i) => (
-                          <Badge key={i} variant="secondary" className="gap-1 py-1.5 px-3 text-sm">
-                            {item}
-                            <button type="button" onClick={() => setAmenities(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Type an amenity and press Enter..."
-                          value={amenityInput}
-                          onChange={e => setAmenityInput(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              if (amenityInput.trim() && !amenities.includes(amenityInput.trim())) {
-                                setAmenities(prev => [...prev, amenityInput.trim()]);
-                                setAmenityInput("");
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Type an amenity and press Enter..."
+                              value={stay.amenityInput}
+                              onChange={e => setStays(p => p.map((s, i) => i === si ? { ...s, amenityInput: e.target.value } : s))}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const val = stay.amenityInput.trim();
+                                  if (val && !stay.amenities.includes(val)) {
+                                    setStays(p => p.map((s, i) => i === si ? { ...s, amenities: [...s.amenities, val], amenityInput: "" } : s));
+                                  }
+                                }
+                              }}
+                            />
+                            <Button type="button" variant="outline" size="sm" onClick={() => {
+                              const val = stay.amenityInput.trim();
+                              if (val && !stay.amenities.includes(val)) {
+                                setStays(p => p.map((s, i) => i === si ? { ...s, amenities: [...s.amenities, val], amenityInput: "" } : s));
                               }
-                            }
-                          }}
-                        />
-                        <Button type="button" variant="outline" size="sm" onClick={() => {
-                          if (amenityInput.trim() && !amenities.includes(amenityInput.trim())) {
-                            setAmenities(prev => [...prev, amenityInput.trim()]);
-                            setAmenityInput("");
-                          }
-                        }}>Add</Button>
+                            }}>Add</Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {["WiFi", "Hot Water", "AC", "Pool", "Breakfast", "Parking", "Laundry", "Power Backup", "Locker"].filter(sg => !stay.amenities.includes(sg)).map(suggestion => (
+                              <button key={suggestion} type="button" onClick={() => setStays(p => p.map((s, i) => i === si ? { ...s, amenities: [...s.amenities, suggestion] } : s))} className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+                                + {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        </Field>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {["WiFi", "Hot Water", "AC", "Pool", "Breakfast", "Parking", "Laundry", "Power Backup", "Locker"].filter(s => !amenities.includes(s)).map(suggestion => (
-                          <button key={suggestion} type="button" onClick={() => setAmenities(prev => [...prev, suggestion])} className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary">
-                            + {suggestion}
-                          </button>
-                        ))}
-                      </div>
-                    </Field>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={() => setStays(prev => [...prev, { id: `s${Date.now()}`, accommodationType: "", roomSharing: "", stayName: "", stayDescription: "", amenities: [], amenityInput: "" }])}>
+                      <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Stay
+                    </Button>
                   </CardContent>
                 )}
               </Card>
@@ -1041,12 +1151,38 @@ const CreateTrip = () => {
                             </div>
                             {(q.type === "single_select" || q.type === "multiple_choice") && (
                               <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground">Options (comma-separated)</Label>
-                                <Input
-                                  value={(q.options || []).join(", ")}
-                                  onChange={e => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: e.target.value.split(",").map(o => o.trim()).filter(Boolean) } : cq))}
-                                  placeholder="Option 1, Option 2, Option 3"
-                                />
+                                <Label className="text-xs text-muted-foreground">Options</Label>
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {(q.options || []).map((opt, oi) => (
+                                    <Badge key={oi} variant="secondary" className="gap-1 py-1 px-2.5 text-xs">
+                                      {opt}
+                                      <button type="button" onClick={() => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: (cq.options || []).filter((_, oIdx) => oIdx !== oi) } : cq))} className="ml-0.5 hover:text-destructive"><X className="h-3 w-3" /></button>
+                                    </Badge>
+                                  ))}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="Type an option..."
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        const val = (e.target as HTMLInputElement).value.trim();
+                                        if (val && !(q.options || []).includes(val)) {
+                                          setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: [...(cq.options || []), val] } : cq));
+                                          (e.target as HTMLInputElement).value = "";
+                                        }
+                                      }
+                                    }}
+                                  />
+                                  <Button type="button" variant="outline" size="sm" onClick={(e) => {
+                                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                                    const val = input.value.trim();
+                                    if (val && !(q.options || []).includes(val)) {
+                                      setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: [...(cq.options || []), val] } : cq));
+                                      input.value = "";
+                                    }
+                                  }}>Add</Button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1144,7 +1280,7 @@ const CreateTrip = () => {
                 <div className="text-sm text-muted-foreground">{completedSections.length} of {visibleSections.length} sections • {progressPercent}%</div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
-                  <Button variant="outline"><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
+                  <Button variant="outline" onClick={() => { saveDraftData(); const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null); if (id) navigate(`/trips/${id}`); }}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
                   <Button onClick={handleSubmit} disabled={loading} className="transition-transform hover:scale-[1.02]">
                     {loading ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Publishing...</> : <><Send className="mr-1.5 h-4 w-4" /> Publish Trip</>}
                   </Button>
