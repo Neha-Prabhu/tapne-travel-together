@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Experiences from "./pages/Experiences";
 import ExperienceDetail from "./pages/ExperienceDetail";
 import ExperienceCreate from "./pages/ExperienceCreate";
+import ExperienceEdit from "./pages/ExperienceEdit";
 import ManageTrip from "./pages/ManageTrip";
 import NotFound from "./pages/NotFound";
 
