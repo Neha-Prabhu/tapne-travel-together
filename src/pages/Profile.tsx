@@ -41,6 +41,8 @@ interface ProfileResponse {
     trips_hosted?: number;
     travelers_hosted?: number;
     trips_joined?: number;
+    followers_count?: number;
+    is_following?: boolean;
   };
   trips_hosted: TripData[];
   trips_joined: TripData[];
