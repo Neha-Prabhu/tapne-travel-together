@@ -109,8 +109,8 @@ const RichTextEditor = ({ value, onChange, placeholder, className, minHeight = "
           "prose prose-sm max-w-none",
           "[&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-muted-foreground [&:empty]:before:pointer-events-none",
           "[&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1",
-          "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
-          "[&_li]:my-0.5"
+          "[&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6",
+          "[&_li]:my-0.5 [&_li]:ml-1"
         )}
         style={{ minHeight }}
       />
