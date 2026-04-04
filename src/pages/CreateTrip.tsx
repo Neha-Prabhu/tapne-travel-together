@@ -209,13 +209,32 @@ const CreateTrip = () => {
   const [includedItems, setIncludedItems] = useState<string[]>(["Accommodation", "Breakfast", "Local Transport"]);
   const [notIncludedItems, setNotIncludedItems] = useState<string[]>(["Flights", "Travel Insurance", "Personal Expenses"]);
 
-  // Stay & Accommodation
-  const [accommodationType, setAccommodationType] = useState("");
-  const [roomSharing, setRoomSharing] = useState("");
-  const [stayName, setStayName] = useState("");
-  const [stayDescription, setStayDescription] = useState("");
-  const [amenities, setAmenities] = useState<string[]>([]);
-  const [amenityInput, setAmenityInput] = useState("");
+  // Stay & Accommodation — supports multiple stays
+  interface StayEntry {
+    id: string;
+    accommodationType: string;
+    roomSharing: string;
+    stayName: string;
+    stayDescription: string;
+    amenities: string[];
+    amenityInput: string;
+  }
+  const [stays, setStays] = useState<StayEntry[]>([{
+    id: "s1", accommodationType: "", roomSharing: "", stayName: "", stayDescription: "", amenities: [], amenityInput: ""
+  }]);
+  // Keep backwards compat aliases for save
+  const accommodationType = stays[0]?.accommodationType || "";
+  const roomSharing = stays[0]?.roomSharing || "";
+  const stayName = stays[0]?.stayName || "";
+  const stayDescription = stays[0]?.stayDescription || "";
+  const amenities = stays[0]?.amenities || [];
+  const amenityInput = stays[0]?.amenityInput || "";
+  const setAccommodationType = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, accommodationType: v } : s));
+  const setRoomSharing = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, roomSharing: v } : s));
+  const setStayName = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, stayName: v } : s));
+  const setStayDescription = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, stayDescription: v } : s));
+  const setAmenities = (fn: React.SetStateAction<string[]>) => setStays(p => p.map((s, i) => i === 0 ? { ...s, amenities: typeof fn === "function" ? fn(s.amenities) : fn } : s));
+  const setAmenityInput = (v: string) => setStays(p => p.map((s, i) => i === 0 ? { ...s, amenityInput: v } : s));
 
   // Things to carry (pill tags)
   const [thingsToCarry, setThingsToCarry] = useState<string[]>(["ID Proof", "Sunscreen", "Power Bank"]);
