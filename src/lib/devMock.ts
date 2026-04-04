@@ -599,5 +599,93 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { ok: true };
   }
 
+  // ── DM Inbox ──
+  if (method === "GET" && path === "/dm/inbox/") {
+    const resp: InboxResponse = { threads: _mockThreads };
+    return resp;
+  }
+
+  // ── Send message to thread ──
+  const threadMsgMatch = path.match(/^\/dm\/inbox\/(\d+)\/messages\/$/);
+  if (method === "POST" && threadMsgMatch) {
+    const threadId = parseInt(threadMsgMatch[1]);
+    const thread = _mockThreads.find(t => t.id === threadId);
+    if (thread) {
+      const b = body as any;
+      const newMsg: MessageData = {
+        id: ++_mockMsgIdCounter,
+        thread_id: threadId,
+        sender_username: _devUser?.username || "dev_user",
+        sender_display_name: _devUser?.display_name || "Dev User",
+        body: b?.body || "",
+        sent_at: new Date().toISOString(),
+      };
+      thread.messages.push(newMsg);
+      thread.last_message = newMsg.body;
+      thread.last_sent_at = newMsg.sent_at;
+    }
+    return { ok: true };
+  }
+
+  // ── Create new DM thread ──
+  if (method === "POST" && path === "/dm/inbox/") {
+    const b = body as any;
+    const existingDm = _mockThreads.find(
+      t => t.type === "dm" && t.participants.some(p => p.username === b?.username)
+    );
+    if (existingDm) return { thread: existingDm };
+    const newThread: ThreadData = {
+      id: _mockThreads.length + 100,
+      type: b?.type || "dm",
+      title: b?.title || b?.display_name || "New Chat",
+      trip_id: b?.trip_id,
+      trip_title: b?.trip_title,
+      participants: [
+        { username: _devUser?.username || "dev_user", display_name: _devUser?.display_name || "Dev User" },
+        { username: b?.username, display_name: b?.display_name || b?.username, avatar_url: b?.avatar_url },
+      ],
+      last_message: b?.initial_message || undefined,
+      last_sent_at: new Date().toISOString(),
+      unread_count: 0,
+      messages: b?.initial_message ? [{
+        id: ++_mockMsgIdCounter,
+        thread_id: _mockThreads.length + 100,
+        sender_username: _devUser?.username || "dev_user",
+        sender_display_name: _devUser?.display_name || "Dev User",
+        body: b.initial_message,
+        sent_at: new Date().toISOString(),
+      }] : [],
+    };
+    _mockThreads.push(newThread);
+    return { thread: newThread };
+  }
+
+  // ── Trip group chat creation ──
+  const tripChatMatch = path.match(/^\/trip-chat\/(\d+)\/$/);
+  if (method === "POST" && tripChatMatch) {
+    const tripId = parseInt(tripChatMatch[1]);
+    const trip = MOCK_TRIPS.find(t => t.id === tripId);
+    const existing = _mockThreads.find(t => t.type === "group_chat" && t.trip_id === tripId);
+    if (existing) return { thread: existing };
+    const participants = getMockParticipants(tripId);
+    const newThread: ThreadData = {
+      id: _mockThreads.length + 200,
+      type: "group_chat",
+      title: `${trip?.title || "Trip"} – Group Chat`,
+      trip_id: tripId,
+      trip_title: trip?.title,
+      participants: [
+        { username: _devUser?.username || "dev_user", display_name: _devUser?.display_name || "Dev User" },
+        ...participants.map(p => ({ username: p.username, display_name: p.display_name, avatar_url: p.avatar_url })),
+      ],
+      last_message: undefined,
+      last_sent_at: new Date().toISOString(),
+      unread_count: 0,
+      messages: [],
+    };
+    _mockThreads.push(newThread);
+    return { thread: newThread };
+  }
+
   return {};
 }
