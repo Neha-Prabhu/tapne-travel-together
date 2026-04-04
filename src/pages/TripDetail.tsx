@@ -548,6 +548,20 @@ const TripDetail = () => {
                       <h4 className="text-lg font-semibold text-foreground">{trip.host_display_name}</h4>
                       {trip.host_location && <p className="text-sm text-muted-foreground mb-1">{trip.host_location}</p>}
                       {trip.host_bio && <p className="text-sm text-muted-foreground mb-2">{trip.host_bio}</p>}
+                      {!isHost && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 border-primary/30 text-primary hover:bg-primary/5"
+                          onClick={() => {
+                            requireAuth(() => {
+                              navigate(`/inbox?trip_query=${trip.id}`);
+                            });
+                          }}
+                        >
+                          <MessageCircle className="mr-1.5 h-4 w-4" /> Ask a Question
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Section>
