@@ -185,8 +185,8 @@ const Navbar = () => {
               </Button>
             </>
           ) : (
-            <Button className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-              <Link to="/login">Login</Link>
+            <Button className="justify-start" onClick={() => { requireAuth(); setMobileOpen(false); }}>
+              Login
             </Button>
           )}
         </div>
