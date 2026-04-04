@@ -84,6 +84,7 @@ const Profile = () => {
   }, [userId, isAuthenticated, navigate]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     setLoading(true);
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     const profileId = userId || (user?.username ?? user?.id);
