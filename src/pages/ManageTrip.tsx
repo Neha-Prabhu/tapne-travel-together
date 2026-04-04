@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowLeft, Users, Eye, Send, XCircle, CheckCircle2, Clock, Loader2,
   AlertTriangle, Lock, Unlock, UserMinus, MessageSquare, ClipboardList,
+  Bell, MessagesSquare,
 } from "lucide-react";
 
 const ManageTrip = () => {
