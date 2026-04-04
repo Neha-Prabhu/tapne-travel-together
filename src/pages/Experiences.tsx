@@ -64,8 +64,8 @@ const Experiences = () => {
                       </div>
                     )}
                     <CardContent className="p-4">
-                      <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">{blog.title}</h3>
-                      {blog.excerpt && <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{blog.excerpt}</p>}
+                      <h3 className="mb-1.5 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">{blog.title}</h3>
+                      {(blog.short_description || blog.excerpt) && <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{blog.short_description || blog.excerpt}</p>}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center gap-1"><User className="h-3 w-3" />{blog.author_display_name || blog.author_username}</div>
                         {blog.created_at && (
