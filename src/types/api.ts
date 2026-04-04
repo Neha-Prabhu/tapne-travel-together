@@ -123,6 +123,10 @@ export interface TripData {
   participants_count?: number;
   applications_count?: number;
   access_type?: "open" | "apply" | "invite";
+  average_rating?: number;
+  reviews_count?: number;
+  payment_method?: "direct_contact" | "show_payment_details";
+  payment_details?: string;
 }
 
 export interface ParticipantData {
