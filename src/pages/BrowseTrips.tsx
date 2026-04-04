@@ -157,7 +157,6 @@ const BrowseTrips = () => {
                               </Button>
                             </div>
                           </div>
-                        </div>
                       </div>
                     </Card>
                   </Link>
