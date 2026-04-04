@@ -23,6 +23,7 @@ import ExperienceEdit from "./pages/ExperienceEdit";
 import ManageTrip from "./pages/ManageTrip";
 import Travelers from "./pages/Travelers";
 import NotFound from "./pages/NotFound";
+import Bookmarks from "./pages/Bookmarks";
 
 const queryClient = new QueryClient();
 
