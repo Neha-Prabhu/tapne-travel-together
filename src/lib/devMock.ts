@@ -451,6 +451,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
     return {
       profile: {
+        username: su.username,
         email: su.email,
         display_name: su.display_name,
         bio: su.bio || mu?.bio || "",
