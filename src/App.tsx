@@ -21,6 +21,7 @@ import ExperienceDetail from "./pages/ExperienceDetail";
 import ExperienceCreate from "./pages/ExperienceCreate";
 import ExperienceEdit from "./pages/ExperienceEdit";
 import ManageTrip from "./pages/ManageTrip";
+import Travelers from "./pages/Travelers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
