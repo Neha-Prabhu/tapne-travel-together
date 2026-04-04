@@ -63,6 +63,7 @@ const App = () => (
             {/* Legacy blog routes redirect */}
             <Route path="/blogs" element={<Experiences />} />
             <Route path="/travelers" element={<Travelers />} />
+            <Route path="/bookmarks" element={<Bookmarks />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />

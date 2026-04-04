@@ -304,16 +304,29 @@ const Profile = () => {
               </>
             ) : (
               <>
-                <Button size="sm">
+                <Button
+                  size="sm"
+                  variant={isFollowing ? "secondary" : "default"}
+                  onClick={() => {
+                    if (!isAuthenticated) { requireAuth(); return; }
+                    const cfg = window.TAPNE_RUNTIME_CONFIG;
+                    const url = `${cfg.api.base}/profile/${p.username}/follow/`;
+                    if (isFollowing) {
+                      setIsFollowing(false);
+                      setFollowersCount(c => c - 1);
+                      apiDelete(url).catch(() => { setIsFollowing(true); setFollowersCount(c => c + 1); });
+                    } else {
+                      setIsFollowing(true);
+                      setFollowersCount(c => c + 1);
+                      apiPost(url).catch(() => { setIsFollowing(false); setFollowersCount(c => c - 1); });
+                    }
+                  }}
+                >
+                  {isFollowing ? <><UserCheck className="mr-1 h-4 w-4" /> Following</> : <><UserPlus className="mr-1 h-4 w-4" /> Follow</>}
+                </Button>
+                <Button size="sm" variant="outline">
                   <MessageCircle className="mr-1 h-4 w-4" /> Message
                 </Button>
-                {isHost && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/trips?host=${p.username}`}>
-                      <Compass className="mr-1 h-4 w-4" /> View Trips
-                    </Link>
-                  </Button>
-                )}
               </>
             )}
           </div>
