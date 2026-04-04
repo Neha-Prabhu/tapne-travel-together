@@ -501,7 +501,32 @@ const TripDetail = () => {
                 </Section>
               )}
 
-              {/* Host */}
+              {/* Reviews Section — always visible */}
+              <Section id="reviews" icon={Star} title="Reviews & Ratings">
+                {trip.average_rating ? (
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className={cn("h-5 w-5", s <= Math.round(trip.average_rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                      ))}
+                    </div>
+                    <span className="text-lg font-bold text-foreground">{trip.average_rating.toFixed(1)}</span>
+                    <span className="text-sm text-muted-foreground">({trip.reviews_count || 0} review{(trip.reviews_count || 0) !== 1 ? "s" : ""})</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mb-4">Not enough reviews yet. Be the first to share your experience!</p>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/30 text-primary hover:bg-primary/5"
+                  onClick={() => requireAuth(() => setReviewModalOpen(true))}
+                >
+                  <Star className="mr-1.5 h-4 w-4" /> Write a Review
+                </Button>
+              </Section>
+
+
               {trip.host_display_name && (
                 <Section id="host" icon={UserCircle} title="Meet Your Host">
                   <div className="flex items-start gap-4">
