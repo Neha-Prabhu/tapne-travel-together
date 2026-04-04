@@ -222,6 +222,12 @@ const ManageTrip = () => {
                   {pendingApps.length > 0 && <Badge variant="secondary" className="ml-2 text-xs">{pendingApps.length}</Badge>}
                 </TabsTrigger>
               )}
+              <TabsTrigger value="chat">
+                <MessagesSquare className="mr-1.5 h-4 w-4" /> Group Chat
+              </TabsTrigger>
+              <TabsTrigger value="notifications">
+                <Bell className="mr-1.5 h-4 w-4" /> Notifications
+              </TabsTrigger>
             </TabsList>
 
             {/* Participants Tab */}
