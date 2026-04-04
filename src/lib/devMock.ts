@@ -421,6 +421,33 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { draft: newDraft };
   }
 
+  // ── Bookmarks ──
+  if (method === "GET" && path === "/bookmarks/") {
+    return { trips: _bookmarkedTripIds.size > 0 ? MOCK_TRIPS.filter(t => _bookmarkedTripIds.has(t.id)) : [] };
+  }
+  const bookmarkAddMatch = path.match(/^\/bookmarks\/(\d+)\/$/);
+  if (method === "POST" && bookmarkAddMatch) {
+    _bookmarkedTripIds.add(parseInt(bookmarkAddMatch[1]));
+    return { ok: true };
+  }
+  if (method === "DELETE" && bookmarkAddMatch) {
+    _bookmarkedTripIds.delete(parseInt(bookmarkAddMatch[1]));
+    return { ok: true };
+  }
+
+  // ── Follow ──
+  const followMatch = path.match(/^\/profile\/([^/]+)\/follow\/$/);
+  if (method === "POST" && followMatch) {
+    const username = followMatch[1];
+    _followedUsers.add(username);
+    return { ok: true, followers_count: (_followerCounts.get(username) ?? 12) + 1 };
+  }
+  if (method === "DELETE" && followMatch) {
+    const username = followMatch[1];
+    _followedUsers.delete(username);
+    return { ok: true, followers_count: Math.max(0, (_followerCounts.get(username) ?? 12) - 1) };
+  }
+
   // ── Profile (public view) ──
   const profileViewMatch = path.match(/^\/profile\/([^/]+)\/$/);
   if (method === "GET" && profileViewMatch) {
