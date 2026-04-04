@@ -35,6 +35,7 @@ const SECTIONS = [
   { id: "carry", label: "Packing" },
   { id: "policies", label: "Policies" },
   { id: "faqs", label: "FAQs" },
+  { id: "reviews", label: "Reviews" },
   { id: "host", label: "Host" },
 ];
 
