@@ -19,7 +19,8 @@ interface ExperienceDetailResponse {
 }
 
 const ExperienceEdit = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const slug = searchParams.get("slug");
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
