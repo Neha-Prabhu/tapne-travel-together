@@ -18,9 +18,10 @@ import TripCard from "@/components/TripCard";
 import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
-  AlertTriangle, Trash2, PauseCircle,
+  AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
 
 /* ─── Types ─────────────────────────────────────────────────────── */

@@ -479,6 +479,9 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80",
     ];
 
+    const isFollowed = _followedUsers.has(su.username);
+    const baseFollowers = _followerCounts.get(su.username) ?? (hostedTrips.length > 0 ? 47 : 12);
+
     return {
       profile: {
         username: su.username,
@@ -494,6 +497,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         trips_hosted: hostedTrips.length,
         travelers_hosted: hostedTrips.length * 6,
         trips_joined: joinedTrips.length + 3,
+        followers_count: baseFollowers + (isFollowed ? 1 : 0),
+        is_following: isFollowed,
       },
       trips_hosted: hostedTrips,
       trips_joined: joinedTrips,
