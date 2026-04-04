@@ -127,7 +127,7 @@ const ExperienceDetail = () => {
             )}
             {isOwner && (
               <div className="ml-auto flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => navigate(`/experiences/${blog.slug}/edit`)}>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/experiences/edit?slug=${blog.slug}`)}>
                   <Edit className="mr-1 h-3 w-3" /> Edit
                 </Button>
                 <Button variant="outline" size="sm" className="text-destructive" onClick={handleDelete}>
