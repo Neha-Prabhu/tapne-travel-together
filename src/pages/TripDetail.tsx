@@ -190,6 +190,9 @@ const TripDetail = () => {
               Log in to book or review this trip
             </p>
           )}
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Saved by {Math.floor(Math.random() * 30 + 15)} travelers
+          </p>
         </CardContent>
       </Card>
 

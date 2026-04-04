@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, Settings, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
+import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
 import { useState } from "react";
 import CreateTripModal from "@/components/CreateTripModal";
 
