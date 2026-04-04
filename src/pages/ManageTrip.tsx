@@ -349,6 +349,136 @@ const ManageTrip = () => {
                 )}
               </TabsContent>
             )}
+
+            {/* Group Chat Tab */}
+            <TabsContent value="chat">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MessagesSquare className="h-5 w-5 text-primary" />
+                    Group Chat
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border bg-muted/20 p-4 min-h-[200px] max-h-[400px] overflow-y-auto space-y-3">
+                    {chatMessages.length === 0 ? (
+                      <p className="text-center text-sm text-muted-foreground py-8">No messages yet. Start the conversation!</p>
+                    ) : (
+                      chatMessages.map(msg => (
+                        <div key={msg.id} className="flex gap-3">
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarFallback className="text-xs">{msg.sender[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-sm font-medium text-foreground">{msg.sender}</span>
+                              <span className="text-[10px] text-muted-foreground">{msg.time}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{msg.text}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="Type a message to the group..."
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      rows={2}
+                      className="flex-1"
+                    />
+                    <Button className="shrink-0 self-end" onClick={() => {
+                      if (chatInput.trim()) {
+                        setChatMessages(prev => [...prev, {
+                          id: `msg-${Date.now()}`,
+                          sender: "You (Host)",
+                          text: chatInput.trim(),
+                          time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+                        }]);
+                        setChatInput("");
+                        toast.success("Message sent to group");
+                      }
+                    }}>
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Notifications Tab */}
+            <TabsContent value="notifications">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Bell className="h-5 w-5 text-primary" />
+                    Send Notification
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {[
+                      { value: "update", label: "Trip Update", desc: "General trip info" },
+                      { value: "payment", label: "Payment Reminder", desc: "Payment-related" },
+                      { value: "announcement", label: "Announcement", desc: "Important notice" },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setNotifType(opt.value)}
+                        className={cn(
+                          "rounded-lg border p-3 text-left transition-all",
+                          notifType === opt.value ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"
+                        )}
+                      >
+                        <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                        <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <Textarea
+                    placeholder="Write your notification message..."
+                    value={notifText}
+                    onChange={e => setNotifText(e.target.value)}
+                    rows={3}
+                  />
+                  <Button onClick={() => {
+                    if (!notifText.trim()) { toast.error("Please write a message"); return; }
+                    setNotifications(prev => [...prev, {
+                      id: `n-${Date.now()}`,
+                      type: notifType,
+                      message: notifText.trim(),
+                      sentAt: new Date().toISOString(),
+                    }]);
+                    toast.success("Notification sent to all participants");
+                    setNotifText("");
+                  }}>
+                    <Bell className="mr-1.5 h-4 w-4" /> Send Notification
+                  </Button>
+
+                  {notifications.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Sent Notifications</p>
+                      {notifications.map(n => (
+                        <div key={n.id} className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3">
+                          <Bell className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <Badge variant="outline" className="text-[10px] capitalize">{n.type}</Badge>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(n.sentAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground">{n.message}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
 
           {/* Danger Zone — Cancel Trip */}
