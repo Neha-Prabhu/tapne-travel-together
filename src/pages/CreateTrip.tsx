@@ -412,7 +412,7 @@ const CreateTrip = () => {
         fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
         generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
         medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
-        customQuestions, autoApprove,
+        customQuestions, autoApprove, paymentMethod, paymentDetails,
       },
     });
   }, [draftId, draftIdParam, updateDraft, title, destination, category, summary, startDate, endDate,
