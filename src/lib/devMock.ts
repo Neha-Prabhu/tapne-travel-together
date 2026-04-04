@@ -4,6 +4,7 @@ import type {
   SessionUser, SessionResponse, MyTripsResponse, BlogData,
   ParticipantData, ManageTripResponse, EnrollmentRequestData,
 } from "@/types/api";
+import type { ThreadData, InboxResponse, MessageData } from "@/types/messaging";
 
 function mockUserToSessionUser(u: typeof mockUsers[0], idx: number): SessionUser {
   const username = u.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
