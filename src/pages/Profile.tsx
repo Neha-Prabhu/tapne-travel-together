@@ -264,6 +264,13 @@ const Profile = () => {
                   ))}
                 </div>
               )}
+
+              {/* Follower count */}
+              {!isOwner && (
+                <p className="text-xs text-muted-foreground pt-1 flex items-center gap-1 justify-center sm:justify-start">
+                  <Users className="h-3 w-3" /> {followersCount} follower{followersCount !== 1 ? "s" : ""}
+                </p>
+              )}
             </div>
           </div>
 
