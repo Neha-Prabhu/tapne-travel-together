@@ -1136,12 +1136,38 @@ const CreateTrip = () => {
                             </div>
                             {(q.type === "single_select" || q.type === "multiple_choice") && (
                               <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground">Options (comma-separated)</Label>
-                                <Input
-                                  value={(q.options || []).join(", ")}
-                                  onChange={e => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: e.target.value.split(",").map(o => o.trim()).filter(Boolean) } : cq))}
-                                  placeholder="Option 1, Option 2, Option 3"
-                                />
+                                <Label className="text-xs text-muted-foreground">Options</Label>
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {(q.options || []).map((opt, oi) => (
+                                    <Badge key={oi} variant="secondary" className="gap-1 py-1 px-2.5 text-xs">
+                                      {opt}
+                                      <button type="button" onClick={() => setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: (cq.options || []).filter((_, oIdx) => oIdx !== oi) } : cq))} className="ml-0.5 hover:text-destructive"><X className="h-3 w-3" /></button>
+                                    </Badge>
+                                  ))}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="Type an option..."
+                                    onKeyDown={e => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        const val = (e.target as HTMLInputElement).value.trim();
+                                        if (val && !(q.options || []).includes(val)) {
+                                          setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: [...(cq.options || []), val] } : cq));
+                                          (e.target as HTMLInputElement).value = "";
+                                        }
+                                      }
+                                    }}
+                                  />
+                                  <Button type="button" variant="outline" size="sm" onClick={(e) => {
+                                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                                    const val = input.value.trim();
+                                    if (val && !(q.options || []).includes(val)) {
+                                      setCustomQuestions(prev => prev.map((cq, idx) => idx === i ? { ...cq, options: [...(cq.options || []), val] } : cq));
+                                      input.value = "";
+                                    }
+                                  }}>Add</Button>
+                                </div>
                               </div>
                             )}
                           </div>
