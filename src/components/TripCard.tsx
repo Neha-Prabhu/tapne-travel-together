@@ -72,7 +72,7 @@ const TripCard = ({ trip }: TripCardProps) => {
                   )}
                 </>
               ) : (
-                <span className="text-xs text-muted-foreground">No reviews yet</span>
+                <span className="text-xs text-muted-foreground">New trip</span>
               )}
             </div>
             {trip.spots_left != null && (

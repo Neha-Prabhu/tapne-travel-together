@@ -213,10 +213,28 @@ export interface ProfileData {
 
 // ─── Home Feed ────────────────────────────────────────────────────────────
 
+export interface CommunityProfile {
+  username: string;
+  display_name: string;
+  avatar_url?: string;
+  travel_tags?: string[];
+}
+
+export interface TestimonialData {
+  id: number;
+  user_name: string;
+  user_avatar?: string;
+  rating: number;
+  text: string;
+}
+
 export interface HomeResponse {
   trips: TripData[];
   blogs: BlogData[];
   profiles: ProfileData[];
+  community_profiles?: CommunityProfile[];
+  testimonials?: TestimonialData[];
+  stats?: { travelers: number; trips_hosted: number; destinations: number };
 }
 
 // ─── DMs ─────────────────────────────────────────────────────────────────
