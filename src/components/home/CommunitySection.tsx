@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import type { CommunityProfile } from "@/types/api";
 
 interface CommunitySectionProps {
@@ -8,17 +10,30 @@ interface CommunitySectionProps {
 }
 
 const CommunitySection = ({ profiles }: CommunitySectionProps) => {
+  const navigate = useNavigate();
+
   if (!profiles.length) return null;
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-14">
-      <h2 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">
-        Travel with people like you
-      </h2>
-      <p className="mb-6 text-muted-foreground">Real people, real trips, real connections.</p>
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground md:text-3xl">
+            Travel Hosts
+          </h2>
+          <p className="mt-1 text-muted-foreground">Meet the people leading community trips.</p>
+        </div>
+        <Button
+          variant="ghost"
+          className="hidden sm:flex"
+          onClick={() => navigate("/travelers")}
+        >
+          View all <ArrowRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
 
       <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-        {profiles.map((p) => (
+        {profiles.slice(0, 10).map((p) => (
           <Link
             key={p.username}
             to={`/profile/${p.username}`}
@@ -43,6 +58,12 @@ const CommunitySection = ({ profiles }: CommunitySectionProps) => {
             </Card>
           </Link>
         ))}
+      </div>
+
+      <div className="mt-4 text-center sm:hidden">
+        <Button variant="outline" size="sm" onClick={() => navigate("/travelers")}>
+          View all hosts
+        </Button>
       </div>
     </section>
   );

@@ -15,7 +15,9 @@ import MyTrips from "./pages/MyTrips";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
-import Blogs from "./pages/Blogs";
+import Experiences from "./pages/Experiences";
+import ExperienceDetail from "./pages/ExperienceDetail";
+import ExperienceCreate from "./pages/ExperienceCreate";
 import ManageTrip from "./pages/ManageTrip";
 import NotFound from "./pages/NotFound";
 
@@ -49,7 +51,11 @@ const App = () => (
             <Route path="/trips/:id" element={<TripDetail />} />
             <Route path="/create-trip" element={<CreateTrip />} />
             <Route path="/my-trips" element={<MyTrips />} />
-            <Route path="/blogs" element={<Blogs />} />
+            <Route path="/experiences" element={<Experiences />} />
+            <Route path="/experiences/create" element={<ExperienceCreate />} />
+            <Route path="/experiences/:slug" element={<ExperienceDetail />} />
+            {/* Legacy blog routes redirect */}
+            <Route path="/blogs" element={<Experiences />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />

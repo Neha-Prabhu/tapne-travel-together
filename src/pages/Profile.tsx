@@ -84,6 +84,7 @@ const Profile = () => {
   }, [userId, isAuthenticated, navigate]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     setLoading(true);
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     const profileId = userId || (user?.username ?? user?.id);
@@ -262,6 +263,7 @@ const Profile = () => {
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="trips">Trips</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
+              <TabsTrigger value="experiences">Experiences</TabsTrigger>
               <TabsTrigger value="gallery">Gallery</TabsTrigger>
             </TabsList>
 
@@ -334,6 +336,11 @@ const Profile = () => {
               ) : (
                 <EmptyState message="No reviews yet" />
               )}
+            </TabsContent>
+
+            {/* Experiences */}
+            <TabsContent value="experiences" className="mt-6">
+              <EmptyState message="No experiences shared yet" />
             </TabsContent>
 
             {/* Gallery */}
