@@ -176,6 +176,7 @@ const CreateTrip = () => {
 
   // ─ Form State ─
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [destination, setDestination] = useState("");
   const [category, setCategory] = useState("");
   const [summary, setSummary] = useState("");
