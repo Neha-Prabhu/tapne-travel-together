@@ -189,6 +189,7 @@ export interface BlogData {
   slug: string;
   title: string;
   excerpt?: string;
+  short_description?: string;
   body?: string;
   author_username?: string;
   author_display_name?: string;
@@ -196,6 +197,8 @@ export interface BlogData {
   reviews_count?: number;
   cover_image_url?: string;
   created_at?: string;
+  tags?: string[];
+  location?: string;
 }
 
 // ─── Profile ──────────────────────────────────────────────────────────────
