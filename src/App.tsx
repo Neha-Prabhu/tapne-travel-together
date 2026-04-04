@@ -57,6 +57,7 @@ const App = () => (
             <Route path="/experiences" element={<Experiences />} />
             <Route path="/experiences/create" element={<ExperienceCreate />} />
             <Route path="/experiences/:slug" element={<ExperienceDetail />} />
+            <Route path="/experiences/:slug/edit" element={<ExperienceEdit />} />
             {/* Legacy blog routes redirect */}
             <Route path="/blogs" element={<Experiences />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
