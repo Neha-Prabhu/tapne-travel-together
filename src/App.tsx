@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DraftProvider } from "@/contexts/DraftContext";
+import LoginModal from "@/components/LoginModal";
+import { useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import BrowseTrips from "./pages/BrowseTrips";
 import TripDetail from "./pages/TripDetail";
@@ -19,6 +21,19 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const GlobalLoginModal = () => {
+  const { loginModalOpen, setLoginModalOpen, pendingAuthAction } = useAuth();
+  return (
+    <LoginModal
+      open={loginModalOpen}
+      onOpenChange={setLoginModalOpen}
+      onSuccess={() => {
+        pendingAuthAction?.();
+      }}
+    />
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -27,6 +42,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <GlobalLoginModal />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/trips" element={<BrowseTrips />} />
