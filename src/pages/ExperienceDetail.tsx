@@ -2,12 +2,30 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiDelete } from "@/lib/api";
 import type { BlogData } from "@/types/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Calendar, ArrowLeft, Loader2, Edit, Trash2 } from "lucide-react";
+import { Calendar, ArrowLeft, Loader2, Edit, Trash2, MapPin } from "lucide-react";
+import { generateHTML } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import ImageExt from "@tiptap/extension-image";
+
+function renderBody(body?: string): string {
+  if (!body) return "";
+  // Try parsing as Tiptap JSON
+  try {
+    const json = JSON.parse(body);
+    if (json.type === "doc") {
+      return generateHTML(json, [StarterKit, ImageExt]);
+    }
+  } catch {
+    // It's plain HTML already
+  }
+  return body;
+}
 
 interface ExperienceDetailResponse {
   blog: BlogData;
@@ -63,11 +81,13 @@ const ExperienceDetail = () => {
     );
   }
 
+  const htmlContent = renderBody(blog.body || blog.excerpt || "");
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
-        <article className="mx-auto max-w-3xl px-4 py-8">
+        <article className="mx-auto max-w-[700px] px-4 py-8">
           <Button variant="ghost" size="sm" className="mb-4" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-1 h-4 w-4" /> Back
           </Button>
@@ -78,9 +98,13 @@ const ExperienceDetail = () => {
             </div>
           )}
 
-          <h1 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">{blog.title}</h1>
+          <h1 className="mb-3 text-3xl font-bold text-foreground md:text-4xl leading-tight">{blog.title}</h1>
 
-          <div className="mb-6 flex items-center gap-4">
+          {blog.excerpt && (
+            <p className="mb-4 text-base text-muted-foreground leading-relaxed">{blog.excerpt}</p>
+          )}
+
+          <div className="mb-6 flex flex-wrap items-center gap-4">
             <Link to={`/profile/${blog.author_username}`} className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-accent text-accent-foreground text-xs">
@@ -95,6 +119,12 @@ const ExperienceDetail = () => {
                 {new Date(blog.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </div>
             )}
+            {(blog as any).location && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                {(blog as any).location}
+              </div>
+            )}
             {isOwner && (
               <div className="ml-auto flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => navigate(`/experiences/${blog.slug}/edit`)}>
@@ -107,9 +137,17 @@ const ExperienceDetail = () => {
             )}
           </div>
 
+          {(blog as any).tags?.length > 0 && (
+            <div className="mb-6 flex flex-wrap gap-1.5">
+              {(blog as any).tags.map((tag: string) => (
+                <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+              ))}
+            </div>
+          )}
+
           <div
-            className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90"
-            dangerouslySetInnerHTML={{ __html: blog.body || blog.excerpt || "" }}
+            className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 [&_img]:rounded-lg [&_img]:my-4"
+            dangerouslySetInnerHTML={{ __html: htmlContent }}
           />
         </article>
       </main>
