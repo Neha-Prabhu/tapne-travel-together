@@ -421,7 +421,7 @@ const CreateTrip = () => {
       accommodationType, roomSharing, stayName, stayDescription, amenities, thingsToCarry,
       experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
       generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact, medicalDetails,
-      emergencyDetails, faqs, contactPreferences, hosts, customQuestions, autoApprove]);
+      emergencyDetails, faqs, contactPreferences, hosts, customQuestions, autoApprove, paymentMethod, paymentDetails]);
 
   // Auto-save every 10 seconds
   useEffect(() => {
