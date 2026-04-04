@@ -104,9 +104,10 @@ const TripDetail = () => {
   const isTripPast = trip.ends_at ? new Date(trip.ends_at) < new Date() : false;
   const canReview = isAuthenticated && isJoined && isTripPast;
 
+  const { requireAuth } = useAuth();
+
   const handleAction = () => {
-    if (!isAuthenticated) { toast.info("Please log in first"); return; }
-    setBookingModalOpen(true);
+    requireAuth(() => setBookingModalOpen(true));
   };
 
   const ctaLabel = isHost ? "Manage Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
