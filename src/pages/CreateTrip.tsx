@@ -645,8 +645,34 @@ const CreateTrip = () => {
                 {!collapsedSections.has("media") && (
                   <CardContent className="space-y-4 pt-0">
                     <Field label="Hero Image" required hint="Main cover photo">
-                      <div className="flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary/50 hover:bg-muted/50">
-                        <div className="text-center"><Image className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Drag & drop or click to upload</p><p className="text-xs text-muted-foreground">Recommended: 1920×1080px</p></div>
+                      <input ref={heroInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setHeroImage(reader.result as string);
+                        reader.readAsDataURL(file);
+                        e.target.value = "";
+                      }} />
+                      <div
+                        onClick={() => heroInputRef.current?.click()}
+                        onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-primary"); }}
+                        onDragLeave={e => e.currentTarget.classList.remove("border-primary")}
+                        onDrop={e => {
+                          e.preventDefault();
+                          e.currentTarget.classList.remove("border-primary");
+                          const file = e.dataTransfer.files[0];
+                          if (!file?.type.startsWith("image/")) return;
+                          const reader = new FileReader();
+                          reader.onload = () => setHeroImage(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }}
+                        className="flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary/50 hover:bg-muted/50 overflow-hidden"
+                      >
+                        {heroImage ? (
+                          <img src={heroImage} alt="Hero" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="text-center"><Image className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Drag & drop or click to upload</p><p className="text-xs text-muted-foreground">Recommended: 1920×1080px</p></div>
+                        )}
                       </div>
                     </Field>
                     <Field label="Gallery Images" hint="Multiple photos to showcase the trip">
