@@ -24,6 +24,7 @@ import ManageTrip from "./pages/ManageTrip";
 import Travelers from "./pages/Travelers";
 import NotFound from "./pages/NotFound";
 import Bookmarks from "./pages/Bookmarks";
+import Inbox from "./pages/Inbox";
 
 const queryClient = new QueryClient();
 
