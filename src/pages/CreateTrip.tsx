@@ -676,10 +676,40 @@ const CreateTrip = () => {
                       </div>
                     </Field>
                     <Field label="Gallery Images" hint="Multiple photos to showcase the trip">
+                      <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={e => {
+                        const files = e.target.files;
+                        if (!files) return;
+                        Array.from(files).forEach(file => {
+                          const reader = new FileReader();
+                          reader.onload = () => setGalleryImages(prev => [...prev, reader.result as string]);
+                          reader.readAsDataURL(file);
+                        });
+                        e.target.value = "";
+                      }} />
                       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                        {[1, 2, 3, 4].map(i => (
-                          <div key={i} className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 hover:border-primary/50"><Plus className="h-5 w-5 text-muted-foreground" /></div>
+                        {galleryImages.map((img, i) => (
+                          <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border">
+                            <img src={img} alt={`Gallery ${i + 1}`} className="h-full w-full object-cover" />
+                            <button type="button" onClick={() => setGalleryImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 rounded-full bg-background/80 p-1 hover:bg-destructive hover:text-destructive-foreground"><X className="h-3 w-3" /></button>
+                          </div>
                         ))}
+                        <div
+                          onClick={() => galleryInputRef.current?.click()}
+                          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("border-primary"); }}
+                          onDragLeave={e => e.currentTarget.classList.remove("border-primary")}
+                          onDrop={e => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove("border-primary");
+                            Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/")).forEach(file => {
+                              const reader = new FileReader();
+                              reader.onload = () => setGalleryImages(prev => [...prev, reader.result as string]);
+                              reader.readAsDataURL(file);
+                            });
+                          }}
+                          className="flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 hover:border-primary/50"
+                        >
+                          <Plus className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       </div>
                     </Field>
                     <Field label="Video Link" hint="YouTube or Instagram reel"><Input placeholder="https://youtube.com/watch?v=..." /></Field>
