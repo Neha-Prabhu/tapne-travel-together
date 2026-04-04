@@ -37,6 +37,15 @@ const ManageTrip = () => {
   const [messageText, setMessageText] = useState("");
   const [appFilter, setAppFilter] = useState<"pending" | "approved" | "denied">("pending");
 
+  // Group chat
+  const [chatMessages, setChatMessages] = useState<{ id: string; sender: string; text: string; time: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+
+  // Notifications
+  const [notifications, setNotifications] = useState<{ id: string; type: string; message: string; sentAt: string }[]>([]);
+  const [notifType, setNotifType] = useState("update");
+  const [notifText, setNotifText] = useState("");
+
   const fetchData = () => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     if (!cfg?.api?.manage_trip || !id) { setLoading(false); return; }
