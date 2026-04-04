@@ -324,7 +324,14 @@ const Profile = () => {
                 >
                   {isFollowing ? <><UserCheck className="mr-1 h-4 w-4" /> Following</> : <><UserPlus className="mr-1 h-4 w-4" /> Follow</>}
                 </Button>
-                <Button size="sm" variant="outline">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (!isAuthenticated) { requireAuth(); return; }
+                    navigate(`/inbox?dm=${p.username}`);
+                  }}
+                >
                   <MessageCircle className="mr-1 h-4 w-4" /> Message
                 </Button>
               </>
