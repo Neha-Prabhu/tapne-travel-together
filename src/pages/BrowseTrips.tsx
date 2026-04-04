@@ -132,12 +132,6 @@ const BrowseTrips = () => {
                                   {new Date(trip.starts_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – {new Date(trip.ends_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                                 </span>
                               )}
-                              {trip.price_per_person != null && (
-                                <span className="flex items-center gap-1">
-                                  <IndianRupee className="h-3.5 w-3.5" />
-                                  {trip.price_per_person.toLocaleString()}
-                                </span>
-                              )}
                               {trip.spots_left != null && (
                                 <span className={`flex items-center gap-1 ${spotsLeft <= 2 ? "font-medium text-destructive" : ""}`}>
                                   <Users className="h-3.5 w-3.5" />
@@ -150,11 +144,19 @@ const BrowseTrips = () => {
                                 </span>
                               )}
                             </div>
-                            <Button variant="outline" size="sm" className="shrink-0">
-                              View Details <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-3">
+                              {trip.price_per_person != null && (
+                                <span className="flex items-center gap-1 text-base font-semibold text-foreground">
+                                  <IndianRupee className="h-4 w-4" />
+                                  {trip.price_per_person.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                              <Button variant="outline" size="sm" className="shrink-0">
+                                View Details <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
                       </div>
                     </Card>
                   </Link>

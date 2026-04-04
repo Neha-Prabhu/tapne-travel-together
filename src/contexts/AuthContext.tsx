@@ -1,30 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import type { SessionResponse, SessionUser } from "@/types/api";
+import { useAuthStore, sessionUserToAuthUser, type AuthUser } from "@/features/auth/store/useAuthStore";
 
-export interface User {
-  id: number;
-  username: string;
-  name: string;
-  email: string;
-  bio: string;
-  location: string;
-  website: string;
-  avatar?: string;
-}
-
-function sessionUserToUser(su: SessionUser): User {
-  return {
-    id: su.id,
-    username: su.username,
-    name: su.display_name,
-    email: su.email,
-    bio: su.bio,
-    location: su.location,
-    website: su.website,
-    avatar: undefined,
-  };
-}
+export type User = AuthUser;
 
 interface AuthContextType {
   user: User | null;
@@ -34,31 +13,37 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (updates: Partial<User>) => void;
   lastAuthError: string;
+  /** Open login modal with optional callback after success */
+  requireAuth: (onSuccess?: () => void) => void;
+  loginModalOpen: boolean;
+  setLoginModalOpen: (open: boolean) => void;
+  pendingAuthAction: (() => void) | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    // Seed from runtime config synchronously to avoid flash
-    const cfg = window.TAPNE_RUNTIME_CONFIG;
-    if (cfg?.session?.authenticated && cfg.session.user) {
-      return sessionUserToUser(cfg.session.user);
-    }
-    return null;
-  });
+  const store = useAuthStore();
   const [lastAuthError, setLastAuthError] = useState("");
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
-  // Hydrate session on mount
+  // Hydrate from runtime config on mount (Django mode)
+  useEffect(() => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (cfg?.session?.authenticated && cfg.session.user && !store.user) {
+      store.setAuth(sessionUserToAuthUser(cfg.session.user), cfg.csrf?.token || "session");
+    }
+  }, []);
+
+  // Hydrate session from API on mount
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     if (!cfg?.api?.session) return;
     apiGet<SessionResponse>(cfg.api.session)
       .then((data) => {
         if (data.authenticated && data.user) {
-          setUser(sessionUserToUser(data.user));
-        } else {
-          setUser(null);
+          store.setAuth(sessionUserToAuthUser(data.user), data.csrf_token || "session");
         }
       })
       .catch(() => {});
@@ -69,7 +54,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiPost<{ user: SessionUser }>(cfg.api.login, { email, password });
-      setUser(sessionUserToUser(data.user));
+      const authUser = sessionUserToAuthUser(data.user);
+      store.setAuth(authUser, "session-token");
       return true;
     } catch (err: any) {
       setLastAuthError(err?.error || "Invalid credentials");
@@ -82,7 +68,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiPost<{ user: SessionUser }>(cfg.api.signup, { first_name: name, email, password });
-      setUser(sessionUserToUser(data.user));
+      const authUser = sessionUserToAuthUser(data.user);
+      store.setAuth(authUser, "session-token");
       return true;
     } catch (err: any) {
       setLastAuthError(err?.error || "Something went wrong");
@@ -95,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       await apiPost(cfg.api.logout, {});
     } catch {}
-    setUser(null);
+    store.logout();
   }, []);
 
   const updateProfile = useCallback(async (updates: Partial<User>) => {
@@ -107,20 +94,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (updates.location !== undefined) payload.location = updates.location;
       if (updates.website !== undefined) payload.website = updates.website;
       const data = await apiPatch<{ profile: any }>(cfg.api.profile_me, payload);
-      setUser((prev) =>
-        prev
-          ? {
-              ...prev,
-              ...updates,
-              name: data.profile?.display_name || updates.name || prev.name,
-            }
-          : null
-      );
+      store.updateUser({
+        ...updates,
+        name: data.profile?.display_name || updates.name || store.user?.name,
+      });
     } catch {}
   }, []);
 
+  const requireAuth = useCallback((onSuccess?: () => void) => {
+    if (store.user) {
+      onSuccess?.();
+      return;
+    }
+    setPendingAuthAction(() => onSuccess || null);
+    setLoginModalOpen(true);
+  }, [store.user]);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, updateProfile, lastAuthError }}>
+    <AuthContext.Provider value={{
+      user: store.user,
+      isAuthenticated: !!store.user,
+      login,
+      signup,
+      logout,
+      updateProfile,
+      lastAuthError,
+      requireAuth,
+      loginModalOpen,
+      setLoginModalOpen: (open: boolean) => {
+        setLoginModalOpen(open);
+        if (!open) setPendingAuthAction(null);
+      },
+      pendingAuthAction,
+    }}>
       {children}
     </AuthContext.Provider>
   );

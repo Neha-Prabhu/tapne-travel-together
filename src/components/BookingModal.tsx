@@ -222,8 +222,23 @@ const BookingModal = ({ open, onOpenChange, trip }: BookingModalProps) => {
               {trip.starts_at && trip.ends_at && (
                 <div className="flex justify-between"><span className="text-muted-foreground">Dates</span><span className="font-medium">{fmtDate(trip.starts_at)} – {fmtDate(trip.ends_at)}</span></div>
               )}
-              <div className="flex justify-between"><span className="text-muted-foreground">Amount paid</span><span className="font-bold text-primary">₹{payableNow.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-primary">₹{payableNow.toLocaleString()}</span></div>
             </div>
+
+            {/* Payment details based on host config */}
+            {trip.payment_method === "show_payment_details" && trip.payment_details ? (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-left space-y-2">
+                <p className="text-sm font-semibold text-foreground">💳 Payment Details</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{trip.payment_details}</p>
+                <p className="text-xs text-muted-foreground">Please complete the payment and share confirmation with the host.</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border bg-muted/30 p-4 text-left space-y-1">
+                <p className="text-sm font-semibold text-foreground">📩 Next Step</p>
+                <p className="text-sm text-muted-foreground">Contact the host via chat/inbox to complete payment.</p>
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground">A confirmation has been sent to your email.</p>
             <Button onClick={resetAndClose} className="w-full">Done</Button>
           </div>

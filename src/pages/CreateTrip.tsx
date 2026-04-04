@@ -193,6 +193,8 @@ const CreateTrip = () => {
   const [earlyBirdSeats, setEarlyBirdSeats] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("full");
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"direct_contact" | "show_payment_details">("direct_contact");
+  const [paymentDetails, setPaymentDetails] = useState("");
 
   // Highlights
   const [highlights, setHighlights] = useState<string[]>([""]);
@@ -410,7 +412,7 @@ const CreateTrip = () => {
         fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
         generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
         medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
-        customQuestions, autoApprove,
+        customQuestions, autoApprove, paymentMethod, paymentDetails,
       },
     });
   }, [draftId, draftIdParam, updateDraft, title, destination, category, summary, startDate, endDate,
@@ -419,7 +421,7 @@ const CreateTrip = () => {
       accommodationType, roomSharing, stayName, stayDescription, amenities, thingsToCarry,
       experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
       generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact, medicalDetails,
-      emergencyDetails, faqs, contactPreferences, hosts, customQuestions, autoApprove]);
+      emergencyDetails, faqs, contactPreferences, hosts, customQuestions, autoApprove, paymentMethod, paymentDetails]);
 
   // Auto-save every 10 seconds
   useEffect(() => {
@@ -661,11 +663,25 @@ const CreateTrip = () => {
                       </Select>
                     </Field>
                     {paymentTerms === "partial" && (
-                      <Field label="Advance Amount Required">
-                        <Input type="number" placeholder="e.g. 5000" value={advanceAmount} onChange={e => setAdvanceAmount(e.target.value)} />
-                      </Field>
-                    )}
-                  </CardContent>
+                       <Field label="Advance Amount Required">
+                         <Input type="number" placeholder="e.g. 5000" value={advanceAmount} onChange={e => setAdvanceAmount(e.target.value)} />
+                       </Field>
+                     )}
+                     <Field label="How do you want to handle payments?" hint="Tapne does not process payments — choose how travelers pay you.">
+                       <Select value={paymentMethod} onValueChange={(v: "direct_contact" | "show_payment_details") => setPaymentMethod(v)}>
+                         <SelectTrigger><SelectValue /></SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="direct_contact">Direct contact (chat / inbox)</SelectItem>
+                           <SelectItem value="show_payment_details">Show payment details (e.g. UPI ID)</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </Field>
+                     {paymentMethod === "show_payment_details" && (
+                       <Field label="Payment Details" hint="This will be shown to travelers after they confirm booking.">
+                         <Textarea rows={3} placeholder="e.g. UPI: yourname@upi&#10;Bank: SBI, A/C: 1234..." value={paymentDetails} onChange={e => setPaymentDetails(e.target.value)} />
+                       </Field>
+                     )}
+                   </CardContent>
                 )}
               </Card>
 

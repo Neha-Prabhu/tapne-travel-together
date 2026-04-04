@@ -21,7 +21,7 @@ const notifications = [
 ];
 
 const Navbar = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, requireAuth } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -115,8 +115,8 @@ const Navbar = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button size="sm" asChild className="ml-1">
-              <Link to="/login">Login</Link>
+            <Button size="sm" className="ml-1" onClick={() => requireAuth()}>
+              Login
             </Button>
           )}
         </div>
@@ -185,8 +185,8 @@ const Navbar = () => {
               </Button>
             </>
           ) : (
-            <Button className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-              <Link to="/login">Login</Link>
+            <Button className="justify-start" onClick={() => { requireAuth(); setMobileOpen(false); }}>
+              Login
             </Button>
           )}
         </div>

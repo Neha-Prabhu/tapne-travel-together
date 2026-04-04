@@ -35,6 +35,7 @@ const SECTIONS = [
   { id: "carry", label: "Packing" },
   { id: "policies", label: "Policies" },
   { id: "faqs", label: "FAQs" },
+  { id: "reviews", label: "Reviews" },
   { id: "host", label: "Host" },
 ];
 
@@ -104,9 +105,10 @@ const TripDetail = () => {
   const isTripPast = trip.ends_at ? new Date(trip.ends_at) < new Date() : false;
   const canReview = isAuthenticated && isJoined && isTripPast;
 
+  const { requireAuth } = useAuth();
+
   const handleAction = () => {
-    if (!isAuthenticated) { toast.info("Please log in first"); return; }
-    setBookingModalOpen(true);
+    requireAuth(() => setBookingModalOpen(true));
   };
 
   const ctaLabel = isHost ? "Manage Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
@@ -169,19 +171,19 @@ const TripDetail = () => {
             {isHost ? <Link to="/create-trip">{ctaLabel}</Link> : <span>{ctaLabel}</span>}
           </Button>
 
-          {canReview && (
-            <Button
-              variant="outline"
-              className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
-              onClick={() => setReviewModalOpen(true)}
-            >
-              <Star className="mr-2 h-4 w-4" /> Write a Review
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
+            onClick={() => {
+              requireAuth(() => setReviewModalOpen(true));
+            }}
+          >
+            <Star className="mr-2 h-4 w-4" /> Write a Review
+          </Button>
 
           {!isAuthenticated && (
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              <Link to="/login" className="text-primary hover:underline">Log in</Link> to continue
+              Log in to book or review this trip
             </p>
           )}
         </CardContent>
@@ -499,7 +501,32 @@ const TripDetail = () => {
                 </Section>
               )}
 
-              {/* Host */}
+              {/* Reviews Section — always visible */}
+              <Section id="reviews" icon={Star} title="Reviews & Ratings">
+                {trip.average_rating ? (
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className={cn("h-5 w-5", s <= Math.round(trip.average_rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                      ))}
+                    </div>
+                    <span className="text-lg font-bold text-foreground">{trip.average_rating.toFixed(1)}</span>
+                    <span className="text-sm text-muted-foreground">({trip.reviews_count || 0} review{(trip.reviews_count || 0) !== 1 ? "s" : ""})</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mb-4">Not enough reviews yet. Be the first to share your experience!</p>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/30 text-primary hover:bg-primary/5"
+                  onClick={() => requireAuth(() => setReviewModalOpen(true))}
+                >
+                  <Star className="mr-1.5 h-4 w-4" /> Write a Review
+                </Button>
+              </Section>
+
+
               {trip.host_display_name && (
                 <Section id="host" icon={UserCircle} title="Meet Your Host">
                   <div className="flex items-start gap-4">
