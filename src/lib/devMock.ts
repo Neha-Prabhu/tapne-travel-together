@@ -283,12 +283,12 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       ],
       profiles: [],
       community_profiles: [
-        { username: "arjun_mehta", display_name: "Arjun Mehta", avatar_url: "https://i.pravatar.cc/150?img=11", travel_tags: ["Mountains", "Solo", "Backpacking"] },
-        { username: "priya_sharma", display_name: "Priya Sharma", avatar_url: "https://i.pravatar.cc/150?img=5", travel_tags: ["Beach", "Chill", "Cultural"] },
-        { username: "ravi_kumar", display_name: "Ravi Kumar", avatar_url: "https://i.pravatar.cc/150?img=12", travel_tags: ["Trekking", "Adventure", "Party"] },
-        { username: "ananya_desai", display_name: "Ananya Desai", avatar_url: "https://i.pravatar.cc/150?img=9", travel_tags: ["Workation", "Solo", "Chill"] },
-        { username: "karan_singh", display_name: "Karan Singh", avatar_url: "https://i.pravatar.cc/150?img=15", travel_tags: ["Adventure", "Road Trip", "Social"] },
-        { username: "meera_nair", display_name: "Meera Nair", avatar_url: "https://i.pravatar.cc/150?img=20", travel_tags: ["Yoga", "Wellness", "Explorer"] },
+        { username: "arjun_mehta", display_name: "Arjun Mehta", avatar_url: "https://i.pravatar.cc/150?img=11", travel_tags: ["Mountains", "Solo", "Backpacking"], location: "Mumbai, India", bio: "Solo traveler & mountain lover. Always chasing sunsets." },
+        { username: "priya_sharma", display_name: "Priya Sharma", avatar_url: "https://i.pravatar.cc/150?img=5", travel_tags: ["Beach", "Chill", "Cultural"], location: "Delhi, India", bio: "Beach bum & culture enthusiast. Let's explore together!" },
+        { username: "ravi_kumar", display_name: "Ravi Kumar", avatar_url: "https://i.pravatar.cc/150?img=12", travel_tags: ["Trekking", "Adventure", "Party"], location: "Bangalore, India", bio: "Weekend warrior. Trek, eat, repeat." },
+        { username: "ananya_desai", display_name: "Ananya Desai", avatar_url: "https://i.pravatar.cc/150?img=9", travel_tags: ["Workation", "Solo", "Chill"], location: "Pune, India", bio: "Digital nomad blending work & wanderlust." },
+        { username: "karan_singh", display_name: "Karan Singh", avatar_url: "https://i.pravatar.cc/150?img=15", travel_tags: ["Adventure", "Road Trip", "Social"], location: "Jaipur, India", bio: "Road tripper & storyteller. 50+ trips and counting." },
+        { username: "meera_nair", display_name: "Meera Nair", avatar_url: "https://i.pravatar.cc/150?img=20", travel_tags: ["Yoga", "Wellness", "Explorer"], location: "Kochi, India", bio: "Yoga teacher exploring ashrams and hidden trails." },
       ],
       testimonials: [
         { id: 1, user_name: "Ananya Desai", user_avatar: "https://i.pravatar.cc/150?img=9", rating: 5, text: "Tapne helped me find my travel tribe. The Goa trip was life-changing — I made friends I still travel with!" },
