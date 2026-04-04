@@ -196,7 +196,34 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── Home ──
   if (method === "GET" && path === "/home/") {
-    const resp: HomeResponse = { trips: MOCK_TRIPS.slice(0, 4), blogs: [], profiles: [] };
+    const resp: HomeResponse = {
+      trips: MOCK_TRIPS.filter(t => !t.is_draft).slice(0, 6).map(t => ({
+        ...t,
+        average_rating: t.average_rating ?? (3.5 + Math.random() * 1.5),
+        reviews_count: t.reviews_count ?? Math.floor(Math.random() * 20 + 2),
+        participants_count: t.participants_count ?? Math.floor(Math.random() * 10 + 2),
+      })),
+      blogs: [
+        { slug: "solo-girl-india", title: "Solo Traveling as a Girl in India", excerpt: "My honest experience backpacking across Rajasthan and Kerala as a solo female traveler.", cover_image_url: "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&q=80", author_display_name: "Priya Sharma", created_at: "2026-03-01" },
+        { slug: "found-travel-group", title: "How I Found My Travel Group", excerpt: "From solo trips to finding my tribe — here's how Tapne changed the way I travel.", cover_image_url: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=600&q=80", author_display_name: "Arjun Mehta", created_at: "2026-02-20" },
+        { slug: "budget-himachal", title: "Budget Himachal in ₹8,000", excerpt: "A complete breakdown of how I did a 7-day Himachal trip on a shoestring budget.", cover_image_url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80", author_display_name: "Karan Singh", created_at: "2026-02-10" },
+      ],
+      profiles: [],
+      community_profiles: [
+        { username: "arjun_mehta", display_name: "Arjun Mehta", avatar_url: "https://i.pravatar.cc/150?img=11", travel_tags: ["Mountains", "Solo", "Backpacking"] },
+        { username: "priya_sharma", display_name: "Priya Sharma", avatar_url: "https://i.pravatar.cc/150?img=5", travel_tags: ["Beach", "Chill", "Cultural"] },
+        { username: "ravi_kumar", display_name: "Ravi Kumar", avatar_url: "https://i.pravatar.cc/150?img=12", travel_tags: ["Trekking", "Adventure", "Party"] },
+        { username: "ananya_desai", display_name: "Ananya Desai", avatar_url: "https://i.pravatar.cc/150?img=9", travel_tags: ["Workation", "Solo", "Chill"] },
+        { username: "karan_singh", display_name: "Karan Singh", avatar_url: "https://i.pravatar.cc/150?img=15", travel_tags: ["Adventure", "Road Trip", "Social"] },
+        { username: "meera_nair", display_name: "Meera Nair", avatar_url: "https://i.pravatar.cc/150?img=20", travel_tags: ["Yoga", "Wellness", "Explorer"] },
+      ],
+      testimonials: [
+        { id: 1, user_name: "Ananya Desai", user_avatar: "https://i.pravatar.cc/150?img=9", rating: 5, text: "Tapne helped me find my travel tribe. The Goa trip was life-changing — I made friends I still travel with!" },
+        { id: 2, user_name: "Karan Singh", user_avatar: "https://i.pravatar.cc/150?img=15", rating: 5, text: "As a solo traveler, I was nervous. But the community vibe on Tapne made it feel like traveling with old friends." },
+        { id: 3, user_name: "Meera Nair", user_avatar: "https://i.pravatar.cc/150?img=20", rating: 4, text: "I hosted my first trip through Tapne and the tools made it so easy. 10/10 would recommend for new hosts." },
+      ],
+      stats: { travelers: 3200, trips_hosted: 127, destinations: 54 },
+    };
     return resp;
   }
 
