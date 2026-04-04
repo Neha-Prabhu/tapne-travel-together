@@ -25,6 +25,8 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     hosting_inbox: "/__devmock__/hosting/inbox/",
     dm_inbox: "/__devmock__/dm/inbox/",
     manage_trip: "/__devmock__/manage-trip/",
+    messages: "/__devmock__/messages/",
+    trip_chat: "/__devmock__/trip-chat/",
   },
   csrf: {
     cookie_name: "csrftoken",
