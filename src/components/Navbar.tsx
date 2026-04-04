@@ -107,9 +107,6 @@ const Navbar = () => {
                 <DropdownMenuItem onClick={() => navigate("/bookmarks")}>
                   <Bookmark className="mr-2 h-4 w-4" /> Bookmarks
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <Settings className="mr-2 h-4 w-4" /> Settings
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" /> Log Out
