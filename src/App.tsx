@@ -24,6 +24,7 @@ import ManageTrip from "./pages/ManageTrip";
 import Travelers from "./pages/Travelers";
 import NotFound from "./pages/NotFound";
 import Bookmarks from "./pages/Bookmarks";
+import Inbox from "./pages/Inbox";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/blogs" element={<Experiences />} />
             <Route path="/travelers" element={<Travelers />} />
             <Route path="/bookmarks" element={<Bookmarks />} />
+            <Route path="/inbox" element={<Inbox />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />

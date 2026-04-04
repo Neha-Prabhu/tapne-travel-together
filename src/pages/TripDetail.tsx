@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import BookmarkButton from "@/features/trip/components/BookmarkButton";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -20,7 +20,7 @@ import {
   Calendar, MapPin, IndianRupee, Users, ArrowLeft, Clock, Star,
   CheckCircle2, XCircle, Hotel, Shield, HelpCircle, Backpack,
   DollarSign, Sparkles, Heart, UserCircle, Eye, Lock, Send,
-  AlertTriangle, Loader2
+  AlertTriangle, Loader2, MessageCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 const TripDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [trip, setTrip] = useState<TripData | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -547,6 +548,20 @@ const TripDetail = () => {
                       <h4 className="text-lg font-semibold text-foreground">{trip.host_display_name}</h4>
                       {trip.host_location && <p className="text-sm text-muted-foreground mb-1">{trip.host_location}</p>}
                       {trip.host_bio && <p className="text-sm text-muted-foreground mb-2">{trip.host_bio}</p>}
+                      {!isHost && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2 border-primary/30 text-primary hover:bg-primary/5"
+                          onClick={() => {
+                            requireAuth(() => {
+                              navigate(`/inbox?trip_query=${trip.id}`);
+                            });
+                          }}
+                        >
+                          <MessageCircle className="mr-1.5 h-4 w-4" /> Ask a Question
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Section>

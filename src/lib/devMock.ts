@@ -4,6 +4,7 @@ import type {
   SessionUser, SessionResponse, MyTripsResponse, BlogData,
   ParticipantData, ManageTripResponse, EnrollmentRequestData,
 } from "@/types/api";
+import type { ThreadData, InboxResponse, MessageData } from "@/types/messaging";
 
 function mockUserToSessionUser(u: typeof mockUsers[0], idx: number): SessionUser {
   const username = u.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
@@ -139,6 +140,63 @@ let _devDraftCounter = 5000;
 const _bookmarkedTripIds = new Set<number>();
 const _followedUsers = new Set<string>();
 const _followerCounts = new Map<string, number>();
+
+// ── Messaging state ──
+const _mockThreads: ThreadData[] = [
+  {
+    id: 1, type: "dm", title: "Priya Sharma",
+    participants: [
+      { username: "dev_user", display_name: "Dev User", avatar_url: "" },
+      { username: "priya_sharma", display_name: "Priya Sharma", avatar_url: "https://i.pravatar.cc/150?img=5" },
+    ],
+    last_message: "Hey! Are you joining the Goa trip?", last_sent_at: "2026-04-04T10:30:00Z", unread_count: 2,
+    messages: [
+      { id: 1, thread_id: 1, sender_username: "priya_sharma", sender_display_name: "Priya Sharma", sender_avatar: "https://i.pravatar.cc/150?img=5", body: "Hi there! I saw you're interested in travel.", sent_at: "2026-04-04T09:00:00Z" },
+      { id: 2, thread_id: 1, sender_username: "dev_user", sender_display_name: "Dev User", body: "Yes! I'm looking for group trips.", sent_at: "2026-04-04T09:15:00Z" },
+      { id: 3, thread_id: 1, sender_username: "priya_sharma", sender_display_name: "Priya Sharma", sender_avatar: "https://i.pravatar.cc/150?img=5", body: "Hey! Are you joining the Goa trip?", sent_at: "2026-04-04T10:30:00Z" },
+    ],
+  },
+  {
+    id: 2, type: "dm", title: "Arjun Mehta",
+    participants: [
+      { username: "dev_user", display_name: "Dev User", avatar_url: "" },
+      { username: "arjun_mehta", display_name: "Arjun Mehta", avatar_url: "https://i.pravatar.cc/150?img=11" },
+    ],
+    last_message: "The trek route looks amazing!", last_sent_at: "2026-04-03T18:00:00Z", unread_count: 0,
+    messages: [
+      { id: 4, thread_id: 2, sender_username: "arjun_mehta", sender_display_name: "Arjun Mehta", sender_avatar: "https://i.pravatar.cc/150?img=11", body: "Have you done the Hampta Pass trek before?", sent_at: "2026-04-03T16:00:00Z" },
+      { id: 5, thread_id: 2, sender_username: "dev_user", sender_display_name: "Dev User", body: "Not yet! But it's on my bucket list.", sent_at: "2026-04-03T16:30:00Z" },
+      { id: 6, thread_id: 2, sender_username: "arjun_mehta", sender_display_name: "Arjun Mehta", sender_avatar: "https://i.pravatar.cc/150?img=11", body: "The trek route looks amazing!", sent_at: "2026-04-03T18:00:00Z" },
+    ],
+  },
+  {
+    id: 3, type: "trip_query", title: "Query: Goa Backpacking", trip_id: 1, trip_title: "Goa Backpacking Adventure",
+    participants: [
+      { username: "dev_user", display_name: "Dev User", avatar_url: "" },
+      { username: "arjun_mehta", display_name: "Arjun Mehta", avatar_url: "https://i.pravatar.cc/150?img=11" },
+    ],
+    last_message: "What's the accommodation like?", last_sent_at: "2026-04-02T14:00:00Z", unread_count: 1,
+    messages: [
+      { id: 7, thread_id: 3, sender_username: "dev_user", sender_display_name: "Dev User", body: "Hi! I have a question about the Goa trip. What's the accommodation like?", sent_at: "2026-04-02T14:00:00Z" },
+    ],
+  },
+  {
+    id: 4, type: "group_chat", title: "Goa Backpacking – Group Chat", trip_id: 1, trip_title: "Goa Backpacking Adventure",
+    participants: [
+      { username: "dev_user", display_name: "Dev User", avatar_url: "" },
+      { username: "priya_sharma", display_name: "Priya Sharma", avatar_url: "https://i.pravatar.cc/150?img=5" },
+      { username: "arjun_mehta", display_name: "Arjun Mehta", avatar_url: "https://i.pravatar.cc/150?img=11" },
+      { username: "ananya_desai", display_name: "Ananya Desai", avatar_url: "https://i.pravatar.cc/150?img=9" },
+    ],
+    last_message: "Can't wait for the trip! 🎉", last_sent_at: "2026-04-04T08:00:00Z", unread_count: 3,
+    messages: [
+      { id: 8, thread_id: 4, sender_username: "arjun_mehta", sender_display_name: "Arjun Mehta", sender_avatar: "https://i.pravatar.cc/150?img=11", body: "Welcome everyone! Excited for this trip.", sent_at: "2026-04-03T10:00:00Z" },
+      { id: 9, thread_id: 4, sender_username: "priya_sharma", sender_display_name: "Priya Sharma", sender_avatar: "https://i.pravatar.cc/150?img=5", body: "Hey all! Has everyone booked their tickets?", sent_at: "2026-04-03T12:00:00Z" },
+      { id: 10, thread_id: 4, sender_username: "ananya_desai", sender_display_name: "Ananya Desai", sender_avatar: "https://i.pravatar.cc/150?img=9", body: "Can't wait for the trip! 🎉", sent_at: "2026-04-04T08:00:00Z" },
+    ],
+  },
+];
+let _mockMsgIdCounter = 100;
 
 // Track booking status per trip
 const _tripBookingStatus = new Map<number, "open" | "closed" | "full">();
@@ -539,6 +597,94 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   const decisionMatch = path.match(/^\/hosting-requests\/(\d+)\/decision\/$/);
   if (method === "POST" && decisionMatch) {
     return { ok: true };
+  }
+
+  // ── DM Inbox ──
+  if (method === "GET" && path === "/dm/inbox/") {
+    const resp: InboxResponse = { threads: _mockThreads };
+    return resp;
+  }
+
+  // ── Send message to thread ──
+  const threadMsgMatch = path.match(/^\/dm\/inbox\/(\d+)\/messages\/$/);
+  if (method === "POST" && threadMsgMatch) {
+    const threadId = parseInt(threadMsgMatch[1]);
+    const thread = _mockThreads.find(t => t.id === threadId);
+    if (thread) {
+      const b = body as any;
+      const newMsg: MessageData = {
+        id: ++_mockMsgIdCounter,
+        thread_id: threadId,
+        sender_username: _devUser?.username || "dev_user",
+        sender_display_name: _devUser?.display_name || "Dev User",
+        body: b?.body || "",
+        sent_at: new Date().toISOString(),
+      };
+      thread.messages.push(newMsg);
+      thread.last_message = newMsg.body;
+      thread.last_sent_at = newMsg.sent_at;
+    }
+    return { ok: true };
+  }
+
+  // ── Create new DM thread ──
+  if (method === "POST" && path === "/dm/inbox/") {
+    const b = body as any;
+    const existingDm = _mockThreads.find(
+      t => t.type === "dm" && t.participants.some(p => p.username === b?.username)
+    );
+    if (existingDm) return { thread: existingDm };
+    const newThread: ThreadData = {
+      id: _mockThreads.length + 100,
+      type: b?.type || "dm",
+      title: b?.title || b?.display_name || "New Chat",
+      trip_id: b?.trip_id,
+      trip_title: b?.trip_title,
+      participants: [
+        { username: _devUser?.username || "dev_user", display_name: _devUser?.display_name || "Dev User" },
+        { username: b?.username, display_name: b?.display_name || b?.username, avatar_url: b?.avatar_url },
+      ],
+      last_message: b?.initial_message || undefined,
+      last_sent_at: new Date().toISOString(),
+      unread_count: 0,
+      messages: b?.initial_message ? [{
+        id: ++_mockMsgIdCounter,
+        thread_id: _mockThreads.length + 100,
+        sender_username: _devUser?.username || "dev_user",
+        sender_display_name: _devUser?.display_name || "Dev User",
+        body: b.initial_message,
+        sent_at: new Date().toISOString(),
+      }] : [],
+    };
+    _mockThreads.push(newThread);
+    return { thread: newThread };
+  }
+
+  // ── Trip group chat creation ──
+  const tripChatMatch = path.match(/^\/trip-chat\/(\d+)\/$/);
+  if (method === "POST" && tripChatMatch) {
+    const tripId = parseInt(tripChatMatch[1]);
+    const trip = MOCK_TRIPS.find(t => t.id === tripId);
+    const existing = _mockThreads.find(t => t.type === "group_chat" && t.trip_id === tripId);
+    if (existing) return { thread: existing };
+    const participants = getMockParticipants(tripId);
+    const newThread: ThreadData = {
+      id: _mockThreads.length + 200,
+      type: "group_chat",
+      title: `${trip?.title || "Trip"} – Group Chat`,
+      trip_id: tripId,
+      trip_title: trip?.title,
+      participants: [
+        { username: _devUser?.username || "dev_user", display_name: _devUser?.display_name || "Dev User" },
+        ...participants.map(p => ({ username: p.username, display_name: p.display_name, avatar_url: p.avatar_url })),
+      ],
+      last_message: undefined,
+      last_sent_at: new Date().toISOString(),
+      unread_count: 0,
+      messages: [],
+    };
+    _mockThreads.push(newThread);
+    return { thread: newThread };
   }
 
   return {};
