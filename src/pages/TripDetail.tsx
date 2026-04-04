@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 const TripDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [trip, setTrip] = useState<TripData | null>(null);
   const [canManage, setCanManage] = useState(false);
