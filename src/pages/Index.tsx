@@ -10,8 +10,6 @@ import QuickFilters from "@/components/home/QuickFilters";
 import HorizontalCarousel from "@/components/home/HorizontalCarousel";
 import CommunitySection from "@/components/home/CommunitySection";
 import WhyTapne from "@/components/home/WhyTapne";
-import HostCTA from "@/components/home/HostCTA";
-import SocialProofStrip from "@/components/home/SocialProofStrip";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import FinalCTA from "@/components/home/FinalCTA";
@@ -43,7 +41,6 @@ const Index = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Filter trips by active filter (trip_type match)
   const filteredTrips = useMemo(() => {
     if (!activeFilter) return trips;
     return trips.filter(
@@ -51,7 +48,6 @@ const Index = () => {
     );
   }, [trips, activeFilter]);
 
-  // Extract unique destinations
   const destinations = useMemo(() => {
     const destMap = new Map<string, { name: string; image: string; count: number }>();
     trips.forEach((t) => {
@@ -77,15 +73,12 @@ const Index = () => {
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
-        {/* Hero */}
+        {/* Hero — stats are rendered inside HeroSection below search */}
         <HeroSection trips={trips} stats={stats} />
 
-        {/* Quick Filters */}
-        <QuickFilters active={activeFilter} onSelect={setActiveFilter} />
-
-        {/* Explore Trips */}
+        {/* 1. Explore Trips — filters live here */}
         <section className="mx-auto max-w-6xl px-4 py-10">
-          <div className="mb-6 flex items-end justify-between">
+          <div className="mb-4 flex items-end justify-between">
             <div>
               <h2 className="text-2xl font-bold text-foreground md:text-3xl">Explore Trips</h2>
               <p className="mt-1 text-muted-foreground">Discover community trips created by travelers.</p>
@@ -94,6 +87,9 @@ const Index = () => {
               <Link to="/trips">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </div>
+
+          {/* Quick filter pills */}
+          <QuickFilters active={activeFilter} onSelect={setActiveFilter} />
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -120,13 +116,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Community Profiles */}
-        <CommunitySection profiles={communityProfiles} />
-
-        {/* Why Tapne */}
-        <WhyTapne />
-
-        {/* Destinations */}
+        {/* 2. Destinations */}
         {destinations.length > 0 && (
           <section className="py-14">
             <div className="mx-auto max-w-6xl px-4">
@@ -168,72 +158,74 @@ const Index = () => {
           </section>
         )}
 
-        {/* Blogs */}
+        {/* 3. Travel Hosts */}
+        <CommunitySection profiles={communityProfiles} />
+
+        {/* 4. Travel Experiences */}
         {blogs.length > 0 && (
           <section className="bg-muted/30 py-14">
             <div className="mx-auto max-w-6xl px-4">
               <div className="mb-6 flex items-end justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">From the Community</h2>
+                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">Travel Experiences</h2>
                   <p className="mt-1 text-muted-foreground">Stories, tips, and experiences from fellow travelers.</p>
                 </div>
                 <Button variant="ghost" asChild className="hidden sm:flex">
-                  <Link to="/blogs">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                  <Link to="/experiences">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {blogs.slice(0, 3).map((blog) => (
-                  <Card key={blog.slug} className="group overflow-hidden transition-shadow hover:shadow-lg">
-                    {blog.cover_image_url && (
-                      <div className="relative aspect-[16/10] overflow-hidden">
-                        <img
-                          src={blog.cover_image_url}
-                          alt={blog.title}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </div>
-                    )}
-                    <CardContent className="p-4">
-                      <h3 className="mb-1 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
-                        {blog.title}
-                      </h3>
-                      {blog.excerpt && (
-                        <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">{blog.excerpt}</p>
-                      )}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {blog.author_display_name || blog.author_username}
+                  <Link key={blog.slug} to={`/experiences/${blog.slug}`} className="block">
+                    <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
+                      {blog.cover_image_url && (
+                        <div className="relative aspect-[16/10] overflow-hidden">
+                          <img
+                            src={blog.cover_image_url}
+                            alt={blog.title}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
                         </div>
-                        {blog.created_at && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(blog.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </div>
+                      )}
+                      <CardContent className="p-4">
+                        <h3 className="mb-1 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+                          {blog.title}
+                        </h3>
+                        {blog.excerpt && (
+                          <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">{blog.excerpt}</p>
                         )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {blog.author_display_name || blog.author_username}
+                          </div>
+                          {blog.created_at && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(blog.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>
           </section>
         )}
 
-        {/* Host CTA */}
-        <HostCTA />
+        {/* 5. Why Tapne */}
+        <WhyTapne />
 
-        {/* Social Proof Strip */}
-        <SocialProofStrip stats={stats} />
-
-        {/* Testimonials */}
+        {/* 6. What Travelers Say */}
         <TestimonialsSection testimonials={testimonials} />
 
-        {/* FAQ */}
+        {/* 7. FAQ */}
         <FAQSection />
 
-        {/* Final CTA */}
+        {/* 8. Final CTA */}
         <FinalCTA />
       </main>
       <Footer />

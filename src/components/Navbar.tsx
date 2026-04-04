@@ -11,7 +11,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, Settings, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import CreateTripModal from "@/components/CreateTripModal";
 
 const notifications = [
@@ -32,6 +31,11 @@ const Navbar = () => {
     document.documentElement.classList.toggle("dark");
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
   const unreadCount = notifications.filter(n => n.unread).length;
 
   return (
@@ -48,15 +52,13 @@ const Navbar = () => {
             <Link to="/trips">Trips</Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/blogs">Blogs</Link>
+            <Link to="/experiences">Experiences</Link>
           </Button>
 
-          {/* Dark/Light toggle */}
           <Button variant="ghost" size="icon" onClick={toggleDarkMode} className="h-9 w-9">
             {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
 
-          {/* Notification Bell */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted">
@@ -109,7 +111,7 @@ const Navbar = () => {
                   <Settings className="mr-2 h-4 w-4" /> Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" /> Log Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -158,7 +160,7 @@ const Navbar = () => {
             <Link to="/trips">Trips</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-            <Link to="/blogs">Blogs</Link>
+            <Link to="/experiences">Experiences</Link>
           </Button>
           {isAuthenticated ? (
             <>
@@ -180,7 +182,7 @@ const Navbar = () => {
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/settings">Settings</Link>
               </Button>
-              <Button variant="ghost" className="justify-start text-destructive" onClick={() => { logout(); setMobileOpen(false); }}>
+              <Button variant="ghost" className="justify-start text-destructive" onClick={() => { handleLogout(); setMobileOpen(false); }}>
                 Log Out
               </Button>
             </>

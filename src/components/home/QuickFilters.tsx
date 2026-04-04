@@ -8,7 +8,7 @@ interface QuickFiltersProps {
 }
 
 const QuickFilters = ({ active, onSelect }: QuickFiltersProps) => (
-  <div className="mx-auto max-w-6xl px-4 py-4">
+  <div className="mb-4">
     <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
       {FILTERS.map((f) => (
         <Badge

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin } from "lucide-react";
+import { Search, MapPin, Users, Map, MapPin as MapPinIcon } from "lucide-react";
 import type { TripData } from "@/types/api";
 
 interface HeroSectionProps {
@@ -56,7 +56,7 @@ const HeroSection = ({ trips, stats }: HeroSectionProps) => {
             ))}
           </div>
           <span className="text-sm text-muted-foreground">
-            {stats ? `${stats.travelers.toLocaleString()}+` : "3,000+"} travelers exploring together
+            People are already traveling together
           </span>
         </div>
 
@@ -97,6 +97,31 @@ const HeroSection = ({ trips, stats }: HeroSectionProps) => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Stats strip directly below search */}
+        <div className="mx-auto mt-8 flex max-w-md flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-foreground">
+              {stats ? `${stats.travelers.toLocaleString()}+` : "3,000+"}
+            </span>
+            travelers
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Map className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-foreground">
+              {stats ? `${stats.trips_hosted}+` : "120+"}
+            </span>
+            trips hosted
+          </div>
+          <div className="flex items-center gap-1.5">
+            <MapPinIcon className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-foreground">
+              {stats ? `${stats.destinations}+` : "50+"}
+            </span>
+            destinations
+          </div>
         </div>
       </div>
     </section>
