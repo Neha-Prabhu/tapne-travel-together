@@ -613,7 +613,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── DM Inbox ──
   if (method === "GET" && path === "/dm/inbox/") {
-    const resp: InboxResponse = { threads: _mockThreads };
+    const threads = getMockThreads();
+    const resp: InboxResponse = { threads };
     return resp;
   }
 
@@ -621,14 +622,15 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   const threadMsgMatch = path.match(/^\/dm\/inbox\/(\d+)\/messages\/$/);
   if (method === "POST" && threadMsgMatch) {
     const threadId = parseInt(threadMsgMatch[1]);
-    const thread = _mockThreads.find(t => t.id === threadId);
+    const threads = getMockThreads();
+    const thread = threads.find(t => t.id === threadId);
     if (thread) {
       const b = body as any;
       const newMsg: MessageData = {
         id: ++_mockMsgIdCounter,
         thread_id: threadId,
-        sender_username: _devUser?.username || "dev_user",
-        sender_display_name: _devUser?.display_name || "Dev User",
+        sender_username: getDevUsername(),
+        sender_display_name: getDevDisplayName(),
         body: b?.body || "",
         sent_at: new Date().toISOString(),
       };
@@ -642,18 +644,19 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── Create new DM thread ──
   if (method === "POST" && path === "/dm/inbox/") {
     const b = body as any;
-    const existingDm = _mockThreads.find(
+    const threads = getMockThreads();
+    const existingDm = threads.find(
       t => t.type === "dm" && t.participants.some(p => p.username === b?.username)
     );
     if (existingDm) return { thread: existingDm };
     const newThread: ThreadData = {
-      id: _mockThreads.length + 100,
+      id: threads.length + 100,
       type: b?.type || "dm",
       title: b?.title || b?.display_name || "New Chat",
       trip_id: b?.trip_id,
       trip_title: b?.trip_title,
       participants: [
-        { username: _devUser?.username || "dev_user", display_name: _devUser?.display_name || "Dev User" },
+        { username: getDevUsername(), display_name: getDevDisplayName() },
         { username: b?.username, display_name: b?.display_name || b?.username, avatar_url: b?.avatar_url },
       ],
       last_message: b?.initial_message || undefined,
@@ -661,14 +664,14 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       unread_count: 0,
       messages: b?.initial_message ? [{
         id: ++_mockMsgIdCounter,
-        thread_id: _mockThreads.length + 100,
-        sender_username: _devUser?.username || "dev_user",
-        sender_display_name: _devUser?.display_name || "Dev User",
+        thread_id: threads.length + 100,
+        sender_username: getDevUsername(),
+        sender_display_name: getDevDisplayName(),
         body: b.initial_message,
         sent_at: new Date().toISOString(),
       }] : [],
     };
-    _mockThreads.push(newThread);
+    threads.push(newThread);
     return { thread: newThread };
   }
 
@@ -677,17 +680,18 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "POST" && tripChatMatch) {
     const tripId = parseInt(tripChatMatch[1]);
     const trip = MOCK_TRIPS.find(t => t.id === tripId);
-    const existing = _mockThreads.find(t => t.type === "group_chat" && t.trip_id === tripId);
+    const threads = getMockThreads();
+    const existing = threads.find(t => t.type === "group_chat" && t.trip_id === tripId);
     if (existing) return { thread: existing };
     const participants = getMockParticipants(tripId);
     const newThread: ThreadData = {
-      id: _mockThreads.length + 200,
+      id: threads.length + 200,
       type: "group_chat",
       title: `${trip?.title || "Trip"} – Group Chat`,
       trip_id: tripId,
       trip_title: trip?.title,
       participants: [
-        { username: _devUser?.username || "dev_user", display_name: _devUser?.display_name || "Dev User" },
+        { username: getDevUsername(), display_name: getDevDisplayName() },
         ...participants.map(p => ({ username: p.username, display_name: p.display_name, avatar_url: p.avatar_url })),
       ],
       last_message: undefined,
@@ -695,7 +699,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       unread_count: 0,
       messages: [],
     };
-    _mockThreads.push(newThread);
+    threads.push(newThread);
     return { thread: newThread };
   }
 
