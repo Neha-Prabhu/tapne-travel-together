@@ -21,6 +21,7 @@ import ExperienceDetail from "./pages/ExperienceDetail";
 import ExperienceCreate from "./pages/ExperienceCreate";
 import ExperienceEdit from "./pages/ExperienceEdit";
 import ManageTrip from "./pages/ManageTrip";
+import Travelers from "./pages/Travelers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/experiences/:slug" element={<ExperienceDetail />} />
             {/* Legacy blog routes redirect */}
             <Route path="/blogs" element={<Experiences />} />
+            <Route path="/travelers" element={<Travelers />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
