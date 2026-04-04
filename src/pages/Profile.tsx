@@ -338,6 +338,11 @@ const Profile = () => {
               )}
             </TabsContent>
 
+            {/* Experiences */}
+            <TabsContent value="experiences" className="mt-6">
+              <EmptyState message="No experiences shared yet" />
+            </TabsContent>
+
             {/* Gallery */}
             <TabsContent value="gallery" className="mt-6">
               {gallery.length > 0 ? (

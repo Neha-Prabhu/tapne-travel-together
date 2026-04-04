@@ -248,9 +248,39 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return resp;
   }
 
-  // ── Blogs ──
+  // ── Blogs / Experiences ──
   if (method === "GET" && path === "/blogs/") {
-    return { blogs: [] as BlogData[] };
+    return {
+      blogs: [
+        { slug: "solo-girl-india", title: "Solo Traveling as a Girl in India", excerpt: "My honest experience backpacking across Rajasthan and Kerala as a solo female traveler.", body: "<p>Traveling solo as a woman in India was one of the most transformative experiences of my life. From the golden deserts of Rajasthan to the lush backwaters of Kerala, every day brought new adventures and incredible people.</p><p>Safety was always on my mind, but I found that with basic precautions—sharing my location, staying in well-reviewed hostels, and trusting my instincts—I felt surprisingly comfortable throughout the journey.</p>", cover_image_url: "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&q=80", author_username: "priya_sharma", author_display_name: "Priya Sharma", created_at: "2026-03-01" },
+        { slug: "found-travel-group", title: "How I Found My Travel Group", excerpt: "From solo trips to finding my tribe — here's how Tapne changed the way I travel.", body: "<p>I used to think solo travel was the only way. But after joining my first community trip on Tapne, everything changed. The people I met became lifelong friends.</p><p>Now I host my own trips and love watching strangers become friends over shared sunsets and chai.</p>", cover_image_url: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=600&q=80", author_username: "arjun_mehta", author_display_name: "Arjun Mehta", created_at: "2026-02-20" },
+        { slug: "budget-himachal", title: "Budget Himachal in ₹8,000", excerpt: "A complete breakdown of how I did a 7-day Himachal trip on a shoestring budget.", body: "<p>Everyone thinks Himachal is expensive. I proved them wrong. Here's exactly how I spent 7 incredible days in the mountains for just ₹8,000.</p><p>The key? Local buses, homestays, and cooking your own meals when possible.</p>", cover_image_url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80", author_username: "karan_singh", author_display_name: "Karan Singh", created_at: "2026-02-10" },
+      ] as BlogData[],
+    };
+  }
+
+  // Blog detail
+  const blogDetailMatch = path.match(/^\/blogs\/([^/]+)\/$/);
+  if (method === "GET" && blogDetailMatch) {
+    const slug = blogDetailMatch[1];
+    const allBlogs: BlogData[] = [
+      { slug: "solo-girl-india", title: "Solo Traveling as a Girl in India", excerpt: "My honest experience backpacking across Rajasthan and Kerala as a solo female traveler.", body: "<p>Traveling solo as a woman in India was one of the most transformative experiences of my life. From the golden deserts of Rajasthan to the lush backwaters of Kerala, every day brought new adventures and incredible people.</p><p>Safety was always on my mind, but I found that with basic precautions—sharing my location, staying in well-reviewed hostels, and trusting my instincts—I felt surprisingly comfortable throughout the journey.</p><h2>My Top Tips</h2><ul><li>Always share your live location with someone you trust</li><li>Book hostels with good reviews from female travelers</li><li>Trust your instincts — if something feels off, leave</li><li>Connect with other travelers through platforms like Tapne</li></ul>", cover_image_url: "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&q=80", author_username: "priya_sharma", author_display_name: "Priya Sharma", created_at: "2026-03-01" },
+      { slug: "found-travel-group", title: "How I Found My Travel Group", excerpt: "From solo trips to finding my tribe.", body: "<p>I used to think solo travel was the only way. But after joining my first community trip on Tapne, everything changed.</p><p>The people I met became lifelong friends. Now I host my own trips and love watching strangers become friends over shared sunsets and chai.</p>", cover_image_url: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=600&q=80", author_username: "arjun_mehta", author_display_name: "Arjun Mehta", created_at: "2026-02-20" },
+      { slug: "budget-himachal", title: "Budget Himachal in ₹8,000", excerpt: "A complete breakdown of how I did a 7-day Himachal trip.", body: "<p>Everyone thinks Himachal is expensive. I proved them wrong.</p><p>Here's exactly how I spent 7 days in the mountains for just ₹8,000. The key? Local buses, homestays, and cooking your own meals when possible.</p>", cover_image_url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80", author_username: "karan_singh", author_display_name: "Karan Singh", created_at: "2026-02-10" },
+    ];
+    const blog = allBlogs.find(b => b.slug === slug);
+    return { blog: blog || null };
+  }
+
+  // Blog create
+  if (method === "POST" && path === "/blogs/") {
+    return { blog: { slug: "new-experience", ...(body as any) } };
+  }
+
+  // Blog delete
+  const blogDeleteMatch = path.match(/^\/blogs\/([^/]+)\/$/);
+  if (method === "DELETE" && blogDeleteMatch) {
+    return {};
   }
 
   // ── My Trips ──
