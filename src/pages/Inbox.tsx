@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const MIN_SIDEBAR = 280;
+const MAX_SIDEBAR = 480;
+const DEFAULT_SIDEBAR = 360;
+
 const Inbox = () => {
   const { user, isAuthenticated, requireAuth } = useAuth();
   const navigate = useNavigate();
@@ -27,7 +31,10 @@ const Inbox = () => {
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sending, setSending] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
+  const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
 
   // Check for query params to auto-open a thread
   const openThreadParam = searchParams.get("thread");
