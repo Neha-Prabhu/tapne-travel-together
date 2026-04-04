@@ -176,9 +176,6 @@ const Navbar = () => {
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/bookmarks">Bookmarks</Link>
               </Button>
-              <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/settings">Settings</Link>
-              </Button>
               <Button variant="ghost" className="justify-start text-destructive" onClick={() => { handleLogout(); setMobileOpen(false); }}>
                 Log Out
               </Button>
