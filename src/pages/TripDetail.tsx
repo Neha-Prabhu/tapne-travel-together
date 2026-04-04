@@ -263,7 +263,7 @@ const TripDetail = () => {
         <div className="sticky top-16 z-20 border-b bg-card/95 backdrop-blur-sm">
           <div className="mx-auto max-w-6xl">
             <nav className="flex gap-1 overflow-x-auto px-4 py-1.5 no-scrollbar">
-              {SECTIONS.map(s => (
+              {visibleSections.map(s => (
                 <a key={s.id} href={`#${s.id}`} className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                   {s.label}
                 </a>
