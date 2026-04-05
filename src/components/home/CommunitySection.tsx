@@ -1,8 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import TravelerCard from "@/components/TravelerCard";
 import type { CommunityProfile } from "@/types/api";
 
 interface CommunitySectionProps {
@@ -26,42 +25,20 @@ const CommunitySection = ({ profiles }: CommunitySectionProps) => {
         <Button
           variant="ghost"
           className="hidden sm:flex"
-          onClick={() => navigate("/travelers")}
+          onClick={() => navigate("/travel-hosts")}
         >
           View all <ArrowRight className="ml-1 h-4 w-4" />
         </Button>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-        {profiles.slice(0, 10).map((p) => (
-          <Link
-            key={p.username}
-            to={`/profile/${p.username}`}
-            className="min-w-[180px] shrink-0"
-          >
-            <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
-              <CardContent className="flex flex-col items-center p-5 text-center">
-                <img
-                  src={p.avatar_url || `https://ui-avatars.com/api/?name=${p.display_name}&background=2dd4bf&color=fff`}
-                  alt={p.display_name}
-                  className="mb-3 h-16 w-16 rounded-full object-cover ring-2 ring-primary/20 transition-transform group-hover:scale-105"
-                />
-                <p className="mb-2 text-sm font-semibold text-foreground">{p.display_name}</p>
-                <div className="flex flex-wrap justify-center gap-1">
-                  {(p.travel_tags || []).slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {profiles.slice(0, 8).map((p) => (
+          <TravelerCard key={p.username} profile={p} />
         ))}
       </div>
 
       <div className="mt-4 text-center sm:hidden">
-        <Button variant="outline" size="sm" onClick={() => navigate("/travelers")}>
+        <Button variant="outline" size="sm" onClick={() => navigate("/travel-hosts")}>
           View all hosts
         </Button>
       </div>

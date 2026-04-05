@@ -11,6 +11,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import BrowseTrips from "./pages/BrowseTrips";
 import TripDetail from "./pages/TripDetail";
+import TripPreview from "./pages/TripPreview";
 import CreateTrip from "./pages/CreateTrip";
 import MyTrips from "./pages/MyTrips";
 import Login from "./pages/Login";
@@ -21,7 +22,7 @@ import ExperienceDetail from "./pages/ExperienceDetail";
 import ExperienceCreate from "./pages/ExperienceCreate";
 import ExperienceEdit from "./pages/ExperienceEdit";
 import ManageTrip from "./pages/ManageTrip";
-import Travelers from "./pages/Travelers";
+import TravelHosts from "./pages/TravelHosts";
 import NotFound from "./pages/NotFound";
 import Bookmarks from "./pages/Bookmarks";
 import Inbox from "./pages/Inbox";
@@ -54,6 +55,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/trips" element={<BrowseTrips />} />
+            <Route path="/trips/preview" element={<TripPreview />} />
             <Route path="/trips/:id" element={<TripDetail />} />
             <Route path="/create-trip" element={<CreateTrip />} />
             <Route path="/my-trips" element={<MyTrips />} />
@@ -61,9 +63,8 @@ const App = () => (
             <Route path="/experiences/create" element={<ExperienceCreate />} />
             <Route path="/experiences/edit" element={<ExperienceEdit />} />
             <Route path="/experiences/:slug" element={<ExperienceDetail />} />
-            {/* Legacy blog routes redirect */}
             <Route path="/blogs" element={<Experiences />} />
-            <Route path="/travelers" element={<Travelers />} />
+            <Route path="/travel-hosts" element={<TravelHosts />} />
             <Route path="/bookmarks" element={<Bookmarks />} />
             <Route path="/inbox" element={<Inbox />} />
             <Route path="/manage-trip/:id" element={<ManageTrip />} />
