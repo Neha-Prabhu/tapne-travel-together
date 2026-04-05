@@ -107,7 +107,6 @@ const TripDetail = () => {
     ...(trip.cancellation_policy ? [{ id: "policies", label: "Policies" }] : []),
     ...(trip.faqs && trip.faqs.length > 0 ? [{ id: "faqs", label: "FAQs" }] : []),
     { id: "reviews", label: "Reviews" },
-    ...(trip.host_display_name ? [{ id: "host", label: "Host" }] : []),
   ];
 
   const { requireAuth } = useAuth();
@@ -197,20 +196,50 @@ const TripDetail = () => {
         </CardContent>
       </Card>
 
-      {/* Host mini card */}
+      {/* Meet Your Hosts card */}
       {trip.host_display_name && (
         <Card>
-          <CardContent className="p-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Hosted by</p>
-            <div className="flex items-center gap-3">
+          <CardContent className="p-4 space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Meet Your Hosts</p>
+            <button
+              onClick={() => navigate(`/profile/${trip.host_username}`)}
+              className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
+            >
               <Avatar className="h-11 w-11 border-2 border-primary/20">
-                <AvatarFallback>{trip.host_display_name[0]}</AvatarFallback>
+                <AvatarFallback>{(trip.host_display_name || "H")[0]}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-foreground">{trip.host_display_name}</p>
-                {trip.host_location && <p className="text-xs text-muted-foreground">{trip.host_location}</p>}
+                {trip.host_bio && <p className="text-xs text-muted-foreground line-clamp-1">{trip.host_bio}</p>}
               </div>
-            </div>
+            </button>
+            {(trip as any).co_hosts_profiles?.map((ch: any) => (
+              <button
+                key={ch.username}
+                onClick={() => navigate(`/profile/${ch.username}`)}
+                className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
+              >
+                <Avatar className="h-11 w-11 border-2 border-primary/20">
+                  <AvatarFallback>{(ch.display_name || ch.username)[0]}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground">{ch.display_name}</p>
+                  <p className="text-xs text-muted-foreground">Co-host</p>
+                </div>
+              </button>
+            ))}
+            {!isHost && (
+              <Button
+                variant="outline"
+                className="w-full border-primary/30 text-primary hover:bg-primary/5"
+                size="sm"
+                onClick={() => {
+                  requireAuth(() => navigate("/inbox"));
+                }}
+              >
+                <MessageCircle className="mr-1.5 h-4 w-4" /> Ask a Question
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
@@ -254,7 +283,10 @@ const TripDetail = () => {
                 <Badge key={v} variant="secondary" className="bg-white/20 text-white border-0 backdrop-blur-sm text-xs">{v}</Badge>
               ))}
             </div>
-            <h1 className="text-2xl font-bold text-white md:text-4xl lg:text-5xl">{trip.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-white md:text-4xl lg:text-5xl">{trip.title}</h1>
+              <BookmarkButton tripId={trip.id} size="md" />
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-white/80 md:text-base">
               {trip.destination && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{trip.destination}</span>}
               {trip.starts_at && trip.ends_at && <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />{fmtDate(trip.starts_at)} – {fmtDateFull(trip.ends_at)}</span>}
@@ -262,9 +294,6 @@ const TripDetail = () => {
               <span className="flex items-center gap-1"><Users className="h-4 w-4" />{spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left</span>
             </div>
           </div>
-          </div>
-          <div className="absolute right-4 bottom-6 md:bottom-8">
-            <BookmarkButton tripId={trip.id} size="md" />
           </div>
 
         {/* ─── Section Nav ─── */}
@@ -538,34 +567,6 @@ const TripDetail = () => {
               </Section>
 
 
-              {trip.host_display_name && (
-                <Section id="host" icon={UserCircle} title="Meet Your Host">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-16 w-16 border-2 border-primary/20">
-                      <AvatarFallback className="text-lg">{trip.host_display_name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-foreground">{trip.host_display_name}</h4>
-                      {trip.host_location && <p className="text-sm text-muted-foreground mb-1">{trip.host_location}</p>}
-                      {trip.host_bio && <p className="text-sm text-muted-foreground mb-2">{trip.host_bio}</p>}
-                      {!isHost && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-2 border-primary/30 text-primary hover:bg-primary/5"
-                          onClick={() => {
-                            requireAuth(() => {
-                              navigate(`/inbox?trip_query=${trip.id}`);
-                            });
-                          }}
-                        >
-                          <MessageCircle className="mr-1.5 h-4 w-4" /> Ask a Question
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </Section>
-              )}
 
               {/* Host Application Management */}
               {isHost && (
