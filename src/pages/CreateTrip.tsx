@@ -331,7 +331,7 @@ const CreateTrip = () => {
     if (fd.autoApprove !== undefined) setAutoApprove(fd.autoApprove);
   }, [draftId, draftIdParam, getDraft]);
 
-  // Errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const CURRENCY_SYMBOLS: Record<string, string> = {
     INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ", SGD: "S$", AUD: "A$",
   };
