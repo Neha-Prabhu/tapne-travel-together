@@ -846,6 +846,7 @@ const CreateTrip = () => {
                             {itinerary.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeItineraryDay(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                           </div>
                         </div>
+                        <Label className="text-xs font-medium text-muted-foreground">Day Title</Label>
                         <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
                         <Field label="What happens on this day" hint="Describe activities, experiences, and plan for this day">
                           <RichTextEditor value={day.description} onChange={(val) => updateItineraryDay(i, "description", val)} placeholder="Write about the day's activities, places to visit, experiences planned..." />
@@ -1106,6 +1107,7 @@ const CreateTrip = () => {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <Label className="text-sm font-medium">Custom Questions</Label>
+                          <p className="text-xs text-muted-foreground">Custom questions are shown to travelers when they apply to join your trip. Use them to learn more about applicants before approving.</p>
                           <Button
                             variant="outline"
                             size="sm"
