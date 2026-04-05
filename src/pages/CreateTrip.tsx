@@ -539,6 +539,7 @@ const CreateTrip = () => {
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
     saveDraftData();
+    localStorage.removeItem("tapne_draft_autosave");
     const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
     if (numId) await publishDraft(numId);
     await new Promise(r => setTimeout(r, 1500));
