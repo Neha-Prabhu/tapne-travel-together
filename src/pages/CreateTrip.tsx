@@ -1303,8 +1303,31 @@ const CreateTrip = () => {
                         ))}
                       </div>
                     </div>
-                    <Field label="Hosts" hint="Add additional hosts (comma-separated names)">
-                      <Input value={hosts} onChange={e => setHosts(e.target.value)} placeholder="e.g. @priya, @ravi" />
+                    <Field label="Co-hosts" hint="Type a username and press Enter">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {hosts.split(" ").filter(Boolean).map((h, i) => (
+                          <Badge key={i} variant="secondary" className="gap-1 py-1 px-2.5 text-sm">
+                            @{h}
+                            <button type="button" onClick={() => setHosts(hosts.split(" ").filter((_, idx) => idx !== i).join(" "))} className="ml-0.5 hover:text-destructive"><X className="h-3 w-3" /></button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <Input
+                        placeholder="Type a username and press Enter"
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const val = (e.target as HTMLInputElement).value.trim().replace("@", "");
+                            if (val) {
+                              const current = hosts.split(" ").filter(Boolean);
+                              if (!current.includes(val)) {
+                                setHosts([...current, val].join(" "));
+                              }
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }
+                        }}
+                      />
                     </Field>
                   </CardContent>
                 )}
