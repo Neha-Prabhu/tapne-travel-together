@@ -333,9 +333,9 @@ const CreateTrip = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const CURRENCY_SYMBOLS: Record<string, string> = {
-    INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ", SGD: "S$", AUD: "A$",
+    INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ", SGD: "S$", AUD: "A$", THB: "฿", IDR: "Rp",
   };
-  const currencySymbol = CURRENCY_SYMBOLS[currency] || currency;
+  const currencySymbol = CURRENCY_SYMBOLS[currency] || (currency + " ");
 
   const duration = startDate && endDate
     ? Math.max(0, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000))
@@ -391,7 +391,7 @@ const CreateTrip = () => {
   const scrollToSection = (sectionId: string) => {
     const el = document.getElementById(sectionId);
     if (!el) return;
-    const offset = 80;
+    const offset = 140; // navbar (64px) + sticky progress bar (~76px)
     const top = el.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top, behavior: "smooth" });
   };
@@ -604,7 +604,14 @@ const CreateTrip = () => {
                   <Save className="mr-1.5 h-3.5 w-3.5" />{savedDraft ? "Saved!" : "Save Draft"}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => {
-                  const formState = { title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary };
+                  const formState = {
+                    title, summary, description, destination, originCity, category, startDate, endDate,
+                    totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
+                    advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
+                    thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
+                    codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
+                    accessType, bookingCloseDate,
+                  };
                   sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
                   window.open("/trips/preview", "_blank");
                 }}><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
@@ -891,8 +898,9 @@ const CreateTrip = () => {
                             {itinerary.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeItineraryDay(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                           </div>
                         </div>
-                        <Label className="text-xs font-medium text-muted-foreground">Day Title</Label>
-                        <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
+                        <Field label="Day Title">
+                          <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
+                        </Field>
                         <Field label="What happens on this day" hint="Describe activities, experiences, and plan for this day">
                           <RichTextEditor value={day.description} onChange={(val) => updateItineraryDay(i, "description", val)} placeholder="Write about the day's activities, places to visit, experiences planned..." />
                         </Field>
@@ -1310,10 +1318,12 @@ const CreateTrip = () => {
                           </div>
                           {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                         </div>
-                        <Label className="text-xs font-medium text-muted-foreground">Question</Label>
-                        <Input placeholder="e.g. Is this trip beginner-friendly?" value={faq.question} onChange={e => updateFAQ(i, "question", e.target.value)} />
-                        <Label className="text-xs font-medium text-muted-foreground">Answer</Label>
-                        <RichTextEditor value={faq.answer} onChange={(val) => updateFAQ(i, "answer", val)} placeholder="Your answer..." minHeight="60px" />
+                        <Field label="Question">
+                          <Input placeholder="e.g. Is this trip beginner-friendly?" value={faq.question} onChange={e => updateFAQ(i, "question", e.target.value)} />
+                        </Field>
+                        <Field label="Answer">
+                          <RichTextEditor value={faq.answer} onChange={(val) => updateFAQ(i, "answer", val)} placeholder="Your answer..." minHeight="60px" />
+                        </Field>
                       </div>
                     ))}
                     <Button variant="outline" size="sm" onClick={addFAQ}><Plus className="mr-1.5 h-3.5 w-3.5" /> Add FAQ</Button>
@@ -1384,7 +1394,14 @@ const CreateTrip = () => {
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
                   <Button variant="outline" onClick={() => {
-                    const formState = { title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary };
+                    const formState = {
+                      title, summary, description, destination, originCity, category, startDate, endDate,
+                      totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
+                      advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
+                      thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
+                      codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
+                      accessType, bookingCloseDate,
+                    };
                     sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
                     window.open("/trips/preview", "_blank");
                   }}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
