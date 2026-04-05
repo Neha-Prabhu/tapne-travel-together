@@ -27,7 +27,9 @@ import NotFound from "./pages/NotFound";
 import Bookmarks from "./pages/Bookmarks";
 import Inbox from "./pages/Inbox";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 
 const GlobalLoginModal = () => {
   const { loginModalOpen, setLoginModalOpen, pendingAuthAction } = useAuth();
