@@ -472,7 +472,51 @@ const CreateTrip = () => {
     return () => clearInterval(interval);
   }, [saveDraftData]);
 
-  const handleSaveDraft = useCallback(() => { saveDraftData(); setSavedDraft(true); toast.success("Draft saved!"); setTimeout(() => setSavedDraft(false), 2000); }, [saveDraftData]);
+  // localStorage autosave for unauthenticated users
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const formState = { title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary, includedItems, notIncludedItems, thingsToCarry, faqs, hosts };
+      localStorage.setItem("tapne_draft_autosave", JSON.stringify(formState));
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary, includedItems, notIncludedItems, thingsToCarry, faqs, hosts]);
+
+  // Restore from localStorage on mount if no active draft
+  useEffect(() => {
+    if (draftIdParam) return;
+    const saved = localStorage.getItem("tapne_draft_autosave");
+    if (!saved) return;
+    try {
+      const d = JSON.parse(saved);
+      if (d.title) setTitle(d.title);
+      if (d.summary) setSummary(d.summary);
+      if (d.description) setDescription(d.description);
+      if (d.destination) setDestination(d.destination);
+      if (d.originCity) setOriginCity(d.originCity);
+      if (d.category) setCategory(d.category);
+      if (d.startDate) setStartDate(d.startDate);
+      if (d.endDate) setEndDate(d.endDate);
+      if (d.totalSeats) setTotalSeats(d.totalSeats);
+      if (d.currency) setCurrency(d.currency);
+      if (d.totalPrice) setTotalPrice(d.totalPrice);
+      if (d.heroImage) setHeroImage(d.heroImage);
+      if (d.highlights) setHighlights(d.highlights);
+      if (d.itinerary) setItinerary(d.itinerary);
+      if (d.includedItems) setIncludedItems(d.includedItems);
+      if (d.notIncludedItems) setNotIncludedItems(d.notIncludedItems);
+      if (d.thingsToCarry) setThingsToCarry(d.thingsToCarry);
+      if (d.faqs) setFaqs(d.faqs);
+      if (d.hosts) setHosts(d.hosts);
+    } catch {}
+  }, []);
+
+  const handleSaveDraft = useCallback(() => {
+    saveDraftData();
+    localStorage.removeItem("tapne_draft_autosave");
+    setSavedDraft(true);
+    toast.success("Draft saved!");
+    setTimeout(() => setSavedDraft(false), 2000);
+  }, [saveDraftData]);
 
   const validate = () => {
     const e: Record<string, string> = {};
