@@ -16,14 +16,14 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
   const { login, signup, lastAuthError } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const reset = () => {
     setName("");
-    setEmail("");
+    setIdentifier("");
     setPassword("");
     setError("");
     setLoading(false);
@@ -47,14 +47,14 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === "signup" && !name) { setError("Name is required"); return; }
-    if (!email || !password) { setError("All fields are required"); return; }
+    if (!identifier || !password) { setError("All fields are required"); return; }
     if (mode === "signup" && password.length < 6) { setError("Password must be at least 6 characters"); return; }
 
     setLoading(true);
     setError("");
     const ok = mode === "login"
-      ? await login(email, password)
-      : await signup(name, email, password);
+      ? await login(identifier, password)
+      : await signup(name, identifier, password);
     setLoading(false);
 
     if (ok) {
@@ -110,8 +110,8 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
               </div>
             )}
             <div>
-              <Label className="mb-1.5 block text-sm">Email</Label>
-              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Label className="mb-1.5 block text-sm">{mode === "login" ? "Username or Email" : "Email"}</Label>
+              <Input type="text" placeholder={mode === "login" ? "username or email" : "you@example.com"} value={identifier} onChange={(e) => setIdentifier(e.target.value)} />
             </div>
             <div>
               <Label className="mb-1.5 block text-sm">Password</Label>
