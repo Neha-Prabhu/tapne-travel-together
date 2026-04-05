@@ -147,11 +147,18 @@ const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDr
 );
 
 const CreateTrip = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, requireAuth } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const draftIdParam = searchParams.get("draft");
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
+
+  // Auth gate
+  useEffect(() => {
+    if (!isAuthenticated) {
+      requireAuth();
+    }
+  }, [isAuthenticated]);
 
   // If no draft param, create one and redirect
   const [draftId, setDraftId] = useState<number | null>(() => {
@@ -378,7 +385,13 @@ const CreateTrip = () => {
     return () => observer.disconnect();
   }, []);
 
-  const scrollToSection = (id: string) => sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToSection = (sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (!el) return;
+    const offset = 80;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: "smooth" });
+  };
   const toggleSection = (id: string) => {
     setCollapsedSections(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
