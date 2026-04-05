@@ -147,11 +147,18 @@ const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDr
 );
 
 const CreateTrip = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, requireAuth } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const draftIdParam = searchParams.get("draft");
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
+
+  // Auth gate
+  useEffect(() => {
+    if (!isAuthenticated) {
+      requireAuth();
+    }
+  }, [isAuthenticated]);
 
   // If no draft param, create one and redirect
   const [draftId, setDraftId] = useState<number | null>(() => {
@@ -324,8 +331,11 @@ const CreateTrip = () => {
     if (fd.autoApprove !== undefined) setAutoApprove(fd.autoApprove);
   }, [draftId, draftIdParam, getDraft]);
 
-  // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const CURRENCY_SYMBOLS: Record<string, string> = {
+    INR: "₹", USD: "$", EUR: "€", GBP: "£", AED: "د.إ", SGD: "S$", AUD: "A$",
+  };
+  const currencySymbol = CURRENCY_SYMBOLS[currency] || currency;
 
   const duration = startDate && endDate
     ? Math.max(0, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000))
@@ -378,7 +388,13 @@ const CreateTrip = () => {
     return () => observer.disconnect();
   }, []);
 
-  const scrollToSection = (id: string) => sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const scrollToSection = (sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (!el) return;
+    const offset = 80;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: "smooth" });
+  };
   const toggleSection = (id: string) => {
     setCollapsedSections(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
@@ -456,7 +472,51 @@ const CreateTrip = () => {
     return () => clearInterval(interval);
   }, [saveDraftData]);
 
-  const handleSaveDraft = useCallback(() => { saveDraftData(); setSavedDraft(true); toast.success("Draft saved!"); setTimeout(() => setSavedDraft(false), 2000); }, [saveDraftData]);
+  // localStorage autosave for unauthenticated users
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const formState = { title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary, includedItems, notIncludedItems, thingsToCarry, faqs, hosts };
+      localStorage.setItem("tapne_draft_autosave", JSON.stringify(formState));
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary, includedItems, notIncludedItems, thingsToCarry, faqs, hosts]);
+
+  // Restore from localStorage on mount if no active draft
+  useEffect(() => {
+    if (draftIdParam) return;
+    const saved = localStorage.getItem("tapne_draft_autosave");
+    if (!saved) return;
+    try {
+      const d = JSON.parse(saved);
+      if (d.title) setTitle(d.title);
+      if (d.summary) setSummary(d.summary);
+      if (d.description) setDescription(d.description);
+      if (d.destination) setDestination(d.destination);
+      if (d.originCity) setOriginCity(d.originCity);
+      if (d.category) setCategory(d.category);
+      if (d.startDate) setStartDate(d.startDate);
+      if (d.endDate) setEndDate(d.endDate);
+      if (d.totalSeats) setTotalSeats(d.totalSeats);
+      if (d.currency) setCurrency(d.currency);
+      if (d.totalPrice) setTotalPrice(d.totalPrice);
+      if (d.heroImage) setHeroImage(d.heroImage);
+      if (d.highlights) setHighlights(d.highlights);
+      if (d.itinerary) setItinerary(d.itinerary);
+      if (d.includedItems) setIncludedItems(d.includedItems);
+      if (d.notIncludedItems) setNotIncludedItems(d.notIncludedItems);
+      if (d.thingsToCarry) setThingsToCarry(d.thingsToCarry);
+      if (d.faqs) setFaqs(d.faqs);
+      if (d.hosts) setHosts(d.hosts);
+    } catch {}
+  }, []);
+
+  const handleSaveDraft = useCallback(() => {
+    saveDraftData();
+    localStorage.removeItem("tapne_draft_autosave");
+    setSavedDraft(true);
+    toast.success("Draft saved!");
+    setTimeout(() => setSavedDraft(false), 2000);
+  }, [saveDraftData]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -479,6 +539,7 @@ const CreateTrip = () => {
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
     saveDraftData();
+    localStorage.removeItem("tapne_draft_autosave");
     const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
     if (numId) await publishDraft(numId);
     await new Promise(r => setTimeout(r, 1500));
@@ -542,7 +603,11 @@ const CreateTrip = () => {
                 <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={savedDraft}>
                   <Save className="mr-1.5 h-3.5 w-3.5" />{savedDraft ? "Saved!" : "Save Draft"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => { saveDraftData(); const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null); if (id) navigate(`/trips/${id}`); }}><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
+                <Button variant="outline" size="sm" onClick={() => {
+                  const formState = { title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary };
+                  sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
+                  window.open("/trips/preview", "_blank");
+                }}><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
                 <Button size="sm" onClick={handleSubmit} disabled={loading}>
                   {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}Publish
                 </Button>
@@ -650,7 +715,7 @@ const CreateTrip = () => {
                 {renderSectionHeader("media", Image, "Hero & Media", "Stunning visuals make your trip stand out.")}
                 {!collapsedSections.has("media") && (
                   <CardContent className="space-y-4 pt-0">
-                    <Field label="Hero Image" required hint="Main cover photo">
+                    <Field label="Hero Image" hint="Main cover photo (optional — a default image will be used if not uploaded)">
                       <input ref={heroInputRef} type="file" accept="image/*" className="hidden" onChange={e => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -672,12 +737,13 @@ const CreateTrip = () => {
                           reader.onload = () => setHeroImage(reader.result as string);
                           reader.readAsDataURL(file);
                         }}
-                        className="flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary/50 hover:bg-muted/50 overflow-hidden"
+                        className="relative flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 transition-colors hover:border-primary/50 hover:bg-muted/50 overflow-hidden"
                       >
-                        {heroImage ? (
-                          <img src={heroImage} alt="Hero" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="text-center"><Image className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Drag & drop or click to upload</p><p className="text-xs text-muted-foreground">Recommended: 1920×1080px</p></div>
+                        <img src={heroImage || "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1200&q=80"} alt="Hero" className="h-full w-full object-cover" />
+                        {!heroImage && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <p className="text-sm font-medium text-white">Upload Image (optional)</p>
+                          </div>
                         )}
                       </div>
                     </Field>
@@ -733,7 +799,7 @@ const CreateTrip = () => {
                         <Select value={currency} onValueChange={setCurrency}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                       </Field>
                       <Field label="Total Trip Cost" error={errors.totalPrice} required>
-                        <div className="relative"><DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" type="number" placeholder="25000" value={totalPrice} onChange={e => setTotalPrice(e.target.value)} /></div>
+                        <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{currencySymbol}</span><Input className="pl-9" type="number" placeholder="25000" value={totalPrice} onChange={e => setTotalPrice(e.target.value)} /></div>
                       </Field>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -825,6 +891,7 @@ const CreateTrip = () => {
                             {itinerary.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeItineraryDay(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                           </div>
                         </div>
+                        <Label className="text-xs font-medium text-muted-foreground">Day Title</Label>
                         <Input placeholder="Day title — e.g. Arrival & Exploration" value={day.title} onChange={e => updateItineraryDay(i, "title", e.target.value)} />
                         <Field label="What happens on this day" hint="Describe activities, experiences, and plan for this day">
                           <RichTextEditor value={day.description} onChange={(val) => updateItineraryDay(i, "description", val)} placeholder="Write about the day's activities, places to visit, experiences planned..." />
@@ -1085,6 +1152,7 @@ const CreateTrip = () => {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <Label className="text-sm font-medium">Custom Questions</Label>
+                          <p className="text-xs text-muted-foreground">Custom questions are shown to travelers when they apply to join your trip. Use them to learn more about applicants before approving.</p>
                           <Button
                             variant="outline"
                             size="sm"
@@ -1155,6 +1223,10 @@ const CreateTrip = () => {
                                 </button>
                               ))}
                             </div>
+                            <p className="text-xs text-muted-foreground">
+                              {q.type === "short" ? "Best for brief responses — name, age, experience level, etc." :
+                               q.type === "long" ? "Best for detailed responses — motivation, past trips, health considerations, etc." : ""}
+                            </p>
                             {(q.type === "single_select" || q.type === "multiple_choice") && (
                               <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground">Options</Label>
@@ -1238,7 +1310,9 @@ const CreateTrip = () => {
                           </div>
                           {faqs.length > 1 && <Button variant="ghost" size="icon" onClick={() => removeFAQ(i)} className="opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>}
                         </div>
+                        <Label className="text-xs font-medium text-muted-foreground">Question</Label>
                         <Input placeholder="e.g. Is this trip beginner-friendly?" value={faq.question} onChange={e => updateFAQ(i, "question", e.target.value)} />
+                        <Label className="text-xs font-medium text-muted-foreground">Answer</Label>
                         <RichTextEditor value={faq.answer} onChange={(val) => updateFAQ(i, "answer", val)} placeholder="Your answer..." minHeight="60px" />
                       </div>
                     ))}
@@ -1274,8 +1348,31 @@ const CreateTrip = () => {
                         ))}
                       </div>
                     </div>
-                    <Field label="Hosts" hint="Add additional hosts (comma-separated names)">
-                      <Input value={hosts} onChange={e => setHosts(e.target.value)} placeholder="e.g. @priya, @ravi" />
+                    <Field label="Co-hosts" hint="Type a username and press Enter">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {hosts.split(" ").filter(Boolean).map((h, i) => (
+                          <Badge key={i} variant="secondary" className="gap-1 py-1 px-2.5 text-sm">
+                            @{h}
+                            <button type="button" onClick={() => setHosts(hosts.split(" ").filter((_, idx) => idx !== i).join(" "))} className="ml-0.5 hover:text-destructive"><X className="h-3 w-3" /></button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <Input
+                        placeholder="Type a username and press Enter"
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const val = (e.target as HTMLInputElement).value.trim().replace("@", "");
+                            if (val) {
+                              const current = hosts.split(" ").filter(Boolean);
+                              if (!current.includes(val)) {
+                                setHosts([...current, val].join(" "));
+                              }
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }
+                        }}
+                      />
                     </Field>
                   </CardContent>
                 )}
@@ -1286,7 +1383,11 @@ const CreateTrip = () => {
                 <div className="text-sm text-muted-foreground">{completedSections.length} of {visibleSections.length} sections • {progressPercent}%</div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
-                  <Button variant="outline" onClick={() => { saveDraftData(); const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null); if (id) navigate(`/trips/${id}`); }}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
+                  <Button variant="outline" onClick={() => {
+                    const formState = { title, summary, description, destination, originCity, category, startDate, endDate, totalSeats, currency, totalPrice, heroImage, highlights, itinerary };
+                    sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
+                    window.open("/trips/preview", "_blank");
+                  }}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
                   <Button onClick={handleSubmit} disabled={loading} className="transition-transform hover:scale-[1.02]">
                     {loading ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Publishing...</> : <><Send className="mr-1.5 h-4 w-4" /> Publish Trip</>}
                   </Button>

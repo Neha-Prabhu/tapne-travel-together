@@ -238,6 +238,15 @@ function getMockApplications(tripId: number): EnrollmentRequestData[] {
 export function resolveMockRequest(method: string, url: string, body?: unknown): unknown {
   const path = url.replace("/__devmock__", "").replace(/\?.*$/, "");
 
+  // ── User search ──
+  if (method === "GET" && path.startsWith("/users/search/")) {
+    const q = new URL("http://x" + url.replace("/__devmock__", "")).searchParams.get("q") || "";
+    return { ok: true, users: q ? [
+      { username: q.toLowerCase(), display_name: q },
+      { username: q.toLowerCase() + "_travel", display_name: q + " (traveler)" },
+    ] : [] };
+  }
+
   // ── Session ──
   if (method === "GET" && path === "/session/") {
     const resp: SessionResponse = { authenticated: !!_devUser, user: _devUser, csrf_token: "dev-csrf-token" };

@@ -8,7 +8,7 @@ export type User = AuthUser;
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => void;
@@ -49,11 +49,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .catch(() => {});
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (identifier: string, password: string): Promise<boolean> => {
     setLastAuthError("");
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const data = await apiPost<{ user: SessionUser }>(cfg.api.login, { email, password });
+      const data = await apiPost<{ user: SessionUser }>(cfg.api.login, { username: identifier, password });
       const authUser = sessionUserToAuthUser(data.user);
       store.setAuth(authUser, "session-token");
       return true;
