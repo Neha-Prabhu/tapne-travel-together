@@ -1178,6 +1178,10 @@ const CreateTrip = () => {
                                 </button>
                               ))}
                             </div>
+                            <p className="text-xs text-muted-foreground">
+                              {q.type === "short" ? "Best for brief responses — name, age, experience level, etc." :
+                               q.type === "long" ? "Best for detailed responses — motivation, past trips, health considerations, etc." : ""}
+                            </p>
                             {(q.type === "single_select" || q.type === "multiple_choice") && (
                               <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground">Options</Label>
