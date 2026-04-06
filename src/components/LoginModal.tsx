@@ -29,18 +29,12 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     setLoading(false);
   };
 
-  const handleGoogleAuth = async () => {
-    // Mock Google OAuth — auto-login as dev user
-    setLoading(true);
-    setError("");
-    const ok = await login("google@tapne.com", "google");
-    setLoading(false);
-    if (ok) {
-      onOpenChange(false);
-      onSuccess?.();
-      reset();
-    } else {
-      setError(lastAuthError || "Google sign-in failed");
+  const googleOAuthUrl = (window as any).TAPNE_RUNTIME_CONFIG?.google_oauth_url as string | undefined;
+  const hasGoogle = !!googleOAuthUrl;
+
+  const handleGoogleAuth = () => {
+    if (googleOAuthUrl) {
+      window.location.href = googleOAuthUrl + "?next=" + encodeURIComponent(window.location.pathname);
     }
   };
 

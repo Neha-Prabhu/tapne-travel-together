@@ -511,12 +511,17 @@ const CreateTrip = () => {
   }, []);
 
   const handleSaveDraft = useCallback(() => {
+    const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
+    if (!id) {
+      if (!isAuthenticated) requireAuth();
+      return;
+    }
     saveDraftData();
     localStorage.removeItem("tapne_draft_autosave");
     setSavedDraft(true);
     toast.success("Draft saved!");
     setTimeout(() => setSavedDraft(false), 2000);
-  }, [saveDraftData]);
+  }, [saveDraftData, draftId, draftIdParam, isAuthenticated, requireAuth]);
 
   const validate = () => {
     const e: Record<string, string> = {};
