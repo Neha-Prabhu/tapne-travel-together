@@ -3,9 +3,10 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Star, Camera, ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { Star, Camera, ArrowLeft, ArrowRight, Check, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { apiPost } from "@/lib/api";
 import type { TripData } from "@/types/api";
 
 const POSITIVE_TAGS = [
@@ -21,9 +22,11 @@ interface ReviewModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trip: TripData;
+  tripId: number;
+  onReviewSubmitted?: () => void;
 }
 
-const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
+const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted }: ReviewModalProps) => {
   const [step, setStep] = useState(0);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -32,15 +35,33 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
   const [travelAgain, setTravelAgain] = useState<"Yes" | "Maybe" | "No" | "">("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
-  const handleSubmit = () => {
-    toast.success("Thanks for sharing your experience ❤️");
-    onOpenChange(false);
-    resetForm();
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      const data = await apiPost<{ ok: boolean; error?: string }>(
+        `${cfg.api.trip_reviews}${tripId}/reviews/`,
+        { rating, body: loved, headline: "" }
+      );
+      if (data.ok === false && data.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success("Thanks for sharing your experience ❤️");
+      onOpenChange(false);
+      resetForm();
+      onReviewSubmitted?.();
+    } catch (err: any) {
+      toast.error(err?.error || "Could not submit review. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -55,7 +76,7 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
 
   const ratingLabels = ["", "Poor", "Fair", "Good", "Great", "Amazing"];
 
-  const totalSteps = 4; // 0: rating, 1: feedback, 2: tags, 3: photos+summary
+  const totalSteps = 4;
   const currentProgress = step + 1;
 
   return (
@@ -68,7 +89,7 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
           ))}
         </div>
 
-        {/* Step 0: Rating (main entry — no intermediate screen) */}
+        {/* Step 0: Rating */}
         {step === 0 && (
           <div className="space-y-6 py-2">
             <div className="text-center">
@@ -148,7 +169,6 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
         {/* Step 3: Photos + Summary + Submit */}
         {step === 3 && (
           <div className="space-y-5 py-2">
-            {/* Photos (optional) */}
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Camera className="h-5 w-5 text-muted-foreground" />
@@ -177,7 +197,6 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
               </div>
             </div>
 
-            {/* Review summary */}
             <div className="rounded-lg border p-4 space-y-3 text-sm">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Review Summary</p>
               <div className="flex items-center gap-2">
@@ -194,7 +213,10 @@ const ReviewModal = ({ open, onOpenChange, trip }: ReviewModalProps) => {
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(2)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={handleSubmit} className="flex-1"><Check className="mr-1.5 h-4 w-4" /> Post Review</Button>
+              <Button onClick={handleSubmit} disabled={loading} className="flex-1">
+                {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
+                {loading ? "Submitting..." : "Post Review"}
+              </Button>
             </div>
           </div>
         )}

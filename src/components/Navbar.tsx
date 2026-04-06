@@ -87,8 +87,14 @@ const Navbar = () => {
             <DropdownMenuContent align="end" className="w-80">
               <div className="px-3 py-2 text-sm font-semibold text-foreground">Notifications</div>
               <DropdownMenuSeparator />
+              {notifications.length === 0 && (
+                <div className="px-3 py-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">No notifications yet</p>
+                  <button onClick={() => navigate("/activity")} className="text-xs text-primary hover:underline">Go to activity</button>
+                </div>
+              )}
               {notifications.map(n => (
-                <DropdownMenuItem key={n.id} className="flex items-start gap-3 px-3 py-2.5">
+                <DropdownMenuItem key={n.id} className="flex items-start gap-3 px-3 py-2.5 cursor-pointer" onClick={() => navigate("/activity")}>
                   <span className="text-lg">{n.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm ${n.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>{n.message}</p>
@@ -97,6 +103,14 @@ const Navbar = () => {
                   {n.unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
                 </DropdownMenuItem>
               ))}
+              {notifications.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="justify-center text-xs text-muted-foreground cursor-pointer" onClick={() => navigate("/activity")}>
+                    View all activity
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
