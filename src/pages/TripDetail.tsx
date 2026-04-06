@@ -39,6 +39,7 @@ const TripDetail = () => {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [askingQuestion, setAskingQuestion] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -233,11 +234,30 @@ const TripDetail = () => {
                 variant="outline"
                 className="w-full border-primary/30 text-primary hover:bg-primary/5"
                 size="sm"
-                onClick={() => {
-                  requireAuth(() => navigate("/inbox"));
+                disabled={askingQuestion}
+                onClick={async () => {
+                  if (!isAuthenticated) { requireAuth(); return; }
+                  setAskingQuestion(true);
+                  try {
+                    const cfg = window.TAPNE_RUNTIME_CONFIG;
+                    const data = await apiPost<{ ok: boolean; thread_id?: number; error?: string }>(
+                      cfg.api.dm_start,
+                      { host_username: trip.host_username }
+                    );
+                    if (data.ok && data.thread_id) {
+                      navigate(`/inbox?thread=${data.thread_id}`);
+                    } else {
+                      toast.error(data.error || "Could not start conversation. Please try again.");
+                    }
+                  } catch (err: any) {
+                    toast.error(err?.error || "Could not start conversation. Please try again.");
+                  } finally {
+                    setAskingQuestion(false);
+                  }
                 }}
               >
-                <MessageCircle className="mr-1.5 h-4 w-4" /> Ask a Question
+                {askingQuestion ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-1.5 h-4 w-4" />}
+                Ask a Question
               </Button>
             )}
           </CardContent>
