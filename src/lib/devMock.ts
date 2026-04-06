@@ -260,7 +260,18 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     };
   }
 
-  // ── Session ──
+  // ── DM Start ──
+  if (method === "POST" && path === "/dm/start/") {
+    return { ok: true, thread_id: 1 };
+  }
+
+  // ── Trip Reviews ──
+  const reviewMatch = path.match(/^\/trips\/(\d+)\/reviews\/$/);
+  if (reviewMatch && method === "POST") {
+    return { ok: true, outcome: "created", review: { id: Date.now(), rating: body?.rating || 5, headline: body?.headline || "", body: body?.body || "", author: _devUser?.display_name || "Dev User", created_at: new Date().toISOString() } };
+  }
+
+
   if (method === "GET" && path === "/session/") {
     const resp: SessionResponse = { authenticated: !!_devUser, user: _devUser, csrf_token: "dev-csrf-token" };
     return resp;
