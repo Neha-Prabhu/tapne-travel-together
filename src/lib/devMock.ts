@@ -268,7 +268,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── Trip Reviews ──
   const reviewMatch = path.match(/^\/trips\/(\d+)\/reviews\/$/);
   if (reviewMatch && method === "POST") {
-    return { ok: true, outcome: "created", review: { id: Date.now(), rating: body?.rating || 5, headline: body?.headline || "", body: body?.body || "", author: _devUser?.display_name || "Dev User", created_at: new Date().toISOString() } };
+    const b = body as any;
+    return { ok: true, outcome: "created", review: { id: Date.now(), rating: b?.rating || 5, headline: b?.headline || "", body: b?.body || "", author: _devUser?.display_name || "Dev User", created_at: new Date().toISOString() } };
   }
 
 
@@ -415,8 +416,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       trips: allTrips,
       active_tab: "created",
       tab_counts: {
-        created: hostedTrips.filter(t => !t.ends_at || new Date(t.ends_at) >= now).length + draftList.length,
-        joined: 0,
+        drafts: draftList.length,
+        published: hostedTrips.filter(t => !t.ends_at || new Date(t.ends_at) >= now).length,
         past: hostedTrips.filter(t => t.ends_at && new Date(t.ends_at) < now).length,
       },
     };
