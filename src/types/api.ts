@@ -164,7 +164,7 @@ export interface TripDetailResponse {
 export interface MyTripsResponse {
   trips: TripData[];
   active_tab: "created" | "joined" | "past";
-  tab_counts: { created: number; joined: number; past: number };
+  tab_counts: { drafts: number; published: number; past: number };
 }
 
 // ─── Enrollment ───────────────────────────────────────────────────────────
