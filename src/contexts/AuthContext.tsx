@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, typ
 import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import type { SessionResponse, SessionUser } from "@/types/api";
 import { useAuthStore, sessionUserToAuthUser, type AuthUser } from "@/features/auth/store/useAuthStore";
+import LoginModal from "@/components/LoginModal";
 
 export type User = AuthUser;
 
@@ -28,7 +29,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
-  // Hydrate from runtime config on mount (Django mode)
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     if (cfg?.session?.authenticated && cfg.session.user && !store.user) {
@@ -36,7 +36,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  // Hydrate session from API on mount
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     if (!cfg?.api?.session) return;
@@ -110,6 +109,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoginModalOpen(true);
   }, [store.user]);
 
+  const handleLoginModalChange = useCallback((open: boolean) => {
+    setLoginModalOpen(open);
+    if (!open) setPendingAuthAction(null);
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user: store.user,
@@ -121,13 +125,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       lastAuthError,
       requireAuth,
       loginModalOpen,
-      setLoginModalOpen: (open: boolean) => {
-        setLoginModalOpen(open);
-        if (!open) setPendingAuthAction(null);
-      },
+      setLoginModalOpen: handleLoginModalChange,
       pendingAuthAction,
     }}>
       {children}
+      <LoginModal
+        open={loginModalOpen}
+        onOpenChange={handleLoginModalChange}
+        onSuccess={() => {
+          pendingAuthAction?.();
+        }}
+      />
     </AuthContext.Provider>
   );
 };
