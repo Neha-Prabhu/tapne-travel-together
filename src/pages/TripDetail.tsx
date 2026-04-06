@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import type { TripData, TripDetailResponse } from "@/types/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -619,7 +619,14 @@ const TripDetail = () => {
       {/* Application Modal */}
       <ApplicationModal open={applyModalOpen} onOpenChange={setApplyModalOpen} trip={trip} />
       {/* Review Modal */}
-      <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} />
+      <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} tripId={trip.id} onReviewSubmitted={() => {
+        const cfg = window.TAPNE_RUNTIME_CONFIG;
+        if (cfg?.api?.trips && id) {
+          apiGet<TripDetailResponse>(`${cfg.api.trips}${id}/`)
+            .then((data) => { setTrip(data.trip); })
+            .catch(() => {});
+        }
+      }} />
     </div>
   );
 };
