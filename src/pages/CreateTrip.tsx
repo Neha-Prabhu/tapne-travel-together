@@ -546,11 +546,14 @@ const CreateTrip = () => {
     saveDraftData();
     localStorage.removeItem("tapne_draft_autosave");
     const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
-    if (numId) await publishDraft(numId);
-    await new Promise(r => setTimeout(r, 1500));
-    toast.success("Trip published! 🎉");
-    navigate("/my-trips");
-    setLoading(false);
+    try {
+      if (numId) await publishDraft(numId);
+      toast.success("Trip published! 🎉");
+    } catch (err: any) {
+      toast.error(err?.message || "Could not publish trip");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Drag state for list items
