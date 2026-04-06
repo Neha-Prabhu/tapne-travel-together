@@ -167,13 +167,16 @@ const CreateTrip = () => {
   });
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (draftId == null && !draftIdParam) {
       createDraft().then((id) => {
-        setDraftId(id);
-        window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+        if (id) {
+          setDraftId(id);
+          window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+        }
       });
     }
-  }, [draftId, draftIdParam, createDraft]);
+  }, [isAuthenticated, draftId, draftIdParam, createDraft]);
 
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
