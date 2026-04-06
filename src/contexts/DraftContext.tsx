@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import type { TripData, MyTripsResponse } from "@/types/api";
 
 export interface TripDraft {
@@ -102,7 +104,7 @@ interface DraftContextType {
   deleteDraft: (id: number) => void;
   duplicateDraft: (id: number) => Promise<number>;
   getDraft: (id: number) => TripDraft | undefined;
-  publishDraft: (id: number) => Promise<void>;
+  publishDraft: (id: number, currentFormData?: Record<string, any>) => Promise<void>;
   loading: boolean;
 }
 
@@ -111,11 +113,21 @@ const DraftContext = createContext<DraftContextType | undefined>(undefined);
 export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [drafts, setDrafts] = useState<TripDraft[]>([]);
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const isAuthenticatedRef = useRef(isAuthenticated);
 
-  // Load drafts from API on mount
   useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
+  // Load drafts from API — re-runs when isAuthenticated changes
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setDrafts([]);
+      return;
+    }
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    if (!cfg?.session?.authenticated) return;
     setLoading(true);
     apiGet<MyTripsResponse>(cfg.api.my_trips)
       .then((data) => {
@@ -124,9 +136,10 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [isAuthenticated]);
 
   const createDraft = useCallback(async (): Promise<number> => {
+    if (!isAuthenticatedRef.current) return 0;
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     const data = await apiPost<{ draft: TripData }>(cfg.api.trip_drafts, { title: "", destination: "" });
     const newDraft = tripDataToDraft(data.draft);
@@ -135,11 +148,9 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const updateDraft = useCallback((id: number, updates: Partial<TripDraft>) => {
-    // Optimistic local update
     setDrafts((prev) =>
       prev.map((d) => (d.id === id ? { ...d, ...updates, lastEditedAt: new Date().toISOString() } : d))
     );
-    // Fire API call (debounced externally)
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     const payload = draftToServerPayload(updates);
     if (Object.keys(payload).length > 0) {
@@ -169,13 +180,26 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getDraft = useCallback((id: number) => drafts.find((d) => d.id === id), [drafts]);
 
-  const publishDraft = useCallback(async (id: number) => {
+  const publishDraft = useCallback(async (id: number, currentFormData?: Record<string, any>) => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    await apiPost(`${cfg.api.trip_drafts}${id}/publish/`, {});
-    setDrafts((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: "published" as const, lastEditedAt: new Date().toISOString() } : d))
-    );
-  }, []);
+
+    // If caller passes unsaved form data, PATCH it first to avoid race condition
+    if (currentFormData && Object.keys(currentFormData).length > 0) {
+      const payload = draftToServerPayload({ formData: currentFormData } as Partial<TripDraft>);
+      if (Object.keys(payload).length > 0) {
+        await apiPatch(`${cfg.api.trip_drafts}${id}/`, payload);
+      }
+    }
+
+    try {
+      await apiPost(`${cfg.api.trip_drafts}${id}/publish/`, {});
+    } catch (err: any) {
+      throw new Error(err?.message || err?.error || "Could not publish trip");
+    }
+
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
+    navigate("/my-trips");
+  }, [navigate]);
 
   return (
     <DraftContext.Provider value={{ drafts, createDraft, updateDraft, deleteDraft, duplicateDraft, getDraft, publishDraft, loading }}>

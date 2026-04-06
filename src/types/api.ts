@@ -25,6 +25,8 @@ export interface TapneRuntimeConfig {
     trip_chat: string;
     users_search: string;
     notifications: string;
+    trip_reviews: string;
+    dm_start: string;
   };
   csrf: {
     cookie_name: string;
@@ -164,7 +166,7 @@ export interface TripDetailResponse {
 export interface MyTripsResponse {
   trips: TripData[];
   active_tab: "created" | "joined" | "past";
-  tab_counts: { created: number; joined: number; past: number };
+  tab_counts: { drafts: number; published: number; past: number };
 }
 
 // ─── Enrollment ───────────────────────────────────────────────────────────

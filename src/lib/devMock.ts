@@ -260,7 +260,19 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     };
   }
 
-  // ── Session ──
+  // ── DM Start ──
+  if (method === "POST" && path === "/dm/start/") {
+    return { ok: true, thread_id: 1 };
+  }
+
+  // ── Trip Reviews ──
+  const reviewMatch = path.match(/^\/trips\/(\d+)\/reviews\/$/);
+  if (reviewMatch && method === "POST") {
+    const b = body as any;
+    return { ok: true, outcome: "created", review: { id: Date.now(), rating: b?.rating || 5, headline: b?.headline || "", body: b?.body || "", author: _devUser?.display_name || "Dev User", created_at: new Date().toISOString() } };
+  }
+
+
   if (method === "GET" && path === "/session/") {
     const resp: SessionResponse = { authenticated: !!_devUser, user: _devUser, csrf_token: "dev-csrf-token" };
     return resp;
@@ -404,8 +416,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       trips: allTrips,
       active_tab: "created",
       tab_counts: {
-        created: hostedTrips.filter(t => !t.ends_at || new Date(t.ends_at) >= now).length + draftList.length,
-        joined: 0,
+        drafts: draftList.length,
+        published: hostedTrips.filter(t => !t.ends_at || new Date(t.ends_at) >= now).length,
         past: hostedTrips.filter(t => t.ends_at && new Date(t.ends_at) < now).length,
       },
     };
