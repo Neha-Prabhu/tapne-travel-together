@@ -24,6 +24,7 @@ export interface TapneRuntimeConfig {
     messages: string;
     trip_chat: string;
     users_search: string;
+    notifications: string;
   };
   csrf: {
     cookie_name: string;
