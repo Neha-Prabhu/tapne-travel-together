@@ -28,6 +28,7 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     messages: "/__devmock__/messages/",
     trip_chat: "/__devmock__/trip-chat/",
     users_search: "/__devmock__/users/search/",
+    notifications: "/__devmock__/notifications/",
   },
   csrf: {
     cookie_name: "csrftoken",

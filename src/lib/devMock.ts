@@ -247,6 +247,19 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     ] : [] };
   }
 
+  // ── Notifications ──
+  if (method === "GET" && path === "/notifications/") {
+    if (!_devUser) return { notifications: [], unread_count: 0 };
+    return {
+      notifications: [
+        { id: "1", icon: "👤", message: "Rahul joined your trip", time: "2 min ago", unread: true },
+        { id: "2", icon: "✅", message: "Your trip application was accepted", time: "1 hour ago", unread: true },
+        { id: "3", icon: "💬", message: "New message from Priya", time: "3 hours ago", unread: false },
+      ],
+      unread_count: 2,
+    };
+  }
+
   // ── Session ──
   if (method === "GET" && path === "/session/") {
     const resp: SessionResponse = { authenticated: !!_devUser, user: _devUser, csrf_token: "dev-csrf-token" };

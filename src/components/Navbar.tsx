@@ -10,14 +10,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { apiGet } from "@/lib/api";
 import CreateTripModal from "@/components/CreateTripModal";
 
-const notifications = [
-  { id: 1, icon: "👤", message: "Rahul joined your trip", time: "2 min ago", unread: true },
-  { id: 2, icon: "✅", message: "Your trip application was accepted", time: "1 hour ago", unread: true },
-  { id: 3, icon: "💬", message: "New message from Priya", time: "3 hours ago", unread: false },
-];
+interface Notification {
+  id: string;
+  icon: string;
+  message: string;
+  time: string;
+  unread: boolean;
+}
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, requireAuth } = useAuth();
@@ -25,6 +28,19 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setNotifications([]);
+      return;
+    }
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (!cfg?.api?.notifications) return;
+    apiGet<{ notifications: Notification[]; unread_count: number }>(cfg.api.notifications)
+      .then((data) => setNotifications(data.notifications || []))
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
