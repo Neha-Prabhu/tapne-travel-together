@@ -71,7 +71,7 @@ const TRAVEL_TAG_OPTIONS = [
 
 const Profile = () => {
   const { userId } = useParams<{ userId: string }>();
-  const { user, isAuthenticated, updateProfile, requireAuth } = useAuth();
+  const { user, isAuthenticated, updateProfile, requireAuth, logout } = useAuth();
   const navigate = useNavigate();
 
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
