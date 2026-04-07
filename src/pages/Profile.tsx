@@ -92,6 +92,7 @@ const Profile = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
+  const [accountActionPending, setAccountActionPending] = useState(false);
 
   const isOwner = useMemo(() => {
     if (!user) return false;
@@ -174,16 +175,40 @@ const Profile = () => {
     setEditOpen(false);
   };
 
-  const handleDeactivate = () => {
-    toast.success("Account deactivated. You can reactivate anytime.");
-    setDeactivateOpen(false);
-    setSettingsOpen(false);
+  const { logout } = useAuth();
+
+  const handleDeactivate = async () => {
+    setAccountActionPending(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPost(cfg.api.account_deactivate, {});
+      toast.success("Account deactivated. You can reactivate anytime.");
+      setDeactivateOpen(false);
+      setSettingsOpen(false);
+      logout();
+      navigate("/");
+    } catch {
+      toast.error("Could not deactivate account. Please try again.");
+    } finally {
+      setAccountActionPending(false);
+    }
   };
 
-  const handleDeleteAccount = () => {
-    toast.success("Account deletion scheduled. This cannot be undone.");
-    setDeleteOpen(false);
-    setSettingsOpen(false);
+  const handleDeleteAccount = async () => {
+    setAccountActionPending(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPost(cfg.api.account_delete, {});
+      toast.success("Account deletion scheduled. This cannot be undone.");
+      setDeleteOpen(false);
+      setSettingsOpen(false);
+      logout();
+      navigate("/");
+    } catch {
+      toast.error("Could not delete account. Please try again.");
+    } finally {
+      setAccountActionPending(false);
+    }
   };
 
   if (loading) {
@@ -551,7 +576,10 @@ const Profile = () => {
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setDeactivateOpen(false)}>Cancel</Button>
-            <Button variant="secondary" onClick={handleDeactivate}>Deactivate</Button>
+            <Button variant="secondary" onClick={handleDeactivate} disabled={accountActionPending}>
+              {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Deactivate
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -569,7 +597,10 @@ const Profile = () => {
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteAccount}>Delete Permanently</Button>
+            <Button variant="destructive" onClick={handleDeleteAccount} disabled={accountActionPending}>
+              {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete Permanently
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

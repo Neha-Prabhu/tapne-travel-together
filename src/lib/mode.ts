@@ -31,6 +31,8 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     notifications: "/__devmock__/notifications/",
     trip_reviews: "/__devmock__/trips/",
     dm_start: "/__devmock__/dm/start/",
+    account_deactivate: "/__devmock__/account/deactivate/",
+    account_delete: "/__devmock__/account/delete/",
   },
   csrf: {
     cookie_name: "csrftoken",

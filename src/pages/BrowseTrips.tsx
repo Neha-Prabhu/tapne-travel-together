@@ -11,6 +11,7 @@ import { apiGet } from "@/lib/api";
 import type { TripData, TripListResponse } from "@/types/api";
 import TripCard from "@/components/TripCard";
 import { Search, MapPin, Calendar, Users, IndianRupee, ArrowRight, Loader2 } from "lucide-react";
+import BookmarkButton from "@/features/trip/components/BookmarkButton";
 
 const TRIP_TYPES = [
   "Backpacking", "Trek", "Social", "Road Trip", "Beach", "Cultural", "Adventure", "Wellness",
@@ -85,7 +86,8 @@ const BrowseTrips = () => {
               {trips.map((trip) => {
                 const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
                 return (
-                  <Link key={trip.id} to={`/trips/${trip.id}`} className="block">
+                  <div key={trip.id} className="relative">
+                  <Link to={`/trips/${trip.id}`} className="block">
                     <Card className="group overflow-hidden transition-shadow hover:shadow-lg h-[200px] sm:h-[220px]">
                       <div className="flex h-full flex-col sm:flex-row">
                         {/* Left: Image */}
@@ -160,6 +162,12 @@ const BrowseTrips = () => {
                       </div>
                     </Card>
                   </Link>
+                  <BookmarkButton
+                    tripId={trip.id}
+                    size="sm"
+                    className="absolute right-3 top-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 md:opacity-0 max-md:opacity-100"
+                  />
+                  </div>
                 );
               })}
             </div>

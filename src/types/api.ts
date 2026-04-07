@@ -27,6 +27,8 @@ export interface TapneRuntimeConfig {
     notifications: string;
     trip_reviews: string;
     dm_start: string;
+    account_deactivate: string;
+    account_delete: string;
   };
   csrf: {
     cookie_name: string;

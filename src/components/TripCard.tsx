@@ -8,9 +8,10 @@ import BookmarkButton from "@/features/trip/components/BookmarkButton";
 
 interface TripCardProps {
   trip: TripData;
+  initialBookmarked?: boolean;
 }
 
-const TripCard = ({ trip }: TripCardProps) => {
+const TripCard = ({ trip, initialBookmarked = false }: TripCardProps) => {
   const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
   const DEFAULT_HERO = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
   const heroImg = trip.banner_image_url || DEFAULT_HERO;
@@ -31,6 +32,7 @@ const TripCard = ({ trip }: TripCardProps) => {
           )}
           <BookmarkButton
             tripId={trip.id}
+            initialBookmarked={initialBookmarked}
             size="sm"
             className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 md:opacity-0 max-md:opacity-100"
           />
