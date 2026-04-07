@@ -175,7 +175,7 @@ const Profile = () => {
     setEditOpen(false);
   };
 
-  const { logout } = useAuth();
+  
 
   const handleDeactivate = async () => {
     setAccountActionPending(true);
