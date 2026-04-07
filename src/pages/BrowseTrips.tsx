@@ -86,7 +86,7 @@ const BrowseTrips = () => {
               {trips.map((trip) => {
                 const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
                 return (
-                  <div key={trip.id} className="relative">
+                  <div key={trip.id} className="group relative">
                   <Link to={`/trips/${trip.id}`} className="block">
                     <Card className="group overflow-hidden transition-shadow hover:shadow-lg h-[200px] sm:h-[220px]">
                       <div className="flex h-full flex-col sm:flex-row">
