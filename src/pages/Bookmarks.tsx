@@ -43,7 +43,7 @@ const Bookmarks = () => {
           ) : trips.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {trips.map((t) => (
-                <TripCard key={t.id} trip={t} />
+                <TripCard key={t.id} trip={t} initialBookmarked={true} />
               ))}
             </div>
           ) : (
