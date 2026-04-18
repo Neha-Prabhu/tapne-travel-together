@@ -6,9 +6,15 @@ const cfg = () => window.TAPNE_RUNTIME_CONFIG;
 function csrfHeaders(): Record<string, string> {
   if (IS_DEV_MODE) return { "Content-Type": "application/json" };
   const c = cfg();
+  const cookieName = c.csrf.cookie_name;
+  let token = c.csrf.token;
+  const raw = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(cookieName + "="));
+  if (raw) token = decodeURIComponent(raw.split("=")[1] || "") || token;
   return {
     "Content-Type": "application/json",
-    [c.csrf.header_name]: c.csrf.token,
+    [c.csrf.header_name]: token,
   };
 }
 
