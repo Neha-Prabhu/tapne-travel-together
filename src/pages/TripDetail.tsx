@@ -93,8 +93,8 @@ const TripDetail = () => {
 
   const joinStatus = trip.join_request_status;
   const isJoined = joinStatus === "approved";
-  const isTripPast = trip.ends_at ? new Date(trip.ends_at) < new Date() : false;
-  const canReview = isAuthenticated && isJoined && isTripPast;
+  const isCompleted = trip.status === "completed";
+  const canReview = isAuthenticated && isJoined && isCompleted;
 
   // Build visible sections dynamically based on trip data
   const visibleSections = [
@@ -169,11 +169,11 @@ const TripDetail = () => {
           <Button
             className="w-full text-base transition-transform hover:scale-[1.02]"
             size="lg"
-            disabled={ctaDisabled}
+            disabled={ctaDisabled || (isCompleted && !isHost)}
             onClick={isHost ? () => {} : handleAction}
-            asChild={isHost ? true : undefined}
+            asChild={isHost && !isCompleted ? true : undefined}
           >
-            {isHost ? <Link to="/create-trip">{ctaLabel}</Link> : <span>{ctaLabel}</span>}
+            {isHost && !isCompleted ? <Link to="/create-trip">{ctaLabel}</Link> : <span>{isCompleted && !isHost ? "Trip completed" : ctaLabel}</span>}
           </Button>
 
           <Button
@@ -331,6 +331,12 @@ const TripDetail = () => {
 
         {/* ─── BODY ─── */}
         <div className="mx-auto max-w-6xl px-4 py-6">
+          {isCompleted && isHost && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-muted bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              <Lock className="h-4 w-4 shrink-0" />
+              <span>This trip is completed. Actions are locked.</span>
+            </div>
+          )}
           <div className="flex gap-8">
             {/* Main Content */}
             <div className="min-w-0 flex-1 space-y-5">
@@ -589,7 +595,7 @@ const TripDetail = () => {
 
 
               {/* Host Application Management */}
-              {isHost && (
+              {isHost && !isCompleted && (
                 <ApplicationManager tripId={trip.id} />
               )}
 
@@ -622,11 +628,11 @@ const TripDetail = () => {
             </div>
             <Button
               size="lg"
-              disabled={ctaDisabled}
+              disabled={ctaDisabled || (isCompleted && !isHost)}
               onClick={isHost ? undefined : handleAction}
               className="transition-transform hover:scale-[1.02]"
             >
-              {ctaLabel}
+              {isCompleted && !isHost ? "Trip completed" : ctaLabel}
             </Button>
           </div>
         </div>

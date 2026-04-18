@@ -79,9 +79,7 @@ const TripCard = ({ trip, initialBookmarked = false }: TripCardProps) => {
                     <span className="text-muted-foreground">({trip.reviews_count})</span>
                   )}
                 </>
-              ) : (
-                <span className="text-xs text-muted-foreground">New trip</span>
-              )}
+              ) : null}
             </div>
             {trip.spots_left != null && (
               <div className="flex items-center gap-1 text-sm">

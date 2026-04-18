@@ -15,10 +15,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch } from "@/lib/api";
 import type { TripData } from "@/types/api";
 import TripCard from "@/components/TripCard";
+import HorizontalCarousel from "@/components/home/HorizontalCarousel";
 import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
-  AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck,
+  AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
@@ -372,21 +373,39 @@ const Profile = () => {
               <TabsTrigger value="gallery">Gallery</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="trips" className="mt-6">
-              {isHost && tripsHosted.length > 0 && (
-                <div className="mb-8">
+            <TabsContent value="trips" className="mt-6 space-y-8">
+              {tripsHosted.length > 0 && (
+                <div>
                   <h2 className="mb-4 text-lg font-semibold text-foreground">Trips Hosted</h2>
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    {tripsHosted.map((t) => <TripCard key={t.id} trip={t} />)}
-                  </div>
+                  <HorizontalCarousel>
+                    {tripsHosted.map((t) => (
+                      <div key={t.id} className="relative w-[280px] shrink-0 sm:w-[320px]">
+                        <TripCard trip={t} />
+                        {(t.status as string) === "completed" && (
+                          <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
+                            <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </HorizontalCarousel>
                 </div>
               )}
               {tripsJoined.length > 0 && (
                 <div>
                   <h2 className="mb-4 text-lg font-semibold text-foreground">Trips Joined</h2>
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    {tripsJoined.map((t) => <TripCard key={t.id} trip={t} />)}
-                  </div>
+                  <HorizontalCarousel>
+                    {tripsJoined.map((t) => (
+                      <div key={t.id} className="relative w-[280px] shrink-0 sm:w-[320px]">
+                        <TripCard trip={t} />
+                        {(t.status as string) === "completed" && (
+                          <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
+                            <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </HorizontalCarousel>
                 </div>
               )}
               {tripsHosted.length === 0 && tripsJoined.length === 0 && (
