@@ -38,9 +38,8 @@ const MyTrips = () => {
     if (!cfg?.api?.my_trips) { setLoading(false); return; }
     apiGet<MyTripsResponse>(cfg.api.my_trips)
       .then((data) => {
-        const now = new Date();
-        const published = data.trips.filter(t => !t.is_draft && t.is_published && (!t.ends_at || new Date(t.ends_at) >= now));
-        const past = data.trips.filter(t => !t.is_draft && t.ends_at && new Date(t.ends_at) < now);
+        const published = data.trips.filter(t => t.status === "published");
+        const past = data.trips.filter(t => t.status === "completed");
         setPublishedTrips(published);
         setPastTrips(past);
       })
