@@ -38,8 +38,8 @@ const MyTrips = () => {
     if (!cfg?.api?.my_trips) { setLoading(false); return; }
     apiGet<MyTripsResponse>(cfg.api.my_trips)
       .then((data) => {
-        const published = data.trips.filter(t => t.status === "published");
-        const past = data.trips.filter(t => t.status === "completed");
+        const published = data.trips.filter(t => (t.status as string) === "published");
+        const past = data.trips.filter(t => (t.status as string) === "completed");
         setPublishedTrips(published);
         setPastTrips(past);
       })
