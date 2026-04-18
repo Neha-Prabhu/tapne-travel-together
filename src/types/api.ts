@@ -127,7 +127,7 @@ export interface TripData {
   join_request_status?: "pending" | "approved" | "denied" | null;
   description?: string;
   booking_status?: "open" | "closed" | "full";
-  status?: "draft" | "published" | "completed";
+  status?: "draft" | "published" | "completed" | "active" | "cancelled";
   participants_count?: number;
   applications_count?: number;
   access_type?: "open" | "apply" | "invite";
