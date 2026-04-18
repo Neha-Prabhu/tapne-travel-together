@@ -127,11 +127,10 @@ export interface TripData {
   join_request_status?: "pending" | "approved" | "denied" | null;
   description?: string;
   booking_status?: "open" | "closed" | "full";
-  status?: "active" | "cancelled";
+  status?: "draft" | "published" | "completed";
   participants_count?: number;
   applications_count?: number;
   access_type?: "open" | "apply" | "invite";
-  status?: "draft" | "published" | "completed";
   average_rating?: number;
   reviews_count?: number;
   payment_method?: "direct_contact" | "show_payment_details";
