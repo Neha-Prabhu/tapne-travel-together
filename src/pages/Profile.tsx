@@ -71,7 +71,8 @@ const TRAVEL_TAG_OPTIONS = [
 /* ─── Component ─────────────────────────────────────────────────── */
 
 const Profile = () => {
-  const { userId } = useParams<{ userId: string }>();
+  const { profileId: profileIdParam } = useParams<{ profileId: string }>();
+  const userId = profileIdParam;
   const { user, isAuthenticated, updateProfile, requireAuth, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -103,9 +104,9 @@ const Profile = () => {
 
   useEffect(() => {
     if (!userId && !isAuthenticated) {
-      navigate("/login");
+      requireAuth();
     }
-  }, [userId, isAuthenticated, navigate]);
+  }, [userId, isAuthenticated, requireAuth]);
 
   useEffect(() => {
     window.scrollTo(0, 0);

@@ -127,7 +127,7 @@ const StoryEdit = () => {
           </div>
           <div className="space-y-1.5">
             <Label>Story</Label>
-            <TiptapEditor value={content} onChange={setContent} />
+            <TiptapEditor content={content} onChange={setContent} />
           </div>
         </div>
 
