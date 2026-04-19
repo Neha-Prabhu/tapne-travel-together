@@ -546,7 +546,7 @@ const CreateTrip = () => {
   };
 
   const handleSubmit = async () => {
-    if (!isAuthenticated) { toast.info("Please log in to create a trip"); navigate("/login"); return; }
+    if (!isAuthenticated) { toast.info("Please log in to create a trip"); requireAuth(); return; }
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
     saveDraftData();
@@ -561,6 +561,30 @@ const CreateTrip = () => {
       setLoading(false);
     }
   };
+
+  // Toggle preview mode (keeps URL in sync without reload)
+  const togglePreview = useCallback(() => {
+    saveDraftData();
+    const next = new URLSearchParams(searchParams);
+    if (isPreviewMode) next.delete("mode");
+    else next.set("mode", "preview");
+    setSearchParams(next, { replace: false });
+  }, [isPreviewMode, saveDraftData, searchParams, setSearchParams]);
+
+  // Build the live preview payload from the current form state
+  const buildPreviewData = useCallback(() => ({
+    title, summary, description, destination, originCity, category, startDate, endDate,
+    totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
+    advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
+    thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
+    codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
+    accessType, bookingCloseDate,
+  }), [title, summary, description, destination, originCity, category, startDate, endDate,
+    totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
+    advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
+    thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
+    codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
+    accessType, bookingCloseDate]);
 
   // Drag state for list items
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
