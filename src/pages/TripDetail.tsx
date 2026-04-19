@@ -20,10 +20,15 @@ import {
   Calendar, MapPin, IndianRupee, Users, ArrowLeft, Clock, Star,
   CheckCircle2, XCircle, Hotel, Shield, HelpCircle, Backpack,
   DollarSign, Sparkles, Heart, UserCircle, Eye, Lock, Send,
-  AlertTriangle, Loader2, MessageCircle
+  AlertTriangle, Loader2, MessageCircle, LockOpen, Ban, Settings2
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // ─── Section nav items ───
 // Sections are built dynamically based on trip data — see visibleSections below
