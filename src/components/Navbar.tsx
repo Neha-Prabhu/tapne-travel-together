@@ -68,7 +68,7 @@ const Navbar = () => {
             <Link to="/trips">Trips</Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/experiences">Experiences</Link>
+            <Link to="/stories">Stories</Link>
           </Button>
 
           <Button variant="ghost" size="icon" onClick={toggleDarkMode} className="h-9 w-9">
@@ -90,11 +90,11 @@ const Navbar = () => {
               {notifications.length === 0 && (
                 <div className="px-3 py-6 text-center">
                   <p className="text-sm text-muted-foreground mb-2">No notifications yet</p>
-                  <button onClick={() => navigate("/activity")} className="text-xs text-primary hover:underline">Go to activity</button>
+                  <button onClick={() => navigate("/notifications")} className="text-xs text-primary hover:underline">Go to notifications</button>
                 </div>
               )}
               {notifications.map(n => (
-                <DropdownMenuItem key={n.id} className="flex items-start gap-3 px-3 py-2.5 cursor-pointer" onClick={() => navigate("/activity")}>
+                <DropdownMenuItem key={n.id} className="flex items-start gap-3 px-3 py-2.5 cursor-pointer" onClick={() => navigate("/notifications")}>
                   <span className="text-lg">{n.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm ${n.unread ? "font-medium text-foreground" : "text-muted-foreground"}`}>{n.message}</p>
@@ -106,8 +106,8 @@ const Navbar = () => {
               {notifications.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="justify-center text-xs text-muted-foreground cursor-pointer" onClick={() => navigate("/activity")}>
-                    View all activity
+                  <DropdownMenuItem className="justify-center text-xs text-muted-foreground cursor-pointer" onClick={() => navigate("/notifications")}>
+                    View all notifications
                   </DropdownMenuItem>
                 </>
               )}
@@ -128,14 +128,17 @@ const Navbar = () => {
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <User className="mr-2 h-4 w-4" /> My Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/my-trips")}>
-                  <MapPinIcon className="mr-2 h-4 w-4" /> My Trips
+                <DropdownMenuItem onClick={() => navigate("/dashboard/trips")}>
+                  <MapPinIcon className="mr-2 h-4 w-4" /> Dashboard
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/inbox")}>
-                  <Inbox className="mr-2 h-4 w-4" /> Inbox
+                <DropdownMenuItem onClick={() => navigate("/messages")}>
+                  <Inbox className="mr-2 h-4 w-4" /> Messages
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/bookmarks")}>
                   <Bookmark className="mr-2 h-4 w-4" /> Bookmarks
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings")}>
+                  <User className="mr-2 h-4 w-4" /> Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -187,7 +190,7 @@ const Navbar = () => {
             <Link to="/trips">Trips</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-            <Link to="/experiences">Experiences</Link>
+            <Link to="/stories">Stories</Link>
           </Button>
           {isAuthenticated ? (
             <>
@@ -195,16 +198,19 @@ const Navbar = () => {
                 Create Trip
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/my-trips">My Trips</Link>
+                <Link to="/dashboard/trips">Dashboard</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/profile">My Profile</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/inbox">Inbox</Link>
+                <Link to="/messages">Messages</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/bookmarks">Bookmarks</Link>
+              </Button>
+              <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
+                <Link to="/settings">Settings</Link>
               </Button>
               <Button variant="ghost" className="justify-start text-destructive" onClick={() => { handleLogout(); setMobileOpen(false); }}>
                 Log Out
