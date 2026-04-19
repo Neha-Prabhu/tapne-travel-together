@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import TripPreviewView from "@/components/TripPreviewView";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -149,8 +150,10 @@ const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDr
 const CreateTrip = () => {
   const { isAuthenticated, user, requireAuth } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const draftIdParam = searchParams.get("draft");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { tripId: tripIdParam } = useParams<{ tripId: string }>();
+  const draftIdParam = tripIdParam || searchParams.get("draft");
+  const isPreviewMode = searchParams.get("mode") === "preview";
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
 
   // Auth gate
@@ -172,7 +175,7 @@ const CreateTrip = () => {
       createDraft().then((id) => {
         if (id) {
           setDraftId(id);
-          window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+          window.history.replaceState({}, "", `/trips/${id}/edit`);
         }
       });
     }
