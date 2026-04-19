@@ -104,9 +104,15 @@ const StoryDetail = () => {
           <div className="mb-3 flex items-center justify-between gap-3">
             <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">{story.title}</h1>
             {isOwner && (
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/stories/${story.slug}/edit`}><Edit className="mr-1.5 h-3.5 w-3.5" />Edit</Link>
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/stories/${story.slug}/edit`}><Edit className="mr-1.5 h-3.5 w-3.5" />Edit</Link>
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5">
+                  {deleting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-1.5 h-3.5 w-3.5" />}
+                  Delete
+                </Button>
+              </div>
             )}
           </div>
 
