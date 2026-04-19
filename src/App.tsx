@@ -2,28 +2,31 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DraftProvider } from "@/contexts/DraftContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index";
 import BrowseTrips from "./pages/BrowseTrips";
 import TripDetail from "./pages/TripDetail";
-import TripPreview from "./pages/TripPreview";
 import CreateTrip from "./pages/CreateTrip";
-import MyTrips from "./pages/MyTrips";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
-import Experiences from "./pages/Experiences";
-import ExperienceDetail from "./pages/ExperienceDetail";
-import ExperienceCreate from "./pages/ExperienceCreate";
-import ExperienceEdit from "./pages/ExperienceEdit";
-import ManageTrip from "./pages/ManageTrip";
-import TravelHosts from "./pages/TravelHosts";
+import ProfileEdit from "./pages/ProfileEdit";
+import Stories from "./pages/Stories";
+import StoryDetail from "./pages/StoryDetail";
+import StoryCreate from "./pages/StoryCreate";
+import StoryEdit from "./pages/StoryEdit";
 import NotFound from "./pages/NotFound";
 import Bookmarks from "./pages/Bookmarks";
-import Inbox from "./pages/Inbox";
+import Messages from "./pages/Messages";
+import Search from "./pages/Search";
+import Notifications from "./pages/Notifications";
+import Settings from "./pages/Settings";
+import Dashboard from "./pages/Dashboard";
+import DashboardTrips from "./pages/dashboard/DashboardTrips";
+import DashboardStories from "./pages/dashboard/DashboardStories";
+import DashboardReviews from "./pages/dashboard/DashboardReviews";
+import DashboardSubscriptions from "./pages/dashboard/DashboardSubscriptions";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -40,24 +43,40 @@ const App = () => (
             <ScrollToTop />
             <Routes>
               <Route path="/" element={<Index />} />
+
+              {/* Trips */}
               <Route path="/trips" element={<BrowseTrips />} />
-              <Route path="/trips/preview" element={<TripPreview />} />
-              <Route path="/trips/:id" element={<TripDetail />} />
-              <Route path="/create-trip" element={<CreateTrip />} />
-              <Route path="/my-trips" element={<MyTrips />} />
-              <Route path="/experiences" element={<Experiences />} />
-              <Route path="/experiences/create" element={<ExperienceCreate />} />
-              <Route path="/experiences/edit" element={<ExperienceEdit />} />
-              <Route path="/experiences/:slug" element={<ExperienceDetail />} />
-              <Route path="/blogs" element={<Experiences />} />
-              <Route path="/travel-hosts" element={<TravelHosts />} />
-              <Route path="/bookmarks" element={<Bookmarks />} />
-              <Route path="/inbox" element={<Inbox />} />
-              <Route path="/manage-trip/:id" element={<ManageTrip />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
+              <Route path="/trips/new" element={<CreateTrip />} />
+              <Route path="/trips/:tripId/edit" element={<CreateTrip />} />
+              <Route path="/trips/:tripId" element={<TripDetail />} />
+
+              {/* Stories */}
+              <Route path="/stories" element={<Stories />} />
+              <Route path="/stories/new" element={<StoryCreate />} />
+              <Route path="/stories/:storyId/edit" element={<StoryEdit />} />
+              <Route path="/stories/:storyId" element={<StoryDetail />} />
+
+              {/* Profile */}
               <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/:userId" element={<Profile />} />
+              <Route path="/profile/edit" element={<ProfileEdit />} />
+              <Route path="/users/:profileId" element={<Profile />} />
+
+              {/* Messaging & utility */}
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/bookmarks" element={<Bookmarks />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/settings" element={<Settings />} />
+
+              {/* Dashboard */}
+              <Route path="/dashboard" element={<Dashboard />}>
+                <Route index element={<Navigate to="/dashboard/trips" replace />} />
+                <Route path="trips" element={<DashboardTrips />} />
+                <Route path="stories" element={<DashboardStories />} />
+                <Route path="reviews" element={<DashboardReviews />} />
+                <Route path="subscriptions" element={<DashboardSubscriptions />} />
+              </Route>
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </DraftProvider>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
+import TripPreviewView from "@/components/TripPreviewView";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -149,8 +150,10 @@ const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDr
 const CreateTrip = () => {
   const { isAuthenticated, user, requireAuth } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const draftIdParam = searchParams.get("draft");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { tripId: tripIdParam } = useParams<{ tripId: string }>();
+  const draftIdParam = tripIdParam || searchParams.get("draft");
+  const isPreviewMode = searchParams.get("mode") === "preview";
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
 
   // Auth gate
@@ -172,7 +175,7 @@ const CreateTrip = () => {
       createDraft().then((id) => {
         if (id) {
           setDraftId(id);
-          window.history.replaceState({}, "", `/create-trip?draft=${id}`);
+          window.history.replaceState({}, "", `/trips/${id}/edit`);
         }
       });
     }
@@ -543,7 +546,7 @@ const CreateTrip = () => {
   };
 
   const handleSubmit = async () => {
-    if (!isAuthenticated) { toast.info("Please log in to create a trip"); navigate("/login"); return; }
+    if (!isAuthenticated) { toast.info("Please log in to create a trip"); requireAuth(); return; }
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
     saveDraftData();
@@ -558,6 +561,30 @@ const CreateTrip = () => {
       setLoading(false);
     }
   };
+
+  // Toggle preview mode (keeps URL in sync without reload)
+  const togglePreview = useCallback(() => {
+    saveDraftData();
+    const next = new URLSearchParams(searchParams);
+    if (isPreviewMode) next.delete("mode");
+    else next.set("mode", "preview");
+    setSearchParams(next, { replace: false });
+  }, [isPreviewMode, saveDraftData, searchParams, setSearchParams]);
+
+  // Build the live preview payload from the current form state
+  const buildPreviewData = useCallback(() => ({
+    title, summary, description, destination, originCity, category, startDate, endDate,
+    totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
+    advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
+    thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
+    codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
+    accessType, bookingCloseDate,
+  }), [title, summary, description, destination, originCity, category, startDate, endDate,
+    totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
+    advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
+    thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
+    codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
+    accessType, bookingCloseDate]);
 
   // Drag state for list items
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -597,6 +624,26 @@ const CreateTrip = () => {
       />
     ))
   );
+  // Preview mode renders the public-style detail view from live form state
+  if (isPreviewMode) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <Navbar />
+        <div className="border-b bg-yellow-50 dark:bg-yellow-900/20 px-4 py-3 text-center text-sm font-medium text-yellow-800 dark:text-yellow-200">
+          <Eye className="mr-1.5 inline h-4 w-4" />
+          Private preview — this trip is unpublished and visible only to you.
+          <Button variant="ghost" size="sm" className="ml-3 h-7" onClick={togglePreview}>
+            Back to edit
+          </Button>
+        </div>
+        <main className="flex-1">
+          <TripPreviewView data={buildPreviewData()} hostName={user?.name} hostBio={user?.bio} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
@@ -614,18 +661,9 @@ const CreateTrip = () => {
                 <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={savedDraft}>
                   <Save className="mr-1.5 h-3.5 w-3.5" />{savedDraft ? "Saved!" : "Save Draft"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => {
-                  const formState = {
-                    title, summary, description, destination, originCity, category, startDate, endDate,
-                    totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
-                    advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
-                    thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
-                    codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
-                    accessType, bookingCloseDate,
-                  };
-                  sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
-                  window.open("/trips/preview", "_blank");
-                }}><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
+                <Button variant="outline" size="sm" onClick={togglePreview}>
+                  <Eye className="mr-1.5 h-3.5 w-3.5" />Preview
+                </Button>
                 <Button size="sm" onClick={handleSubmit} disabled={loading}>
                   {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}Publish
                 </Button>
@@ -1404,18 +1442,7 @@ const CreateTrip = () => {
                 <div className="text-sm text-muted-foreground">{completedSections.length} of {visibleSections.length} sections • {progressPercent}%</div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
-                  <Button variant="outline" onClick={() => {
-                    const formState = {
-                      title, summary, description, destination, originCity, category, startDate, endDate,
-                      totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
-                      advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
-                      thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
-                      codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
-                      accessType, bookingCloseDate,
-                    };
-                    sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
-                    window.open("/trips/preview", "_blank");
-                  }}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
+                  <Button variant="outline" onClick={togglePreview}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
                   <Button onClick={handleSubmit} disabled={loading} className="transition-transform hover:scale-[1.02]">
                     {loading ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Publishing...</> : <><Send className="mr-1.5 h-4 w-4" /> Publish Trip</>}
                   </Button>

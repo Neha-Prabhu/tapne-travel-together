@@ -170,10 +170,9 @@ const TripDetail = () => {
             className="w-full text-base transition-transform hover:scale-[1.02]"
             size="lg"
             disabled={ctaDisabled || (isCompleted && !isHost)}
-            onClick={isHost ? () => {} : handleAction}
-            asChild={isHost && !isCompleted ? true : undefined}
+            onClick={isHost ? () => navigate(`/trips/${trip.id}/edit`) : handleAction}
           >
-            {isHost && !isCompleted ? <Link to="/create-trip">{ctaLabel}</Link> : <span>{isCompleted && !isHost ? "Trip completed" : ctaLabel}</span>}
+            <span>{isCompleted && !isHost ? "Trip completed" : ctaLabel}</span>
           </Button>
 
           <Button
@@ -203,7 +202,7 @@ const TripDetail = () => {
           <CardContent className="p-4 space-y-3">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Meet Your Hosts</p>
             <button
-              onClick={() => navigate(`/profile/${trip.host_username}`)}
+              onClick={() => navigate(`/users/${trip.host_username}`)}
               className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
             >
               <Avatar className="h-11 w-11 border-2 border-primary/20">
@@ -217,7 +216,7 @@ const TripDetail = () => {
             {(trip as any).co_hosts_profiles?.map((ch: any) => (
               <button
                 key={ch.username}
-                onClick={() => navigate(`/profile/${ch.username}`)}
+                onClick={() => navigate(`/users/${ch.username}`)}
                 className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
               >
                 <Avatar className="h-11 w-11 border-2 border-primary/20">
@@ -245,7 +244,7 @@ const TripDetail = () => {
                       { host_username: trip.host_username }
                     );
                     if (data.ok && data.thread_id) {
-                      navigate(`/inbox?thread=${data.thread_id}`);
+                      navigate(`/messages?thread=${data.thread_id}`);
                     } else {
                       toast.error(data.error || "Could not start conversation. Please try again.");
                     }
