@@ -12,7 +12,7 @@ const TravelerCard = ({ profile: p }: TravelerCardProps) => {
 
   return (
     <button
-      onClick={() => navigate(`/profile/${p.username}`)}
+      onClick={() => navigate(`/users/${p.username}`)}
       className="flex flex-col items-start gap-3 rounded-xl border border-border bg-card p-5 text-left transition-shadow hover:shadow-md"
     >
       <div className="flex items-center gap-3 w-full">
