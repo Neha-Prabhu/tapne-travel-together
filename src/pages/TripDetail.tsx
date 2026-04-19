@@ -704,6 +704,54 @@ const TripDetail = () => {
             .catch(() => {});
         }
       }} />
+
+      {/* Cancel Trip dialog */}
+      <AlertDialog open={cancelOpen} onOpenChange={(o) => { if (!cancelPending) setCancelOpen(o); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this trip?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All confirmed travelers will be notified. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Reason (shared with participants)</label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Why is the trip being cancelled?"
+              rows={4}
+              disabled={cancelPending}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelPending}>Keep Trip</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelPending || cancelReason.trim().length === 0}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async (e) => {
+                e.preventDefault();
+                const cfg = window.TAPNE_RUNTIME_CONFIG;
+                if (!cfg?.api?.base) return;
+                setCancelPending(true);
+                try {
+                  await apiPost(`${cfg.api.base}/trips/${trip.id}/cancel/`, { reason: cancelReason.trim() });
+                  toast.success("Trip cancelled.");
+                  setCancelOpen(false);
+                  setTrip({ ...trip, status: "cancelled" });
+                } catch (err: any) {
+                  toast.error(err?.error || "Could not cancel trip. Please try again.");
+                } finally {
+                  setCancelPending(false);
+                }
+              }}
+            >
+              {cancelPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Cancel Trip
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
