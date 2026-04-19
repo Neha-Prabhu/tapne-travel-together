@@ -45,6 +45,10 @@ const TripDetail = () => {
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [askingQuestion, setAskingQuestion] = useState(false);
+  const [bookingTogglePending, setBookingTogglePending] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelPending, setCancelPending] = useState(false);
 
   useEffect(() => {
     if (!id) return;
