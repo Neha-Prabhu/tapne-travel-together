@@ -198,7 +198,7 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     setDrafts((prev) => prev.filter((d) => d.id !== id));
-    navigate("/my-trips");
+    navigate("/dashboard/trips");
   }, [navigate]);
 
   return (

@@ -31,12 +31,12 @@ const CreateTripModal = ({ open, onOpenChange }: CreateTripModalProps) => {
   const handleNewTrip = async () => {
     const id = await createDraft();
     onOpenChange(false);
-    navigate(`/create-trip?draft=${id}`);
+    navigate(id ? `/trips/${id}/edit` : `/trips/new`);
   };
 
   const handleContinueDraft = (id: number) => {
     onOpenChange(false);
-    navigate(`/create-trip?draft=${id}`);
+    navigate(`/trips/${id}/edit`);
   };
 
   return (
@@ -94,7 +94,7 @@ const CreateTripModal = ({ open, onOpenChange }: CreateTripModalProps) => {
                   variant="ghost"
                   size="sm"
                   className="mt-2 w-full text-primary"
-                  onClick={() => { onOpenChange(false); navigate("/my-trips"); }}
+                  onClick={() => { onOpenChange(false); navigate("/dashboard/trips"); }}
                 >
                   View All Drafts <ArrowRight className="ml-1 h-3.5 w-3.5" />
                 </Button>
