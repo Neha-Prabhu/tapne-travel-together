@@ -30,6 +30,23 @@ const StoryDetail = () => {
   const [story, setStory] = useState<BlogData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!story) return;
+    if (!window.confirm("Delete this story permanently? This cannot be undone.")) return;
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (!cfg?.api?.blogs) return;
+    setDeleting(true);
+    try {
+      await apiDelete(`${cfg.api.blogs}${story.slug}/`);
+      toast.success("Story deleted.");
+      navigate("/stories");
+    } catch (err: any) {
+      toast.error(err?.error || "Could not delete story. Please try again.");
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
