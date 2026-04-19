@@ -624,6 +624,26 @@ const CreateTrip = () => {
       />
     ))
   );
+  // Preview mode renders the public-style detail view from live form state
+  if (isPreviewMode) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <Navbar />
+        <div className="border-b bg-yellow-50 dark:bg-yellow-900/20 px-4 py-3 text-center text-sm font-medium text-yellow-800 dark:text-yellow-200">
+          <Eye className="mr-1.5 inline h-4 w-4" />
+          Private preview — this trip is unpublished and visible only to you.
+          <Button variant="ghost" size="sm" className="ml-3 h-7" onClick={togglePreview}>
+            Back to edit
+          </Button>
+        </div>
+        <main className="flex-1">
+          <TripPreviewView data={buildPreviewData()} hostName={user?.name} hostBio={user?.bio} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
@@ -641,18 +661,9 @@ const CreateTrip = () => {
                 <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={savedDraft}>
                   <Save className="mr-1.5 h-3.5 w-3.5" />{savedDraft ? "Saved!" : "Save Draft"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => {
-                  const formState = {
-                    title, summary, description, destination, originCity, category, startDate, endDate,
-                    totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
-                    advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
-                    thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
-                    codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
-                    accessType, bookingCloseDate,
-                  };
-                  sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
-                  window.open("/trips/preview", "_blank");
-                }}><Eye className="mr-1.5 h-3.5 w-3.5" />Preview</Button>
+                <Button variant="outline" size="sm" onClick={togglePreview}>
+                  <Eye className="mr-1.5 h-3.5 w-3.5" />Preview
+                </Button>
                 <Button size="sm" onClick={handleSubmit} disabled={loading}>
                   {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}Publish
                 </Button>
@@ -1431,18 +1442,7 @@ const CreateTrip = () => {
                 <div className="text-sm text-muted-foreground">{completedSections.length} of {visibleSections.length} sections • {progressPercent}%</div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
-                  <Button variant="outline" onClick={() => {
-                    const formState = {
-                      title, summary, description, destination, originCity, category, startDate, endDate,
-                      totalSeats, minSeats, currency, totalPrice, earlyBirdPrice, earlyBirdSeats, paymentTerms,
-                      advanceAmount, heroImage, galleryImages, highlights, itinerary, includedItems, notIncludedItems,
-                      thingsToCarry, stays, experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange,
-                      codeOfConduct, generalPolicy, cancellationPolicy, faqs, contactPreferences, hosts,
-                      accessType, bookingCloseDate,
-                    };
-                    sessionStorage.setItem("tapne_trip_preview", JSON.stringify(formState));
-                    window.open("/trips/preview", "_blank");
-                  }}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
+                  <Button variant="outline" onClick={togglePreview}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
                   <Button onClick={handleSubmit} disabled={loading} className="transition-transform hover:scale-[1.02]">
                     {loading ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Publishing...</> : <><Send className="mr-1.5 h-4 w-4" /> Publish Trip</>}
                   </Button>
