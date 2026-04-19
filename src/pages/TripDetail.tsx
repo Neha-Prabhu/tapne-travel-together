@@ -604,7 +604,50 @@ const TripDetail = () => {
 
               {/* Host Application Management */}
               {isHost && !isCompleted && (
-                <ApplicationManager tripId={trip.id} />
+                <>
+                  <Section id="host-actions" icon={Settings2} title="Host Controls">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={bookingTogglePending}
+                        onClick={async () => {
+                          const cfg = window.TAPNE_RUNTIME_CONFIG;
+                          if (!cfg?.api?.base) return;
+                          const next = trip.booking_status === "closed" ? "open" : "closed";
+                          setBookingTogglePending(true);
+                          try {
+                            await apiPost(`${cfg.api.base}/trips/${trip.id}/booking-status/`, { status: next });
+                            setTrip({ ...trip, booking_status: next });
+                            toast.success(next === "closed" ? "Bookings closed." : "Bookings reopened.");
+                          } catch (err: any) {
+                            toast.error(err?.error || "Could not update bookings. Please try again.");
+                          } finally {
+                            setBookingTogglePending(false);
+                          }
+                        }}
+                      >
+                        {bookingTogglePending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> :
+                          trip.booking_status === "closed" ? <LockOpen className="mr-1.5 h-4 w-4" /> : <Lock className="mr-1.5 h-4 w-4" />}
+                        {trip.booking_status === "closed" ? "Reopen Bookings" : "Close Bookings"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+                        onClick={() => setCancelOpen(true)}
+                      >
+                        <Ban className="mr-1.5 h-4 w-4" /> Cancel Trip
+                      </Button>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {trip.booking_status === "closed"
+                        ? "Bookings are closed. Travelers cannot apply or book."
+                        : "Bookings are open. Close them to stop new applications."}
+                    </p>
+                  </Section>
+                  <ApplicationManager tripId={trip.id} />
+                </>
               )}
 
               {/* Similar Trips */}
