@@ -5,10 +5,11 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiDelete } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { BlogData } from "@/types/api";
-import { Loader2, Calendar, MapPin, Edit, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { Loader2, Calendar, MapPin, Edit, ArrowLeft, Trash2 } from "lucide-react";
 import { generateHTML } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import ImageExt from "@tiptap/extension-image";
@@ -29,6 +30,23 @@ const StoryDetail = () => {
   const [story, setStory] = useState<BlogData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!story) return;
+    if (!window.confirm("Delete this story permanently? This cannot be undone.")) return;
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    if (!cfg?.api?.blogs) return;
+    setDeleting(true);
+    try {
+      await apiDelete(`${cfg.api.blogs}${story.slug}/`);
+      toast.success("Story deleted.");
+      navigate("/stories");
+    } catch (err: any) {
+      toast.error(err?.error || "Could not delete story. Please try again.");
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -86,9 +104,15 @@ const StoryDetail = () => {
           <div className="mb-3 flex items-center justify-between gap-3">
             <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">{story.title}</h1>
             {isOwner && (
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/stories/${story.slug}/edit`}><Edit className="mr-1.5 h-3.5 w-3.5" />Edit</Link>
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/stories/${story.slug}/edit`}><Edit className="mr-1.5 h-3.5 w-3.5" />Edit</Link>
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5">
+                  {deleting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Trash2 className="mr-1.5 h-3.5 w-3.5" />}
+                  Delete
+                </Button>
+              </div>
             )}
           </div>
 
