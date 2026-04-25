@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch } from "@/lib/api";
-import type { TripData } from "@/types/api";
+import type { TripData, BlogData } from "@/types/api";
 import TripCard from "@/components/TripCard";
 import HorizontalCarousel from "@/components/home/HorizontalCarousel";
 import {
