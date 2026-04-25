@@ -27,11 +27,41 @@ const SearchPage = () => {
     if (!submitted.trim()) return;
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     setLoading(true);
-    const q = encodeURIComponent(submitted);
+
+    // Normalize: support both "amalfi_coast" (from destination cards) and free text.
+    const raw = submitted.trim().replace(/_/g, " ");
+    const needle = raw.toLowerCase();
+    const tokens = needle.split(/\s+/).filter(Boolean);
+    const matchesAll = (haystack: string) => {
+      const h = haystack.toLowerCase();
+      return tokens.every((t) => h.includes(t));
+    };
+    const q = encodeURIComponent(raw);
+
     Promise.allSettled([
-      apiGet<{ trips: TripData[] }>(`${cfg.api.trips}?q=${q}&sort=${sort}`).then(d => setTrips(d.trips || [])),
-      apiGet<{ blogs: BlogData[] }>(`${cfg.api.blogs}?q=${q}`).then(d => setStories(d.blogs || [])),
-      apiGet<{ users: any[] }>(`${cfg.api.users_search}?q=${q}`).then(d => setUsers(d.users || [])),
+      apiGet<{ trips: TripData[] }>(`${cfg.api.trips}?q=${q}&sort=${sort}`).then((d) => {
+        const all = d.trips || [];
+        // Backend may ignore `q` — always filter client-side as a safety net so
+        // results actually relate to the query (e.g. destination clicks).
+        const filtered = all.filter((t) =>
+          matchesAll(`${t.title || ""} ${t.destination || ""} ${t.summary || ""} ${t.trip_type || ""}`)
+        );
+        setTrips(filtered);
+      }),
+      apiGet<{ blogs: BlogData[] }>(`${cfg.api.blogs}?q=${q}`).then((d) => {
+        const all = d.blogs || [];
+        const filtered = all.filter((s) =>
+          matchesAll(`${s.title || ""} ${s.short_description || ""} ${s.excerpt || ""} ${s.location || ""} ${(s.tags || []).join(" ")}`)
+        );
+        setStories(filtered);
+      }),
+      apiGet<{ users: any[] }>(`${cfg.api.users_search}?q=${q}`).then((d) => {
+        const all = d.users || [];
+        const filtered = all.filter((u: any) =>
+          matchesAll(`${u.display_name || ""} ${u.username || ""} ${u.location || ""} ${u.bio || ""}`)
+        );
+        setUsers(filtered);
+      }),
     ]).finally(() => setLoading(false));
   }, [submitted, sort]);
 
