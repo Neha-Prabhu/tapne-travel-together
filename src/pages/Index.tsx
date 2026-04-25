@@ -20,7 +20,7 @@ import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
 const Index = () => {
   const [trips, setTrips] = useState<TripData[]>([]);
   const [blogs, setBlogs] = useState<BlogData[]>([]);
-  const [communityProfiles, setCommunityProfiles] = useState<CommunityProfile[]>([]);
+  
   const [testimonials, setTestimonials] = useState<TestimonialData[]>([]);
   const [stats, setStats] = useState<{ travelers: number; trips_hosted: number; destinations: number } | undefined>();
   const [loading, setLoading] = useState(true);
