@@ -20,6 +20,7 @@ import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
   AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck, CheckCircle2,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
