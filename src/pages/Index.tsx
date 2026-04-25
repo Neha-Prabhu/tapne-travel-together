@@ -127,7 +127,7 @@ const Index = () => {
                 {destinations.map((dest) => (
                   <Link
                     key={dest.name}
-                    to={`/trips?destination=${dest.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    to={`/search?q=${dest.name.toLowerCase().replace(/\s+/g, "_")}`}
                     className="group w-[220px] shrink-0 sm:w-[260px]"
                   >
                     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
