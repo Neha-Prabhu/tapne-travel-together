@@ -15,6 +15,7 @@ import { Search as SearchIcon, Loader2, User } from "lucide-react";
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQ = searchParams.get("q") || "";
+  const destination = searchParams.get("destination") || "";
   const [query, setQuery] = useState(initialQ);
   const [submitted, setSubmitted] = useState(initialQ);
   const [trips, setTrips] = useState<TripData[]>([]);
@@ -23,52 +24,37 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState<"recent" | "popular">("recent");
 
+  const hasCriteria = Boolean(submitted.trim() || destination.trim());
+
   useEffect(() => {
-    if (!submitted.trim()) return;
+    if (!hasCriteria) return;
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     setLoading(true);
 
-    // Normalize: support both "amalfi_coast" (from destination cards) and free text.
-    const raw = submitted.trim().replace(/_/g, " ");
-    const needle = raw.toLowerCase();
-    const tokens = needle.split(/\s+/).filter(Boolean);
-    const matchesAll = (haystack: string) => {
-      const h = haystack.toLowerCase();
-      return tokens.every((t) => h.includes(t));
-    };
-    const q = encodeURIComponent(raw);
+    const q = encodeURIComponent(submitted.trim());
+    const dest = encodeURIComponent(destination.trim());
+    const tripsUrl = `${cfg.api.trips}?q=${q}&sort=${sort}${dest ? `&destination=${dest}` : ""}`;
 
     Promise.allSettled([
-      apiGet<{ trips: TripData[] }>(`${cfg.api.trips}?q=${q}&sort=${sort}`).then((d) => {
-        const all = d.trips || [];
-        // Backend may ignore `q` — always filter client-side as a safety net so
-        // results actually relate to the query (e.g. destination clicks).
-        const filtered = all.filter((t) =>
-          matchesAll(`${t.title || ""} ${t.destination || ""} ${t.summary || ""} ${t.trip_type || ""}`)
-        );
-        setTrips(filtered);
+      apiGet<{ trips: TripData[] }>(tripsUrl).then((d) => {
+        setTrips(d.trips || []);
       }),
       apiGet<{ blogs: BlogData[] }>(`${cfg.api.blogs}?q=${q}`).then((d) => {
-        const all = d.blogs || [];
-        const filtered = all.filter((s) =>
-          matchesAll(`${s.title || ""} ${s.short_description || ""} ${s.excerpt || ""} ${s.location || ""} ${(s.tags || []).join(" ")}`)
-        );
-        setStories(filtered);
+        setStories(d.blogs || []);
       }),
       apiGet<{ users: any[] }>(`${cfg.api.users_search}?q=${q}`).then((d) => {
-        const all = d.users || [];
-        const filtered = all.filter((u: any) =>
-          matchesAll(`${u.display_name || ""} ${u.username || ""} ${u.location || ""} ${u.bio || ""}`)
-        );
-        setUsers(filtered);
+        setUsers(d.users || []);
       }),
     ]).finally(() => setLoading(false));
-  }, [submitted, sort]);
+  }, [submitted, sort, destination, hasCriteria]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(query);
-    setSearchParams(query ? { q: query } : {});
+    const next: Record<string, string> = {};
+    if (query) next.q = query;
+    if (destination) next.destination = destination;
+    setSearchParams(next);
   };
 
   return (
@@ -84,7 +70,7 @@ const SearchPage = () => {
           <Button type="submit">Search</Button>
         </form>
 
-        {submitted && (
+        {hasCriteria && (
           <Tabs defaultValue="trips">
             <div className="flex items-center justify-between gap-4">
               <TabsList>
@@ -148,7 +134,7 @@ const SearchPage = () => {
           </Tabs>
         )}
 
-        {!submitted && (
+        {!hasCriteria && (
           <div className="py-12 text-center text-muted-foreground">
             <SearchIcon className="mx-auto mb-3 h-10 w-10 opacity-30" />
             <p>Search across trips, stories, and people.</p>
