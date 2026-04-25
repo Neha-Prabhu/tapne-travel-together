@@ -448,7 +448,7 @@ const Profile = () => {
             </TabsContent>
 
             <TabsContent value="experiences" className="mt-6">
-              <EmptyState message="No experiences shared yet" />
+              <EmptyState message="No stories shared yet" />
             </TabsContent>
 
             <TabsContent value="gallery" className="mt-6">
