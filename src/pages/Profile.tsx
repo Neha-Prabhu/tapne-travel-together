@@ -13,13 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch } from "@/lib/api";
-import type { TripData } from "@/types/api";
+import type { TripData, BlogData } from "@/types/api";
 import TripCard from "@/components/TripCard";
 import HorizontalCarousel from "@/components/home/HorizontalCarousel";
 import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
   AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck, CheckCircle2,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
@@ -50,6 +51,7 @@ interface ProfileResponse {
   trips_joined: TripData[];
   reviews: ReviewItem[];
   gallery: string[];
+  stories?: BlogData[];
 }
 
 interface ReviewItem {
@@ -248,6 +250,11 @@ const Profile = () => {
   const gallery = profileData?.gallery ?? [];
   const tripsHosted = profileData?.trips_hosted ?? [];
   const tripsJoined = profileData?.trips_joined ?? [];
+  const stories = [...(profileData?.stories ?? [])].sort((a, b) => {
+    const ad = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bd = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return bd - ad;
+  });
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -377,7 +384,7 @@ const Profile = () => {
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="trips">Trips</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
-              <TabsTrigger value="experiences">Stories</TabsTrigger>
+              <TabsTrigger value="stories">Stories</TabsTrigger>
               <TabsTrigger value="gallery">Gallery</TabsTrigger>
             </TabsList>
 
@@ -454,8 +461,36 @@ const Profile = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="experiences" className="mt-6">
-              <EmptyState message="No stories shared yet" />
+            <TabsContent value="stories" className="mt-6">
+              {stories.length > 0 ? (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {stories.map((story) => (
+                    <Link key={story.slug} to={`/stories/${story.slug}`} className="block">
+                      <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
+                        {story.cover_image_url && (
+                          <div className="relative aspect-[16/10] overflow-hidden">
+                            <img src={story.cover_image_url} alt={story.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                          </div>
+                        )}
+                        <CardContent className="p-4">
+                          <h3 className="mb-1.5 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">{story.title}</h3>
+                          {(story.short_description || story.excerpt) && (
+                            <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{story.short_description || story.excerpt}</p>
+                          )}
+                          {story.created_at && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(story.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState message="No stories shared yet" />
+              )}
             </TabsContent>
 
             <TabsContent value="gallery" className="mt-6">
