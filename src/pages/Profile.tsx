@@ -50,6 +50,7 @@ interface ProfileResponse {
   trips_joined: TripData[];
   reviews: ReviewItem[];
   gallery: string[];
+  stories?: BlogData[];
 }
 
 interface ReviewItem {
