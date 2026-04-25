@@ -158,26 +158,23 @@ const Index = () => {
           </section>
         )}
 
-        {/* 3. Travel Hosts */}
-        <CommunitySection profiles={communityProfiles} />
-
-        {/* 4. Travel Experiences */}
+        {/* 3. Stories */}
         {blogs.length > 0 && (
           <section className="bg-muted/30 py-14">
             <div className="mx-auto max-w-6xl px-4">
               <div className="mb-6 flex items-end justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">Travel Experiences</h2>
+                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">Stories</h2>
                   <p className="mt-1 text-muted-foreground">Stories, tips, and experiences from fellow travelers.</p>
                 </div>
                 <Button variant="ghost" asChild className="hidden sm:flex">
-                  <Link to="/experiences">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                  <Link to="/stories">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {blogs.slice(0, 3).map((blog) => (
-                  <Link key={blog.slug} to={`/experiences/${blog.slug}`} className="block">
+                  <Link key={blog.slug} to={`/stories/${blog.slug}`} className="block">
                     <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
                       {blog.cover_image_url && (
                         <div className="relative aspect-[16/10] overflow-hidden">
