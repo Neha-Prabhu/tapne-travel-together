@@ -134,7 +134,7 @@ const SearchPage = () => {
           </Tabs>
         )}
 
-        {!submitted && (
+        {!hasCriteria && (
           <div className="py-12 text-center text-muted-foreground">
             <SearchIcon className="mx-auto mb-3 h-10 w-10 opacity-30" />
             <p>Search across trips, stories, and people.</p>
