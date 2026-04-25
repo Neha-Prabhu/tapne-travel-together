@@ -8,19 +8,19 @@ import Footer from "@/components/Footer";
 import HeroSection from "@/components/home/HeroSection";
 import QuickFilters from "@/components/home/QuickFilters";
 import HorizontalCarousel from "@/components/home/HorizontalCarousel";
-import CommunitySection from "@/components/home/CommunitySection";
+
 import WhyTapne from "@/components/home/WhyTapne";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import FinalCTA from "@/components/home/FinalCTA";
 import { apiGet } from "@/lib/api";
-import type { HomeResponse, TripData, BlogData, CommunityProfile, TestimonialData } from "@/types/api";
+import type { HomeResponse, TripData, BlogData, TestimonialData } from "@/types/api";
 import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
 
 const Index = () => {
   const [trips, setTrips] = useState<TripData[]>([]);
   const [blogs, setBlogs] = useState<BlogData[]>([]);
-  const [communityProfiles, setCommunityProfiles] = useState<CommunityProfile[]>([]);
+  
   const [testimonials, setTestimonials] = useState<TestimonialData[]>([]);
   const [stats, setStats] = useState<{ travelers: number; trips_hosted: number; destinations: number } | undefined>();
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ const Index = () => {
       .then((data) => {
         setTrips(data.trips || []);
         setBlogs(data.blogs || []);
-        setCommunityProfiles(data.community_profiles || []);
+        
         setTestimonials(data.testimonials || []);
         setStats(data.stats);
       })
@@ -127,7 +127,7 @@ const Index = () => {
                 {destinations.map((dest) => (
                   <Link
                     key={dest.name}
-                    to={`/trips?destination=${dest.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    to={`/search?q=${dest.name.toLowerCase().replace(/\s+/g, "_")}`}
                     className="group w-[220px] shrink-0 sm:w-[260px]"
                   >
                     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
@@ -158,26 +158,23 @@ const Index = () => {
           </section>
         )}
 
-        {/* 3. Travel Hosts */}
-        <CommunitySection profiles={communityProfiles} />
-
-        {/* 4. Travel Experiences */}
+        {/* 3. Stories */}
         {blogs.length > 0 && (
           <section className="bg-muted/30 py-14">
             <div className="mx-auto max-w-6xl px-4">
               <div className="mb-6 flex items-end justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">Travel Experiences</h2>
+                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">Stories</h2>
                   <p className="mt-1 text-muted-foreground">Stories, tips, and experiences from fellow travelers.</p>
                 </div>
                 <Button variant="ghost" asChild className="hidden sm:flex">
-                  <Link to="/experiences">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                  <Link to="/stories">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {blogs.slice(0, 3).map((blog) => (
-                  <Link key={blog.slug} to={`/experiences/${blog.slug}`} className="block">
+                  <Link key={blog.slug} to={`/stories/${blog.slug}`} className="block">
                     <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
                       {blog.cover_image_url && (
                         <div className="relative aspect-[16/10] overflow-hidden">
