@@ -461,8 +461,36 @@ const Profile = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="experiences" className="mt-6">
-              <EmptyState message="No stories shared yet" />
+            <TabsContent value="stories" className="mt-6">
+              {stories.length > 0 ? (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {stories.map((story) => (
+                    <Link key={story.slug} to={`/stories/${story.slug}`} className="block">
+                      <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
+                        {story.cover_image_url && (
+                          <div className="relative aspect-[16/10] overflow-hidden">
+                            <img src={story.cover_image_url} alt={story.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                          </div>
+                        )}
+                        <CardContent className="p-4">
+                          <h3 className="mb-1.5 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">{story.title}</h3>
+                          {(story.short_description || story.excerpt) && (
+                            <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{story.short_description || story.excerpt}</p>
+                          )}
+                          {story.created_at && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(story.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState message="No stories shared yet" />
+              )}
             </TabsContent>
 
             <TabsContent value="gallery" className="mt-6">
