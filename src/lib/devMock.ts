@@ -619,6 +619,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       trips_joined: joinedTrips,
       reviews: hostedTrips.length > 0 ? mockReviews : [],
       gallery: mockGallery,
+      stories: userStories,
     };
   }
 
