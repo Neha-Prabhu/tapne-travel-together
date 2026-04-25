@@ -12,7 +12,7 @@ interface AuthContextType {
   login: (identifier: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  updateProfile: (updates: Partial<User>) => void;
+  updateProfile: (updates: Partial<User>) => Promise<any>;
   lastAuthError: string;
   /** Open login modal with optional callback after success */
   requireAuth: (onSuccess?: () => void) => void;
