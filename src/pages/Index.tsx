@@ -14,7 +14,7 @@ import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import FinalCTA from "@/components/home/FinalCTA";
 import { apiGet } from "@/lib/api";
-import type { HomeResponse, TripData, BlogData, CommunityProfile, TestimonialData } from "@/types/api";
+import type { HomeResponse, TripData, BlogData, TestimonialData } from "@/types/api";
 import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
 
 const Index = () => {
