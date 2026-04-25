@@ -370,7 +370,7 @@ const Profile = () => {
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="trips">Trips</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
-              <TabsTrigger value="experiences">Experiences</TabsTrigger>
+              <TabsTrigger value="experiences">Stories</TabsTrigger>
               <TabsTrigger value="gallery">Gallery</TabsTrigger>
             </TabsList>
 
