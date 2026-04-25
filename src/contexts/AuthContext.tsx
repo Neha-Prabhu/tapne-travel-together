@@ -87,17 +87,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateProfile = useCallback(async (updates: Partial<User>) => {
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const payload: Record<string, string> = {};
+      const payload: Record<string, unknown> = {};
       if (updates.name !== undefined) payload.display_name = updates.name;
       if (updates.bio !== undefined) payload.bio = updates.bio;
       if (updates.location !== undefined) payload.location = updates.location;
       if (updates.website !== undefined) payload.website = updates.website;
+      if (updates.avatar !== undefined) payload.avatar_url = updates.avatar;
+      if (updates.travel_tags !== undefined) payload.travel_tags = updates.travel_tags;
       const data = await apiPatch<{ profile: any }>(cfg.api.profile_me, payload);
+      const p = data.profile || {};
       store.updateUser({
-        ...updates,
-        name: data.profile?.display_name || updates.name || store.user?.name,
+        name: p.display_name ?? updates.name ?? store.user?.name,
+        bio: p.bio ?? updates.bio ?? store.user?.bio,
+        location: p.location ?? updates.location ?? store.user?.location,
+        website: p.website ?? updates.website ?? store.user?.website,
+        avatar: p.avatar_url ?? updates.avatar ?? store.user?.avatar,
+        travel_tags: p.travel_tags ?? updates.travel_tags ?? store.user?.travel_tags,
       });
-    } catch {}
+      return data.profile;
+    } catch {
+      return null;
+    }
   }, []);
 
   const requireAuth = useCallback((onSuccess?: () => void) => {
