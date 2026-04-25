@@ -586,6 +586,9 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const isFollowed = _followedUsers.has(su.username);
     const baseFollowers = _followerCounts.get(su.username) ?? (hostedTrips.length > 0 ? 47 : 12);
 
+    const isOwnProfile = _devUser && su.username === _devUser.username;
+    const overlay: any = isOwnProfile ? (_devUser as any) : {};
+
     return {
       profile: {
         username: su.username,
@@ -594,8 +597,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         bio: su.bio || mu?.bio || "",
         location: su.location || mu?.location || "",
         website: su.website,
-        avatar_url: mu?.avatar,
-        travel_tags: ["Mountains", "Backpacking", "Culture", "Photography"],
+        avatar_url: overlay.avatar_url ?? mu?.avatar,
+        travel_tags: overlay.travel_tags ?? ["Mountains", "Backpacking", "Culture", "Photography"],
         average_rating: hostedTrips.length > 0 ? 4.6 : undefined,
         reviews_count: hostedTrips.length > 0 ? 12 : 0,
         trips_hosted: hostedTrips.length,
