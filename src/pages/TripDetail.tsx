@@ -34,7 +34,8 @@ import { Textarea } from "@/components/ui/textarea";
 // Sections are built dynamically based on trip data — see visibleSections below
 
 const TripDetail = () => {
-  const { id } = useParams();
+  const { tripId } = useParams<{ tripId: string }>();
+  const id = tripId;
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [trip, setTrip] = useState<TripData | null>(null);
