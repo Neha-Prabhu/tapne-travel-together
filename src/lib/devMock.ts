@@ -623,12 +623,24 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const b = body as any;
     if (_devUser) {
       if (b?.display_name) _devUser = { ..._devUser, display_name: b.display_name };
-    if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
+      if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
       if (b?.location !== undefined) _devUser = { ..._devUser, location: b.location };
       if (b?.website !== undefined) _devUser = { ..._devUser, website: b.website };
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
+      if (b?.avatar_url !== undefined) _devUser = { ..._devUser, avatar_url: b.avatar_url } as any;
     }
-    return { profile: _devUser };
+    const u: any = _devUser || {};
+    return {
+      profile: {
+        username: u.username,
+        display_name: u.display_name,
+        bio: u.bio,
+        location: u.location,
+        website: u.website,
+        avatar_url: u.avatar_url,
+        travel_tags: u.travel_tags,
+      },
+    };
   }
 
   // ── Hosting inbox ──
