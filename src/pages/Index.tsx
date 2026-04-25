@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 import HeroSection from "@/components/home/HeroSection";
 import QuickFilters from "@/components/home/QuickFilters";
 import HorizontalCarousel from "@/components/home/HorizontalCarousel";
-import CommunitySection from "@/components/home/CommunitySection";
+
 import WhyTapne from "@/components/home/WhyTapne";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
