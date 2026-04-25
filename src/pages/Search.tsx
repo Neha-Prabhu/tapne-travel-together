@@ -51,7 +51,10 @@ const SearchPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(query);
-    setSearchParams(query ? { q: query } : {});
+    const next: Record<string, string> = {};
+    if (query) next.q = query;
+    if (destination) next.destination = destination;
+    setSearchParams(next);
   };
 
   return (
