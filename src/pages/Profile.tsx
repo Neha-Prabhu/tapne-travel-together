@@ -249,6 +249,11 @@ const Profile = () => {
   const gallery = profileData?.gallery ?? [];
   const tripsHosted = profileData?.trips_hosted ?? [];
   const tripsJoined = profileData?.trips_joined ?? [];
+  const stories = [...(profileData?.stories ?? [])].sort((a, b) => {
+    const ad = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const bd = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return bd - ad;
+  });
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
