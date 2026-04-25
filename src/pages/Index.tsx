@@ -33,7 +33,7 @@ const Index = () => {
       .then((data) => {
         setTrips(data.trips || []);
         setBlogs(data.blogs || []);
-        setCommunityProfiles(data.community_profiles || []);
+        
         setTestimonials(data.testimonials || []);
         setStats(data.stats);
       })
