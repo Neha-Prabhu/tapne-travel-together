@@ -586,6 +586,9 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const isFollowed = _followedUsers.has(su.username);
     const baseFollowers = _followerCounts.get(su.username) ?? (hostedTrips.length > 0 ? 47 : 12);
 
+    const isOwnProfile = _devUser && su.username === _devUser.username;
+    const overlay: any = isOwnProfile ? (_devUser as any) : {};
+
     return {
       profile: {
         username: su.username,
@@ -594,8 +597,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         bio: su.bio || mu?.bio || "",
         location: su.location || mu?.location || "",
         website: su.website,
-        avatar_url: mu?.avatar,
-        travel_tags: ["Mountains", "Backpacking", "Culture", "Photography"],
+        avatar_url: overlay.avatar_url ?? mu?.avatar,
+        travel_tags: overlay.travel_tags ?? ["Mountains", "Backpacking", "Culture", "Photography"],
         average_rating: hostedTrips.length > 0 ? 4.6 : undefined,
         reviews_count: hostedTrips.length > 0 ? 12 : 0,
         trips_hosted: hostedTrips.length,
@@ -620,12 +623,24 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const b = body as any;
     if (_devUser) {
       if (b?.display_name) _devUser = { ..._devUser, display_name: b.display_name };
-    if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
+      if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
       if (b?.location !== undefined) _devUser = { ..._devUser, location: b.location };
       if (b?.website !== undefined) _devUser = { ..._devUser, website: b.website };
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
+      if (b?.avatar_url !== undefined) _devUser = { ..._devUser, avatar_url: b.avatar_url } as any;
     }
-    return { profile: _devUser };
+    const u: any = _devUser || {};
+    return {
+      profile: {
+        username: u.username,
+        display_name: u.display_name,
+        bio: u.bio,
+        location: u.location,
+        website: u.website,
+        avatar_url: u.avatar_url,
+        travel_tags: u.travel_tags,
+      },
+    };
   }
 
   // ── Hosting inbox ──

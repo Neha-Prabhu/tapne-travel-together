@@ -158,18 +158,25 @@ const Profile = () => {
     );
   };
 
-  const saveEdit = () => {
-    updateProfile({ name: editName, bio: editBio, location: editLocation });
+  const saveEdit = async () => {
+    const updated = await updateProfile({
+      name: editName,
+      bio: editBio,
+      location: editLocation,
+      avatar: avatarPreview ?? undefined,
+      travel_tags: editTags,
+    });
     if (profileData && p) {
+      const next = updated || {};
       setProfileData({
         ...profileData,
         profile: {
           ...p,
-          display_name: editName,
-          bio: editBio,
-          location: editLocation,
-          travel_tags: editTags,
-          avatar_url: avatarPreview || p.avatar_url,
+          display_name: next.display_name ?? editName,
+          bio: next.bio ?? editBio,
+          location: next.location ?? editLocation,
+          travel_tags: next.travel_tags ?? editTags,
+          avatar_url: next.avatar_url ?? avatarPreview ?? p.avatar_url,
         },
       });
     }

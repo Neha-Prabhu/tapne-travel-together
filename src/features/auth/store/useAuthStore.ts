@@ -11,9 +11,10 @@ export interface AuthUser {
   location: string;
   website: string;
   avatar?: string;
+  travel_tags?: string[];
 }
 
-export function sessionUserToAuthUser(su: SessionUser): AuthUser {
+export function sessionUserToAuthUser(su: SessionUser & { avatar_url?: string; travel_tags?: string[] }): AuthUser {
   return {
     id: su.id,
     username: su.username,
@@ -22,7 +23,8 @@ export function sessionUserToAuthUser(su: SessionUser): AuthUser {
     bio: su.bio,
     location: su.location,
     website: su.website,
-    avatar: undefined,
+    avatar: su.avatar_url,
+    travel_tags: su.travel_tags,
   };
 }
 
