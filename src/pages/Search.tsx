@@ -70,7 +70,7 @@ const SearchPage = () => {
           <Button type="submit">Search</Button>
         </form>
 
-        {submitted && (
+        {hasCriteria && (
           <Tabs defaultValue="trips">
             <div className="flex items-center justify-between gap-4">
               <TabsList>
