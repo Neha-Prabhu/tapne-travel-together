@@ -65,10 +65,10 @@ const Navbar = () => {
         {/* Desktop */}
         <div className="hidden items-center gap-1 md:flex">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/trips">Trips</Link>
+            <Link to="/search">Trips</Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/stories">Stories</Link>
+            <Link to="/search?tab=stories">Stories</Link>
           </Button>
 
           <Button variant="ghost" size="icon" onClick={toggleDarkMode} className="h-9 w-9">
@@ -125,7 +125,7 @@ const Navbar = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                <DropdownMenuItem onClick={() => navigate(`/users/${user?.username || user?.id}`)}>
                   <User className="mr-2 h-4 w-4" /> My Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/dashboard/trips")}>
@@ -187,10 +187,10 @@ const Navbar = () => {
       {mobileOpen && (
         <div className="flex flex-col gap-1 border-t bg-card px-4 pb-4 pt-2 md:hidden">
           <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-            <Link to="/trips">Trips</Link>
+            <Link to="/search">Trips</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-            <Link to="/stories">Stories</Link>
+            <Link to="/search?tab=stories">Stories</Link>
           </Button>
           {isAuthenticated ? (
             <>
@@ -201,7 +201,7 @@ const Navbar = () => {
                 <Link to="/dashboard/trips">Dashboard</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/profile">My Profile</Link>
+                <Link to={`/users/${user?.username || user?.id}`}>My Profile</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/messages">Messages</Link>

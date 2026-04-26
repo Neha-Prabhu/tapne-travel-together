@@ -73,7 +73,7 @@ const StoryCreate = () => {
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/stories")} className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/search?tab=stories")} className="mb-4">
           <ArrowLeft className="mr-1.5 h-4 w-4" />Cancel
         </Button>
         <h1 className="mb-6 text-2xl font-bold text-foreground">Write a story</h1>

@@ -85,7 +85,7 @@ const TripDetail = () => {
         <main className="flex flex-1 flex-col items-center justify-center px-4">
           <h1 className="mb-2 text-2xl font-bold">Trip not found</h1>
           <p className="mb-4 text-muted-foreground">This trip may have been removed.</p>
-          <Button asChild><Link to="/trips">Browse Trips</Link></Button>
+          <Button asChild><Link to="/search">Browse Trips</Link></Button>
         </main>
         <Footer />
       </div>
@@ -304,7 +304,7 @@ const TripDetail = () => {
           </div>
           <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl px-4 pb-6 md:pb-8">
             <Button variant="ghost" size="sm" asChild className="mb-3 text-white/80 hover:text-white hover:bg-white/10">
-              <Link to="/trips"><ArrowLeft className="mr-1 h-4 w-4" /> Back</Link>
+              <Link to="/search"><ArrowLeft className="mr-1 h-4 w-4" /> Back</Link>
             </Button>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {trip.trip_type && <Badge className="bg-primary text-primary-foreground">{trip.trip_type}</Badge>}

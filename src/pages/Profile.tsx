@@ -370,7 +370,7 @@ const Profile = () => {
                   variant="outline"
                   onClick={() => {
                     if (!isAuthenticated) { requireAuth(); return; }
-                    navigate(`/inbox?dm=${p.username}`);
+                    navigate(`/messages?dm=${p.username}`);
                   }}
                 >
                   <MessageCircle className="mr-1 h-4 w-4" /> Message
@@ -424,7 +424,7 @@ const Profile = () => {
                 </div>
               )}
               {tripsHosted.length === 0 && tripsJoined.length === 0 && (
-                <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost ? { label: "Host your first trip", to: "/create-trip" } : undefined} />
+                <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost ? { label: "Host your first trip", to: "/trips/new" } : undefined} />
               )}
             </TabsContent>
 

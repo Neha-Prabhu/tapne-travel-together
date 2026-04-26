@@ -41,7 +41,7 @@ const StoryDetail = () => {
     try {
       await apiDelete(`${cfg.api.blogs}${story.slug}/`);
       toast.success("Story deleted.");
-      navigate("/stories");
+      navigate("/search?tab=stories");
     } catch (err: any) {
       toast.error(err?.error || "Could not delete story. Please try again.");
       setDeleting(false);
@@ -76,7 +76,7 @@ const StoryDetail = () => {
         <main className="flex flex-1 flex-col items-center justify-center px-4 text-center">
           <h1 className="text-2xl font-bold text-foreground">Story not found</h1>
           <p className="mt-2 text-muted-foreground">This story may have been removed.</p>
-          <Button className="mt-4" onClick={() => navigate("/stories")}>Back to stories</Button>
+          <Button className="mt-4" onClick={() => navigate("/search?tab=stories")}>Back to stories</Button>
         </main>
         <Footer />
       </div>
@@ -91,7 +91,7 @@ const StoryDetail = () => {
       <Navbar />
       <main className="flex-1">
         <article className="mx-auto max-w-[700px] px-4 py-8">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/stories")} className="mb-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/search?tab=stories")} className="mb-4">
             <ArrowLeft className="mr-1.5 h-4 w-4" />All stories
           </Button>
 

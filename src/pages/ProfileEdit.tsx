@@ -48,7 +48,7 @@ const ProfileEdit = () => {
     try {
       updateProfile({ name, bio, location });
       toast.success("Profile updated");
-      navigate("/profile");
+      navigate(`/users/${user?.username || user?.id}`);
     } catch {
       toast.error("Could not save profile");
     } finally {
@@ -97,7 +97,7 @@ const ProfileEdit = () => {
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/profile")} className="mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/users/${user?.username || user?.id}`)} className="mb-4">
           <ArrowLeft className="mr-1.5 h-4 w-4" />Back to profile
         </Button>
         <h1 className="mb-6 text-2xl font-bold text-foreground">Edit Profile</h1>

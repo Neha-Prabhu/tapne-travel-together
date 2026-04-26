@@ -12,7 +12,7 @@ const FinalCTA = () => {
       </h2>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button asChild size="lg" className="rounded-full">
-          <Link to="/trips">Explore Trips</Link>
+          <Link to="/search">Explore Trips</Link>
         </Button>
         <Button
           variant="outline"
