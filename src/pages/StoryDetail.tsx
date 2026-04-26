@@ -91,7 +91,7 @@ const StoryDetail = () => {
       <Navbar />
       <main className="flex-1">
         <article className="mx-auto max-w-[700px] px-4 py-8">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/stories")} className="mb-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/search?tab=stories")} className="mb-4">
             <ArrowLeft className="mr-1.5 h-4 w-4" />All stories
           </Button>
 
