@@ -76,7 +76,7 @@ const StoryDetail = () => {
         <main className="flex flex-1 flex-col items-center justify-center px-4 text-center">
           <h1 className="text-2xl font-bold text-foreground">Story not found</h1>
           <p className="mt-2 text-muted-foreground">This story may have been removed.</p>
-          <Button className="mt-4" onClick={() => navigate("/stories")}>Back to stories</Button>
+          <Button className="mt-4" onClick={() => navigate("/search?tab=stories")}>Back to stories</Button>
         </main>
         <Footer />
       </div>
