@@ -41,7 +41,7 @@ const StoryDetail = () => {
     try {
       await apiDelete(`${cfg.api.blogs}${story.slug}/`);
       toast.success("Story deleted.");
-      navigate("/stories");
+      navigate("/search?tab=stories");
     } catch (err: any) {
       toast.error(err?.error || "Could not delete story. Please try again.");
       setDeleting(false);
