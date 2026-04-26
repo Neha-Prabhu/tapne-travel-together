@@ -125,7 +125,7 @@ const Navbar = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
+                <DropdownMenuItem onClick={() => navigate(`/users/${user?.username || user?.id}`)}>
                   <User className="mr-2 h-4 w-4" /> My Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/dashboard/trips")}>
