@@ -44,25 +44,28 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
 
-              {/* Trips */}
-              <Route path="/trips" element={<BrowseTrips />} />
+              {/* Trips — /trips retired, browse goes to /search */}
+              <Route path="/trips" element={<Navigate to="/search" replace />} />
               <Route path="/trips/new" element={<CreateTrip />} />
               <Route path="/trips/:tripId/edit" element={<CreateTrip />} />
               <Route path="/trips/:tripId" element={<TripDetail />} />
+              <Route path="/create-trip" element={<Navigate to="/trips/new" replace />} />
 
-              {/* Stories */}
-              <Route path="/stories" element={<Stories />} />
+              {/* Stories — /stories retired, browse goes to /search?tab=stories */}
+              <Route path="/stories" element={<Navigate to="/search?tab=stories" replace />} />
               <Route path="/stories/new" element={<StoryCreate />} />
               <Route path="/stories/:storyId/edit" element={<StoryEdit />} />
               <Route path="/stories/:storyId" element={<StoryDetail />} />
 
-              {/* Profile */}
+              {/* Profile — /profile retired, self profile resolves in <Profile /> via auth */}
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/edit" element={<ProfileEdit />} />
               <Route path="/users/:profileId" element={<Profile />} />
 
               {/* Messaging & utility */}
               <Route path="/messages" element={<Messages />} />
+              <Route path="/inbox" element={<Navigate to="/messages" replace />} />
+              <Route path="/my-trips" element={<Navigate to="/dashboard/trips" replace />} />
               <Route path="/bookmarks" element={<Bookmarks />} />
               <Route path="/search" element={<Search />} />
               <Route path="/notifications" element={<Notifications />} />
