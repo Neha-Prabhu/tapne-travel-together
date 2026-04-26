@@ -84,7 +84,7 @@ const Index = () => {
               <p className="mt-1 text-muted-foreground">Discover community trips created by travelers.</p>
             </div>
             <Button variant="ghost" asChild className="hidden sm:flex">
-              <Link to="/trips">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+              <Link to="/search">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </div>
 
