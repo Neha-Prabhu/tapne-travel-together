@@ -370,7 +370,7 @@ const Profile = () => {
                   variant="outline"
                   onClick={() => {
                     if (!isAuthenticated) { requireAuth(); return; }
-                    navigate(`/inbox?dm=${p.username}`);
+                    navigate(`/messages?dm=${p.username}`);
                   }}
                 >
                   <MessageCircle className="mr-1 h-4 w-4" /> Message
