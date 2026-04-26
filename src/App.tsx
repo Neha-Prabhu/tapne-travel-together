@@ -7,7 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { DraftProvider } from "@/contexts/DraftContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index";
-import BrowseTrips from "./pages/BrowseTrips";
+
 import TripDetail from "./pages/TripDetail";
 import CreateTrip from "./pages/CreateTrip";
 import Profile from "./pages/Profile";
