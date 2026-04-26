@@ -24,10 +24,9 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState<"recent" | "popular">("recent");
 
-  const hasCriteria = Boolean(submitted.trim() || destination.trim());
+  const hasCriteria = true;
 
   useEffect(() => {
-    if (!hasCriteria) return;
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     setLoading(true);
 
@@ -46,7 +45,7 @@ const SearchPage = () => {
         setUsers(d.users || []);
       }),
     ]).finally(() => setLoading(false));
-  }, [submitted, sort, destination, hasCriteria]);
+  }, [submitted, sort, destination]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
