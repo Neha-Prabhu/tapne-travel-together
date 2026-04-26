@@ -27,10 +27,20 @@ import DashboardTrips from "./pages/dashboard/DashboardTrips";
 import DashboardStories from "./pages/dashboard/DashboardStories";
 import DashboardReviews from "./pages/dashboard/DashboardReviews";
 import DashboardSubscriptions from "./pages/dashboard/DashboardSubscriptions";
+import { useAuth } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
+
+const ProfileSelfRedirect = () => {
+  const { user, isAuthenticated, requireAuth } = useAuth();
+  if (!isAuthenticated || !user) {
+    requireAuth();
+    return <Navigate to="/" replace />;
+  }
+  return <Navigate to={`/users/${user.username || user.id}`} replace />;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
