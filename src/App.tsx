@@ -12,7 +12,7 @@ import TripDetail from "./pages/TripDetail";
 import CreateTrip from "./pages/CreateTrip";
 import Profile from "./pages/Profile";
 import ProfileEdit from "./pages/ProfileEdit";
-import Stories from "./pages/Stories";
+
 import StoryDetail from "./pages/StoryDetail";
 import StoryCreate from "./pages/StoryCreate";
 import StoryEdit from "./pages/StoryEdit";
