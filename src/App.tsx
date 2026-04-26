@@ -57,8 +57,8 @@ const App = () => (
               <Route path="/stories/:storyId/edit" element={<StoryEdit />} />
               <Route path="/stories/:storyId" element={<StoryDetail />} />
 
-              {/* Profile — /profile retired, self profile resolves in <Profile /> via auth */}
-              <Route path="/profile" element={<Profile />} />
+              {/* Profile — /profile retired, redirects to canonical /users/:username */}
+              <Route path="/profile" element={<ProfileSelfRedirect />} />
               <Route path="/profile/edit" element={<ProfileEdit />} />
               <Route path="/users/:profileId" element={<Profile />} />
 
