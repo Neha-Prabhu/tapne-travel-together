@@ -71,7 +71,7 @@ const SearchPage = () => {
         </form>
 
         {hasCriteria && (
-          <Tabs defaultValue="trips">
+          <Tabs defaultValue={searchParams.get("tab") || "trips"}>
             <div className="flex items-center justify-between gap-4">
               <TabsList>
                 <TabsTrigger value="trips">Trips ({trips.length})</TabsTrigger>
