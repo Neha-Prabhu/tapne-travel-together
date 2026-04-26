@@ -48,7 +48,7 @@ const ProfileEdit = () => {
     try {
       updateProfile({ name, bio, location });
       toast.success("Profile updated");
-      navigate("/profile");
+      navigate(`/users/${user?.username || user?.id}`);
     } catch {
       toast.error("Could not save profile");
     } finally {
