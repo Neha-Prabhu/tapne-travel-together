@@ -201,7 +201,7 @@ const Navbar = () => {
                 <Link to="/dashboard/trips">Dashboard</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/profile">My Profile</Link>
+                <Link to={`/users/${user?.username || user?.id}`}>My Profile</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to="/messages">Messages</Link>
