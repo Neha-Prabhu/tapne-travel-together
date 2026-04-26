@@ -85,7 +85,7 @@ const TripDetail = () => {
         <main className="flex flex-1 flex-col items-center justify-center px-4">
           <h1 className="mb-2 text-2xl font-bold">Trip not found</h1>
           <p className="mb-4 text-muted-foreground">This trip may have been removed.</p>
-          <Button asChild><Link to="/trips">Browse Trips</Link></Button>
+          <Button asChild><Link to="/search">Browse Trips</Link></Button>
         </main>
         <Footer />
       </div>
