@@ -112,7 +112,7 @@ const DashboardTrips = () => {
               </div>
             );
           })}
-          {joined.length === 0 && renderEmpty("You haven't joined any trips yet.", { label: "Browse trips", to: "/trips" })}
+          {joined.length === 0 && renderEmpty("You haven't joined any trips yet.", { label: "Browse trips", to: "/search" })}
         </TabsContent>
 
         <TabsContent value="managed" className="mt-6 space-y-6">
