@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { useSearch } from "@/contexts/SearchContext";
 import { Search, MapPin, Users, Map, MapPin as MapPinIcon } from "lucide-react";
 import type { TripData } from "@/types/api";
 
@@ -19,8 +20,14 @@ const avatars = [
 
 const HeroSection = ({ trips, stats }: HeroSectionProps) => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { query: searchQuery, setQuery: setSearchQuery } = useSearch();
   const [searchFocused, setSearchFocused] = useState(false);
+
+  const submitSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const q = searchQuery.trim();
+    navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+  };
 
   const searchResults = searchQuery.trim()
     ? trips
@@ -61,11 +68,11 @@ const HeroSection = ({ trips, stats }: HeroSectionProps) => {
         </div>
 
         {/* Search Bar */}
-        <div className="relative mx-auto max-w-xl">
+        <form onSubmit={submitSearch} className="relative mx-auto max-w-xl">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="h-14 rounded-full border-2 border-primary/20 bg-card pl-12 pr-4 text-base shadow-lg transition-all focus:border-primary focus:shadow-xl"
-            placeholder="Search trips..."
+            placeholder="Search trips, stories, people…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
@@ -97,7 +104,7 @@ const HeroSection = ({ trips, stats }: HeroSectionProps) => {
               ))}
             </div>
           )}
-        </div>
+        </form>
 
         {/* Stats strip directly below search */}
         <div className="mx-auto mt-8 flex max-w-md flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">

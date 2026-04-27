@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DraftProvider } from "@/contexts/DraftContext";
+import { SearchProvider } from "@/contexts/SearchContext";
 import ScrollToTop from "@/components/ScrollToTop";
+import RequireAuth from "@/components/RequireAuth";
 import Index from "./pages/Index";
 
 import TripDetail from "./pages/TripDetail";
@@ -50,48 +52,50 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <DraftProvider>
-            <ScrollToTop />
-            <Routes>
-              <Route path="/" element={<Index />} />
+            <SearchProvider>
+              <ScrollToTop />
+              <Routes>
+                <Route path="/" element={<Index />} />
 
-              {/* Trips — /trips retired, browse goes to /search */}
-              <Route path="/trips" element={<Navigate to="/search" replace />} />
-              <Route path="/trips/new" element={<CreateTrip />} />
-              <Route path="/trips/:tripId/edit" element={<CreateTrip />} />
-              <Route path="/trips/:tripId" element={<TripDetail />} />
-              <Route path="/create-trip" element={<Navigate to="/trips/new" replace />} />
+                {/* Trips — /trips retired, browse goes to /search */}
+                <Route path="/trips" element={<Navigate to="/search" replace />} />
+                <Route path="/trips/new" element={<RequireAuth><CreateTrip /></RequireAuth>} />
+                <Route path="/trips/:tripId/edit" element={<RequireAuth><CreateTrip /></RequireAuth>} />
+                <Route path="/trips/:tripId" element={<TripDetail />} />
+                <Route path="/create-trip" element={<Navigate to="/trips/new" replace />} />
 
-              {/* Stories — /stories retired, browse goes to /search?tab=stories */}
-              <Route path="/stories" element={<Navigate to="/search?tab=stories" replace />} />
-              <Route path="/stories/new" element={<StoryCreate />} />
-              <Route path="/stories/:storyId/edit" element={<StoryEdit />} />
-              <Route path="/stories/:storyId" element={<StoryDetail />} />
+                {/* Stories — /stories retired, browse goes to /search?tab=stories */}
+                <Route path="/stories" element={<Navigate to="/search?tab=stories" replace />} />
+                <Route path="/stories/new" element={<RequireAuth><StoryCreate /></RequireAuth>} />
+                <Route path="/stories/:storyId/edit" element={<RequireAuth><StoryEdit /></RequireAuth>} />
+                <Route path="/stories/:storyId" element={<StoryDetail />} />
 
-              {/* Profile — /profile retired, redirects to canonical /users/:username */}
-              <Route path="/profile" element={<ProfileSelfRedirect />} />
-              <Route path="/profile/edit" element={<ProfileEdit />} />
-              <Route path="/users/:profileId" element={<Profile />} />
+                {/* Profile — /profile retired, redirects to canonical /users/:username */}
+                <Route path="/profile" element={<ProfileSelfRedirect />} />
+                <Route path="/profile/edit" element={<RequireAuth><ProfileEdit /></RequireAuth>} />
+                <Route path="/users/:profileId" element={<Profile />} />
 
-              {/* Messaging & utility */}
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/inbox" element={<Navigate to="/messages" replace />} />
-              <Route path="/my-trips" element={<Navigate to="/dashboard/trips" replace />} />
-              <Route path="/bookmarks" element={<Bookmarks />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/settings" element={<Settings />} />
+                {/* Messaging & utility */}
+                <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
+                <Route path="/inbox" element={<Navigate to="/messages" replace />} />
+                <Route path="/my-trips" element={<Navigate to="/dashboard/trips" replace />} />
+                <Route path="/bookmarks" element={<RequireAuth><Bookmarks /></RequireAuth>} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+                <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
 
-              {/* Dashboard */}
-              <Route path="/dashboard" element={<Dashboard />}>
-                <Route index element={<Navigate to="/dashboard/trips" replace />} />
-                <Route path="trips" element={<DashboardTrips />} />
-                <Route path="stories" element={<DashboardStories />} />
-                <Route path="reviews" element={<DashboardReviews />} />
-                <Route path="subscriptions" element={<DashboardSubscriptions />} />
-              </Route>
+                {/* Dashboard — fully protected */}
+                <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>}>
+                  <Route index element={<Navigate to="/dashboard/trips" replace />} />
+                  <Route path="trips" element={<DashboardTrips />} />
+                  <Route path="stories" element={<DashboardStories />} />
+                  <Route path="reviews" element={<DashboardReviews />} />
+                  <Route path="subscriptions" element={<DashboardSubscriptions />} />
+                </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </SearchProvider>
           </DraftProvider>
         </BrowserRouter>
       </TooltipProvider>

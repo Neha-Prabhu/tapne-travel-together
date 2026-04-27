@@ -8,19 +8,20 @@ import Footer from "@/components/Footer";
 import HeroSection from "@/components/home/HeroSection";
 import QuickFilters from "@/components/home/QuickFilters";
 import HorizontalCarousel from "@/components/home/HorizontalCarousel";
+import TravelerCard from "@/components/TravelerCard";
 
 import WhyTapne from "@/components/home/WhyTapne";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import FinalCTA from "@/components/home/FinalCTA";
 import { apiGet } from "@/lib/api";
-import type { HomeResponse, TripData, BlogData, TestimonialData } from "@/types/api";
+import type { HomeResponse, TripData, BlogData, TestimonialData, CommunityProfile } from "@/types/api";
 import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
 
 const Index = () => {
   const [trips, setTrips] = useState<TripData[]>([]);
   const [blogs, setBlogs] = useState<BlogData[]>([]);
-  
+  const [hosts, setHosts] = useState<CommunityProfile[]>([]);
   const [testimonials, setTestimonials] = useState<TestimonialData[]>([]);
   const [stats, setStats] = useState<{ travelers: number; trips_hosted: number; destinations: number } | undefined>();
   const [loading, setLoading] = useState(true);
@@ -33,7 +34,7 @@ const Index = () => {
       .then((data) => {
         setTrips(data.trips || []);
         setBlogs(data.blogs || []);
-        
+        setHosts(data.community_profiles || []);
         setTestimonials(data.testimonials || []);
         setStats(data.stats);
       })
@@ -120,11 +121,18 @@ const Index = () => {
         {destinations.length > 0 && (
           <section className="py-14">
             <div className="mx-auto max-w-6xl px-4">
-              <h2 className="mb-2 text-2xl font-bold text-foreground md:text-3xl">Explore Destinations</h2>
-              <p className="mb-6 text-muted-foreground">Find trips by destination.</p>
+              <div className="mb-6 flex items-end justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">Explore Destinations</h2>
+                  <p className="mt-1 text-muted-foreground">Find trips by destination.</p>
+                </div>
+                <Button variant="ghost" asChild className="hidden sm:flex">
+                  <Link to="/search?tab=destinations">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                </Button>
+              </div>
 
               <HorizontalCarousel>
-                {destinations.map((dest) => (
+                {destinations.slice(0, 6).map((dest) => (
                   <Link
                     key={dest.name}
                     to={`/search?destination=${encodeURIComponent(dest.name)}`}
@@ -158,23 +166,52 @@ const Index = () => {
           </section>
         )}
 
-        {/* 3. Stories */}
+        {/* 3. Travel Hosts */}
+        {hosts.length > 0 && (
+          <section className="py-14">
+            <div className="mx-auto max-w-6xl px-4">
+              <div className="mb-6 flex items-end justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground md:text-3xl">Travel Hosts</h2>
+                  <p className="mt-1 text-muted-foreground">Meet the people leading community trips.</p>
+                </div>
+                <Button variant="ghost" asChild className="hidden sm:flex">
+                  <Link to="/search?tab=users">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                </Button>
+              </div>
+
+              <HorizontalCarousel>
+                {hosts.slice(0, 6).map((p) => (
+                  <div key={p.username} className="w-[260px] shrink-0 sm:w-[280px]">
+                    <TravelerCard profile={p} />
+                  </div>
+                ))}
+              </HorizontalCarousel>
+            </div>
+          </section>
+        )}
+
+        {/* 4. Stories */}
         {blogs.length > 0 && (
           <section className="bg-muted/30 py-14">
             <div className="mx-auto max-w-6xl px-4">
               <div className="mb-6 flex items-end justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-foreground md:text-3xl">Stories</h2>
-                  <p className="mt-1 text-muted-foreground">Stories, tips, and experiences from fellow travelers.</p>
+                  <p className="mt-1 text-muted-foreground">Stories and tips from fellow travelers.</p>
                 </div>
                 <Button variant="ghost" asChild className="hidden sm:flex">
                   <Link to="/search?tab=stories">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {blogs.slice(0, 3).map((blog) => (
-                  <Link key={blog.slug} to={`/stories/${blog.slug}`} className="block">
+              <HorizontalCarousel>
+                {blogs.slice(0, 6).map((blog) => (
+                  <Link
+                    key={blog.slug}
+                    to={`/stories/${blog.slug}`}
+                    className="block w-[280px] shrink-0 sm:w-[320px]"
+                  >
                     <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
                       {blog.cover_image_url && (
                         <div className="relative aspect-[16/10] overflow-hidden">
@@ -208,7 +245,7 @@ const Index = () => {
                     </Card>
                   </Link>
                 ))}
-              </div>
+              </HorizontalCarousel>
             </div>
           </section>
         )}

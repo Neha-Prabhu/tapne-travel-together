@@ -1,6 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearch } from "@/contexts/SearchContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, User, LogOut, MapPin as MapPinIcon } from "lucide-react";
+import { Menu, X, Bell, Sun, Moon, Inbox, Bookmark, User, LogOut, MapPin as MapPinIcon, Search as SearchIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiGet } from "@/lib/api";
 import CreateTripModal from "@/components/CreateTripModal";
@@ -24,11 +26,13 @@ interface Notification {
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, requireAuth } = useAuth();
+  const { query, setQuery } = useSearch();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNavSearch, setShowNavSearch] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -42,6 +46,17 @@ const Navbar = () => {
       .catch(() => {});
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    const onScroll = () => {
+      const isHome = window.location.pathname === "/";
+      if (!isHome) { setShowNavSearch(true); return; }
+      setShowNavSearch(window.scrollY > 360);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle("dark");
@@ -50,6 +65,12 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const submitSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const q = query.trim();
+    navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
 
   const unreadCount = notifications.filter(n => n.unread).length;
@@ -61,6 +82,24 @@ const Navbar = () => {
         <Link to="/" className="text-xl font-bold tracking-tight text-primary">
           Tapne
         </Link>
+
+        {/* Persistent search — slides in once user scrolls past hero */}
+        <form
+          onSubmit={submitSearch}
+          className={`mx-4 hidden flex-1 max-w-md transition-all duration-300 md:block ${
+            showNavSearch ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
+          }`}
+        >
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search trips, stories, people…"
+              className="h-9 rounded-full bg-background pl-9"
+            />
+          </div>
+        </form>
 
         {/* Desktop */}
         <div className="hidden items-center gap-1 md:flex">
