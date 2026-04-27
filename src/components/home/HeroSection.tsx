@@ -104,7 +104,7 @@ const HeroSection = ({ trips, stats }: HeroSectionProps) => {
               ))}
             </div>
           )}
-        </div>
+        </form>
 
         {/* Stats strip directly below search */}
         <div className="mx-auto mt-8 flex max-w-md flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
