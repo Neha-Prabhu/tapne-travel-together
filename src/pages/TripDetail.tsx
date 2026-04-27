@@ -122,12 +122,20 @@ const TripDetail = () => {
 
   const { requireAuth } = useAuth();
 
+  const requiresApplication = trip.access_type === "apply" || trip.access_type === "invite";
+
   const handleAction = () => {
-    requireAuth(() => setBookingModalOpen(true));
+    requireAuth(() => {
+      if (requiresApplication) {
+        setApplyModalOpen(true);
+      } else {
+        setBookingModalOpen(true);
+      }
+    });
   };
 
   const ctaLabel = isHost ? "Manage Trip" : isJoined ? "Already Joined ✓" : isFull ? "Join Waitlist" :
-    joinStatus === "pending" ? "Application Pending" : "Book Now";
+    joinStatus === "pending" ? "Application Pending" : requiresApplication ? "Apply to Join" : "Book Now";
   const ctaDisabled = isJoined || joinStatus === "pending";
 
   const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
