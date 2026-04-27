@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { useSearch } from "@/contexts/SearchContext";
 import { Search, MapPin, Users, Map, MapPin as MapPinIcon } from "lucide-react";
 import type { TripData } from "@/types/api";
 
