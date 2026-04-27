@@ -32,7 +32,7 @@ const Stories = () => {
           <div className="mb-8 flex items-end justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Stories</h1>
-              <p className="mt-1 text-muted-foreground">Stories, tips, and experiences from the Tapne community.</p>
+              <p className="mt-1 text-muted-foreground">Stories and tips from the Tapne community.</p>
             </div>
             <Button
               size="sm"
