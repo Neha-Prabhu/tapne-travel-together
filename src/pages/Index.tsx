@@ -21,7 +21,7 @@ import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
 const Index = () => {
   const [trips, setTrips] = useState<TripData[]>([]);
   const [blogs, setBlogs] = useState<BlogData[]>([]);
-  
+  const [hosts, setHosts] = useState<CommunityProfile[]>([]);
   const [testimonials, setTestimonials] = useState<TestimonialData[]>([]);
   const [stats, setStats] = useState<{ travelers: number; trips_hosted: number; destinations: number } | undefined>();
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ const Index = () => {
       .then((data) => {
         setTrips(data.trips || []);
         setBlogs(data.blogs || []);
-        
+        setHosts(data.community_profiles || []);
         setTestimonials(data.testimonials || []);
         setStats(data.stats);
       })
