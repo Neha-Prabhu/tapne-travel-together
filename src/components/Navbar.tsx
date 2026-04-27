@@ -83,6 +83,24 @@ const Navbar = () => {
           Tapne
         </Link>
 
+        {/* Persistent search — slides in once user scrolls past hero */}
+        <form
+          onSubmit={submitSearch}
+          className={`mx-4 hidden flex-1 max-w-md transition-all duration-300 md:block ${
+            showNavSearch ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"
+          }`}
+        >
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search trips, stories, people…"
+              className="h-9 rounded-full bg-background pl-9"
+            />
+          </div>
+        </form>
+
         {/* Desktop */}
         <div className="hidden items-center gap-1 md:flex">
           <Button variant="ghost" size="sm" asChild>
