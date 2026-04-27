@@ -26,11 +26,13 @@ interface Notification {
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, requireAuth } = useAuth();
+  const { query, setQuery } = useSearch();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNavSearch, setShowNavSearch] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -44,6 +46,17 @@ const Navbar = () => {
       .catch(() => {});
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    const onScroll = () => {
+      const isHome = window.location.pathname === "/";
+      if (!isHome) { setShowNavSearch(true); return; }
+      setShowNavSearch(window.scrollY > 360);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle("dark");
@@ -52,6 +65,12 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const submitSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const q = query.trim();
+    navigate(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
   };
 
   const unreadCount = notifications.filter(n => n.unread).length;
