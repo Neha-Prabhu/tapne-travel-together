@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DraftProvider } from "@/contexts/DraftContext";
 import { SearchProvider } from "@/contexts/SearchContext";
+import { BookmarksProvider } from "@/contexts/BookmarksContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import RequireAuth from "@/components/RequireAuth";
 import Index from "./pages/Index";
@@ -53,6 +54,7 @@ const App = () => (
         <BrowserRouter>
           <DraftProvider>
             <SearchProvider>
+              <BookmarksProvider>
               <ScrollToTop />
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -95,6 +97,7 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </BookmarksProvider>
             </SearchProvider>
           </DraftProvider>
         </BrowserRouter>
