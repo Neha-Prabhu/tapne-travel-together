@@ -1,20 +1,22 @@
 import { useState } from "react";
 import { Bookmark } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiPost, apiDelete } from "@/lib/api";
+import { useBookmarks } from "@/contexts/BookmarksContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface BookmarkButtonProps {
   tripId: number;
+  /** @deprecated state now comes from BookmarksContext */
   initialBookmarked?: boolean;
   className?: string;
   size?: "sm" | "md";
 }
 
-const BookmarkButton = ({ tripId, initialBookmarked = false, className, size = "md" }: BookmarkButtonProps) => {
+const BookmarkButton = ({ tripId, className, size = "md" }: BookmarkButtonProps) => {
   const { isAuthenticated, requireAuth } = useAuth();
-  const [bookmarked, setBookmarked] = useState(initialBookmarked);
+  const { isBookmarked, add, remove } = useBookmarks();
+  const bookmarked = isBookmarked(tripId);
   const [animating, setAnimating] = useState(false);
 
   const toggle = (e: React.MouseEvent) => {
@@ -26,17 +28,14 @@ const BookmarkButton = ({ tripId, initialBookmarked = false, className, size = "
       return;
     }
 
-    const cfg = window.TAPNE_RUNTIME_CONFIG;
     setAnimating(true);
     setTimeout(() => setAnimating(false), 300);
 
     if (bookmarked) {
-      setBookmarked(false);
-      apiDelete(`${cfg.api.bookmarks}${tripId}/`).catch(() => setBookmarked(true));
+      remove(tripId).catch(() => {});
       toast("Removed from saved");
     } else {
-      setBookmarked(true);
-      apiPost(`${cfg.api.bookmarks}${tripId}/`).catch(() => setBookmarked(false));
+      add(tripId).catch(() => {});
       toast("Saved!");
     }
   };
