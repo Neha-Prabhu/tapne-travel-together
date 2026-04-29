@@ -134,7 +134,12 @@ const Index = () => {
                 {destinations.slice(0, 6).map((dest) => (
                   <Link
                     key={dest.name}
-                    to={`/search?intent=trips&destination=${encodeURIComponent(dest.name)}`}
+                    // Match the authoritative destination-result click-through arrival state:
+                    // open Destinations search for {name} → click the {name} result.
+                    // That flow keeps q={name} in the URL (so the search bar shows the
+                    // destination text and the contextual "for {name}" framing renders),
+                    // adds destination={name}, and switches intent to trips with default sort.
+                    to={`/search?intent=trips&q=${encodeURIComponent(dest.name)}&destination=${encodeURIComponent(dest.name)}`}
                     className="group w-[220px] shrink-0 sm:w-[260px]"
                   >
                     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
