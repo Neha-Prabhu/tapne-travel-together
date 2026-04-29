@@ -192,12 +192,20 @@ const SearchPage = () => {
     const q = searchParams.get("q") || "";
     setQueryLocal(q);
     setSubmitted(q);
-    setDestination(searchParams.get("destination") || "");
-    setSort((prev) => {
-      // keep current sort if it's valid for this intent; otherwise reset to default
-      const valid = SORTS[safeIntent].some((s) => s.v === prev);
-      return valid ? prev : defaultSortFor(safeIntent, !!q);
-    });
+    const destParam = searchParams.get("destination") || "";
+    setDestination(destParam);
+    // Mirror handleDestinationClick: arriving with a destination under Trips
+    // resets trip filters + sort so every destination-entry path lands in the
+    // exact same browser-visible Trips arrival state.
+    if (destParam && safeIntent === "trips") {
+      setTripFilters(DEFAULT_TRIP_FILTERS);
+      setSort(defaultSortFor("trips", !!q));
+    } else {
+      setSort((prev) => {
+        const valid = SORTS[safeIntent].some((s) => s.v === prev);
+        return valid ? prev : defaultSortFor(safeIntent, !!q);
+      });
+    }
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
