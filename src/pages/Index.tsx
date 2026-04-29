@@ -85,7 +85,7 @@ const Index = () => {
               <p className="mt-1 text-muted-foreground">Discover community trips created by travelers.</p>
             </div>
             <Button variant="ghost" asChild className="hidden sm:flex">
-              <Link to="/search">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+              <Link to="/search?intent=trips">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </div>
 
@@ -112,7 +112,7 @@ const Index = () => {
 
           <div className="mt-6 text-center sm:hidden">
             <Button variant="outline" asChild>
-              <Link to="/search">View All Trips</Link>
+              <Link to="/search?intent=trips">View All Trips</Link>
             </Button>
           </div>
         </section>
@@ -127,7 +127,7 @@ const Index = () => {
                   <p className="mt-1 text-muted-foreground">Find trips by destination.</p>
                 </div>
                 <Button variant="ghost" asChild className="hidden sm:flex">
-                  <Link to="/search?tab=destinations">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                  <Link to="/search?intent=destinations">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
               </div>
 
@@ -176,7 +176,7 @@ const Index = () => {
                   <p className="mt-1 text-muted-foreground">Meet the people leading community trips.</p>
                 </div>
                 <Button variant="ghost" asChild className="hidden sm:flex">
-                  <Link to="/search?tab=users">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                  <Link to="/search?intent=people">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
               </div>
 
@@ -201,7 +201,7 @@ const Index = () => {
                   <p className="mt-1 text-muted-foreground">Stories and tips from fellow travelers.</p>
                 </div>
                 <Button variant="ghost" asChild className="hidden sm:flex">
-                  <Link to="/search?tab=stories">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                  <Link to="/search?intent=stories">View all <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
               </div>
 

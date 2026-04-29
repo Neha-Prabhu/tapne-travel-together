@@ -6,7 +6,7 @@ const Footer = () => (
       <div className="font-semibold text-foreground">Tapne</div>
       <div className="flex gap-6">
         <Link to="/search" className="transition hover:text-foreground">Explore</Link>
-        <Link to="/search?tab=stories" className="transition hover:text-foreground">Stories</Link>
+        <Link to="/search?intent=stories" className="transition hover:text-foreground">Stories</Link>
         <Link to="/dashboard" className="transition hover:text-foreground">Dashboard</Link>
       </div>
       <div>© 2026 Tapne. All rights reserved.</div>
