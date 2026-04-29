@@ -104,10 +104,10 @@ const Navbar = () => {
         {/* Desktop */}
         <div className="hidden items-center gap-1 md:flex">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/search">Trips</Link>
+            <Link to="/search?intent=trips">Trips</Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/search?tab=stories">Stories</Link>
+            <Link to="/search?intent=stories">Stories</Link>
           </Button>
 
           <Button variant="ghost" size="icon" onClick={toggleDarkMode} className="h-9 w-9">
