@@ -135,7 +135,7 @@ const Index = () => {
                 {destinations.slice(0, 6).map((dest) => (
                   <Link
                     key={dest.name}
-                    to={`/search?destination=${encodeURIComponent(dest.name)}`}
+                    to={`/search?intent=trips&destination=${encodeURIComponent(dest.name)}`}
                     className="group w-[220px] shrink-0 sm:w-[260px]"
                   >
                     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
