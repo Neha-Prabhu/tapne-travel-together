@@ -67,7 +67,7 @@ const App = () => (
                 <Route path="/create-trip" element={<Navigate to="/trips/new" replace />} />
 
                 {/* Stories — /stories retired, browse goes to /search?tab=stories */}
-                <Route path="/stories" element={<Navigate to="/search?tab=stories" replace />} />
+                <Route path="/stories" element={<Navigate to="/search?intent=stories" replace />} />
                 <Route path="/stories/new" element={<RequireAuth><StoryCreate /></RequireAuth>} />
                 <Route path="/stories/:storyId/edit" element={<RequireAuth><StoryEdit /></RequireAuth>} />
                 <Route path="/stories/:storyId" element={<StoryDetail />} />
