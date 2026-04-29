@@ -226,10 +226,10 @@ const Navbar = () => {
       {mobileOpen && (
         <div className="flex flex-col gap-1 border-t bg-card px-4 pb-4 pt-2 md:hidden">
           <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-            <Link to="/search">Trips</Link>
+            <Link to="/search?intent=trips">Trips</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-            <Link to="/search?tab=stories">Stories</Link>
+            <Link to="/search?intent=stories">Stories</Link>
           </Button>
           {isAuthenticated ? (
             <>
