@@ -50,21 +50,20 @@ const Index = () => {
   }, [trips, activeFilter]);
 
   const destinations = useMemo(() => {
+    // Mirror Search.tsx destination aggregation so homepage destination cards
+    // produce the exact same destination name (and therefore the exact same
+    // /search?intent=trips&destination=… arrival state) as a destination-result
+    // click-through from the Destinations search flow.
     const destMap = new Map<string, { name: string; image: string; count: number }>();
     trips.forEach((t) => {
-      const dest = t.destination || "";
-      const key = dest.split(",")[0].trim().toLowerCase();
-      if (key) {
-        const existing = destMap.get(key);
-        if (existing) {
-          existing.count++;
-        } else {
-          destMap.set(key, {
-            name: key.charAt(0).toUpperCase() + key.slice(1),
-            image: t.banner_image_url || "",
-            count: 1,
-          });
-        }
+      const name = (t.destination || "").split(",")[0].trim();
+      if (!name) return;
+      const key = name.toLowerCase();
+      const existing = destMap.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        destMap.set(key, { name, image: t.banner_image_url || "", count: 1 });
       }
     });
     return Array.from(destMap.values());
