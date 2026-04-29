@@ -111,7 +111,7 @@ interface PersonData {
   is_host?: boolean;
 }
 
-interface TripFilters {
+interface TripFiltersState {
   origin: string;
   startDate: string;
   endDate: string;
@@ -122,7 +122,7 @@ interface TripFilters {
 }
 const PRICE_MIN = 0;
 const PRICE_MAX = 100000;
-const DEFAULT_TRIP_FILTERS: TripFilters = {
+const DEFAULT_TRIP_FILTERS: TripFiltersState = {
   origin: "",
   startDate: "",
   endDate: "",
@@ -132,29 +132,29 @@ const DEFAULT_TRIP_FILTERS: TripFilters = {
   difficulty: "",
 };
 
-interface DestFilters {
+interface DestFiltersState {
   tripType: string;
   priceRange: [number, number];
   difficulty: string;
 }
-const DEFAULT_DEST_FILTERS: DestFilters = {
+const DEFAULT_DEST_FILTERS: DestFiltersState = {
   tripType: "",
   priceRange: [PRICE_MIN, PRICE_MAX],
   difficulty: "",
 };
 
-interface StoryFilters {
+interface StoryFiltersState {
   location: string;
   tag: string;
 }
-const DEFAULT_STORY_FILTERS: StoryFilters = { location: "", tag: "" };
+const DEFAULT_STORY_FILTERS: StoryFiltersState = { location: "", tag: "" };
 
-interface PeopleFilters {
+interface PeopleFiltersState {
   location: string;
   travelTag: string;
   hostsOnly: boolean;
 }
-const DEFAULT_PEOPLE_FILTERS: PeopleFilters = { location: "", travelTag: "", hostsOnly: false };
+const DEFAULT_PEOPLE_FILTERS: PeopleFiltersState = { location: "", travelTag: "", hostsOnly: false };
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -179,10 +179,10 @@ const SearchPage = () => {
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  const [tripFilters, setTripFilters] = useState<TripFilters>(DEFAULT_TRIP_FILTERS);
-  const [destFilters, setDestFilters] = useState<DestFilters>(DEFAULT_DEST_FILTERS);
-  const [storyFilters, setStoryFilters] = useState<StoryFilters>(DEFAULT_STORY_FILTERS);
-  const [peopleFilters, setPeopleFilters] = useState<PeopleFilters>(DEFAULT_PEOPLE_FILTERS);
+  const [tripFilters, setTripFilters] = useState<TripFiltersState>(DEFAULT_TRIP_FILTERS);
+  const [destFilters, setDestFilters] = useState<DestFiltersState>(DEFAULT_DEST_FILTERS);
+  const [storyFilters, setStoryFilters] = useState<StoryFiltersState>(DEFAULT_STORY_FILTERS);
+  const [peopleFilters, setPeopleFilters] = useState<PeopleFiltersState>(DEFAULT_PEOPLE_FILTERS);
 
   // Sync URL → state (back/forward, deep links)
   useEffect(() => {
