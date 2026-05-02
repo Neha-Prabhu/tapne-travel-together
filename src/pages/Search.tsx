@@ -697,11 +697,11 @@ const SearchPage = () => {
 
   const DestinationRow = ({ d }: { d: DestinationAgg }) => (
     <button onClick={() => handleDestinationClick(d.name)} className="block w-full text-left group">
-      <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md sm:h-[220px]">
         {d.image ? (
-          <img src={d.image} alt={d.name} className="shrink-0 h-44 w-full object-cover sm:h-auto sm:w-56 md:w-64" />
+          <img src={d.image} alt={d.name} className="shrink-0 h-44 w-full object-cover sm:h-full sm:w-56 md:w-64" />
         ) : (
-          <div className="flex shrink-0 h-44 w-full items-center justify-center bg-muted sm:h-auto sm:w-56 md:w-64">
+          <div className="flex shrink-0 h-44 w-full items-center justify-center bg-muted sm:h-full sm:w-56 md:w-64">
             <Compass className="h-8 w-8 text-muted-foreground" />
           </div>
         )}
