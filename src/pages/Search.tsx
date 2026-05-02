@@ -1307,10 +1307,16 @@ const SearchPage = () => {
                           Showing {list.from}–{list.to} of {list.total}
                         </div>
                       </div>
-                      <div className="space-y-3">
+                      <div
+                        className={cn(
+                          intent === "destinations"
+                            ? "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                            : "space-y-3",
+                        )}
+                      >
                         {list.items.map((item: any) => {
                           if (intent === "trips") return <TripRow key={item.id} t={item} />;
-                          if (intent === "destinations") return <DestinationRow key={item.name} d={item} />;
+                          if (intent === "destinations") return <DestinationCard key={item.name} d={item} />;
                           if (intent === "stories") return <StoryRow key={item.slug} s={item} />;
                           return <PersonRow key={item.username} u={item} />;
                         })}
