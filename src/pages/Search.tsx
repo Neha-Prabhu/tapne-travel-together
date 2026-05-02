@@ -595,44 +595,96 @@ const SearchPage = () => {
         : `${t.spots_left} seat${t.spots_left === 1 ? "" : "s"} left`
       : null;
     return (
-      <Link to={`/trips/${t.id}`} className="block">
-        <Card className="flex overflow-hidden transition-shadow hover:shadow-md">
-          <img
-            src={t.banner_image_url || DEFAULT_HERO}
-            alt={t.title}
-            className="h-32 w-44 shrink-0 object-cover sm:h-36 sm:w-56"
-          />
-          <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 p-4">
-            <div className="min-w-0">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                {t.trip_type && <Badge className="bg-primary/90">{t.trip_type}</Badge>}
-                {t.difficulty_level && <Badge variant="outline">{t.difficulty_level}</Badge>}
-                <h3 className="truncate text-base font-semibold text-foreground">{t.title}</h3>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                {t.destination && (
-                  <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{t.destination}</span>
-                )}
-                {dateRange && (
-                  <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{dateRange}</span>
-                )}
-                {(t.host_display_name || t.host_username) && (
-                  <span className="truncate">by {t.host_display_name || t.host_username}</span>
-                )}
-              </div>
+      <Link to={`/trips/${t.id}`} className="block group">
+        <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md">
+          {/* Image with category pill */}
+          <div className="relative shrink-0 h-44 w-full sm:h-auto sm:w-56 md:w-64">
+            <img
+              src={t.banner_image_url || DEFAULT_HERO}
+              alt={t.title}
+              className="h-full w-full object-cover"
+            />
+            {t.trip_type && (
+              <Badge className="absolute left-3 top-3 bg-primary/90 text-primary-foreground">
+                {t.trip_type}
+              </Badge>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="relative flex min-w-0 flex-1 flex-col p-4 sm:p-5">
+            {/* Bookmark — top-right */}
+            <div
+              className="absolute right-3 top-3 z-10"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            >
+              <BookmarkButton tripId={t.id} size="sm" />
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+
+            {/* Title + summary — top-left */}
+            <div className="min-w-0 pr-10">
+              <h3 className="truncate text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+                {t.title}
+              </h3>
+              {t.summary && (
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {t.summary}
+                </p>
+              )}
+            </div>
+
+            {/* Metadata: location, dates, group size, slots left */}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {t.destination && (
+                <span className="flex items-center gap-1 min-w-0">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate max-w-[160px]">{t.destination}</span>
+                </span>
+              )}
+              {dateRange && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />{dateRange}
+                </span>
+              )}
+              {t.group_size_label && (
+                <span className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" />{t.group_size_label}
+                </span>
+              )}
               {status && (
-                <span className="flex items-center gap-1 text-muted-foreground">
+                <span className={cn(
+                  "flex items-center gap-1",
+                  t.spots_left != null && t.spots_left > 0 && t.spots_left <= 2 && "font-medium text-destructive",
+                )}>
                   <Users className="h-3.5 w-3.5" />{status}
                 </span>
               )}
-              {t.trip_vibe?.slice(0, 2).map((v) => (
-                <Badge key={v} variant="secondary" className="text-[10px]">{v}</Badge>
-              ))}
+            </div>
+
+            {/* Bottom row: host (left) + price (right) */}
+            <div className="mt-auto flex items-end justify-between gap-3 pt-3">
+              {(t.host_display_name || t.host_username) ? (
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-muted-foreground shrink-0">Hosted by</span>
+                  <Avatar className="h-6 w-6 shrink-0">
+                    <AvatarFallback className="text-[10px]">
+                      {(t.host_display_name || t.host_username || "?")[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate text-xs font-medium text-foreground">
+                    {t.host_display_name || t.host_username}
+                  </span>
+                  {t.average_rating != null && (
+                    <span className="flex items-center gap-0.5 text-xs text-muted-foreground shrink-0">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      {t.average_rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+              ) : <span />}
               {t.price_per_person != null && (
-                <span className="ml-auto flex items-center gap-1 text-sm font-semibold text-foreground">
-                  <IndianRupee className="h-3.5 w-3.5" />{t.price_per_person.toLocaleString()}
+                <span className="flex items-center gap-0.5 text-base font-semibold text-foreground shrink-0">
+                  <IndianRupee className="h-4 w-4" />{t.price_per_person.toLocaleString()}
                 </span>
               )}
             </div>
@@ -643,20 +695,20 @@ const SearchPage = () => {
   };
 
   const DestinationRow = ({ d }: { d: DestinationAgg }) => (
-    <button onClick={() => handleDestinationClick(d.name)} className="block w-full text-left">
-      <Card className="flex overflow-hidden transition-shadow hover:shadow-md">
+    <button onClick={() => handleDestinationClick(d.name)} className="block w-full text-left group">
+      <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md">
         {d.image ? (
-          <img src={d.image} alt={d.name} className="h-32 w-44 shrink-0 object-cover sm:h-36 sm:w-56" />
+          <img src={d.image} alt={d.name} className="shrink-0 h-44 w-full object-cover sm:h-auto sm:w-56 md:w-64" />
         ) : (
-          <div className="flex h-32 w-44 shrink-0 items-center justify-center bg-muted sm:h-36 sm:w-56">
+          <div className="flex shrink-0 h-44 w-full items-center justify-center bg-muted sm:h-auto sm:w-56 md:w-64">
             <Compass className="h-8 w-8 text-muted-foreground" />
           </div>
         )}
-        <div className="flex min-w-0 flex-1 flex-col justify-between p-4">
+        <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <h3 className="truncate text-base font-semibold text-foreground">{d.name}</h3>
+              <MapPin className="h-4 w-4 text-primary shrink-0" />
+              <h3 className="truncate text-base font-semibold text-foreground group-hover:text-primary transition-colors">{d.name}</h3>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {d.count} trip{d.count !== 1 ? "s" : ""}
@@ -665,7 +717,7 @@ const SearchPage = () => {
               )}
             </p>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-3">
             {d.topTypes.map((t) => (
               <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>
             ))}
