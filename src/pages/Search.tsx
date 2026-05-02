@@ -594,11 +594,17 @@ const SearchPage = () => {
         ? "Full"
         : `${t.spots_left} seat${t.spots_left === 1 ? "" : "s"} left`
       : null;
+    const seatsText = (() => {
+      if (t.spots_left == null) return null;
+      if (t.spots_left <= 0) return "Full";
+      if (t.total_seats != null) return `${t.spots_left}/${t.total_seats} seats left`;
+      return `${t.spots_left} seat${t.spots_left === 1 ? "" : "s"} left`;
+    })();
     return (
       <Link to={`/trips/${t.id}`} className="block group">
-        <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md">
+        <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md sm:h-[220px]">
           {/* Image with category pill */}
-          <div className="relative shrink-0 h-44 w-full sm:h-auto sm:w-56 md:w-64">
+          <div className="relative shrink-0 h-44 w-full sm:h-full sm:w-56 md:w-64">
             <img
               src={t.banner_image_url || DEFAULT_HERO}
               alt={t.title}
@@ -633,30 +639,25 @@ const SearchPage = () => {
               )}
             </div>
 
-            {/* Metadata: location, dates, group size, slots left */}
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {/* Metadata: stacked — location, dates, seats */}
+            <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
               {t.destination && (
                 <span className="flex items-center gap-1 min-w-0">
                   <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate max-w-[160px]">{t.destination}</span>
+                  <span className="truncate">{t.destination}</span>
                 </span>
               )}
               {dateRange && (
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />{dateRange}
+                  <Calendar className="h-3.5 w-3.5 shrink-0" />{dateRange}
                 </span>
               )}
-              {t.group_size_label && (
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" />{t.group_size_label}
-                </span>
-              )}
-              {status && (
+              {seatsText && (
                 <span className={cn(
                   "flex items-center gap-1",
                   t.spots_left != null && t.spots_left > 0 && t.spots_left <= 2 && "font-medium text-destructive",
                 )}>
-                  <Users className="h-3.5 w-3.5" />{status}
+                  <Users className="h-3.5 w-3.5 shrink-0" />{seatsText}
                 </span>
               )}
             </div>
@@ -696,11 +697,11 @@ const SearchPage = () => {
 
   const DestinationRow = ({ d }: { d: DestinationAgg }) => (
     <button onClick={() => handleDestinationClick(d.name)} className="block w-full text-left group">
-      <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md">
+      <Card className="flex flex-col sm:flex-row overflow-hidden transition-shadow hover:shadow-md sm:h-[220px]">
         {d.image ? (
-          <img src={d.image} alt={d.name} className="shrink-0 h-44 w-full object-cover sm:h-auto sm:w-56 md:w-64" />
+          <img src={d.image} alt={d.name} className="shrink-0 h-44 w-full object-cover sm:h-full sm:w-56 md:w-64" />
         ) : (
-          <div className="flex shrink-0 h-44 w-full items-center justify-center bg-muted sm:h-auto sm:w-56 md:w-64">
+          <div className="flex shrink-0 h-44 w-full items-center justify-center bg-muted sm:h-full sm:w-56 md:w-64">
             <Compass className="h-8 w-8 text-muted-foreground" />
           </div>
         )}
