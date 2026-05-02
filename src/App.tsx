@@ -30,20 +30,9 @@ import DashboardTrips from "./pages/dashboard/DashboardTrips";
 import DashboardStories from "./pages/dashboard/DashboardStories";
 import DashboardReviews from "./pages/dashboard/DashboardReviews";
 import DashboardSubscriptions from "./pages/dashboard/DashboardSubscriptions";
-import { useAuth } from "@/contexts/AuthContext";
-
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
-
-const ProfileSelfRedirect = () => {
-  const { user, isAuthenticated, requireAuth } = useAuth();
-  if (!isAuthenticated || !user) {
-    requireAuth();
-    return <Navigate to="/" replace />;
-  }
-  return <Navigate to={`/users/${user.username || user.id}`} replace />;
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -59,28 +48,22 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
 
-                {/* Trips — /trips retired, browse goes to /search */}
-                <Route path="/trips" element={<Navigate to="/search" replace />} />
+                {/* Trips */}
                 <Route path="/trips/new" element={<RequireAuth><CreateTrip /></RequireAuth>} />
                 <Route path="/trips/:tripId/edit" element={<RequireAuth><CreateTrip /></RequireAuth>} />
                 <Route path="/trips/:tripId" element={<TripDetail />} />
-                <Route path="/create-trip" element={<Navigate to="/trips/new" replace />} />
 
-                {/* Stories — /stories retired, browse goes to /search?intent=stories */}
-                <Route path="/stories" element={<Navigate to="/search?intent=stories" replace />} />
+                {/* Stories */}
                 <Route path="/stories/new" element={<RequireAuth><StoryCreate /></RequireAuth>} />
                 <Route path="/stories/:storyId/edit" element={<RequireAuth><StoryEdit /></RequireAuth>} />
                 <Route path="/stories/:storyId" element={<StoryDetail />} />
 
-                {/* Profile — /profile retired, redirects to canonical /users/:username */}
-                <Route path="/profile" element={<ProfileSelfRedirect />} />
+                {/* Profile */}
                 <Route path="/profile/edit" element={<RequireAuth><ProfileEdit /></RequireAuth>} />
                 <Route path="/users/:profileId" element={<Profile />} />
 
                 {/* Messaging & utility */}
                 <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
-                <Route path="/inbox" element={<Navigate to="/messages" replace />} />
-                <Route path="/my-trips" element={<Navigate to="/dashboard/trips" replace />} />
                 <Route path="/bookmarks" element={<RequireAuth><Bookmarks /></RequireAuth>} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
