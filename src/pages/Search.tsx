@@ -162,10 +162,10 @@ const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { query: ctxQuery, setQuery: setCtxQuery } = useSearch();
 
-  const urlIntent = (searchParams.get("intent") || "all") as Intent;
+  const urlIntent = (searchParams.get("intent") || "trips") as Intent;
   const initialIntent: Intent = (VALID_INTENTS as readonly string[]).includes(urlIntent)
     ? urlIntent
-    : "all";
+    : "trips";
   const initialQ = searchParams.get("q") || ctxQuery || "";
   const initialDest = searchParams.get("destination") || "";
 
