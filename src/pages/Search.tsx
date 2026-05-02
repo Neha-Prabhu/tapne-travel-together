@@ -479,7 +479,7 @@ const SearchPage = () => {
     setDestFilters(DEFAULT_DEST_FILTERS);
     setStoryFilters(DEFAULT_STORY_FILTERS);
     setPeopleFilters(DEFAULT_PEOPLE_FILTERS);
-    updateParams({ intent: next === "all" ? null : next });
+    updateParams({ intent: next === "trips" ? null : next });
   };
 
   const handleDestinationClick = (name: string) => {
