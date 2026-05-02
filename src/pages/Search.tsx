@@ -1070,11 +1070,11 @@ const SearchPage = () => {
 
   // ── Active dataset for current intent ──────────────────────────────────
   const intentChips: { v: Intent; l: string; n: number }[] = [
-    { v: "all", l: "All", n: counts.all },
     { v: "trips", l: "Trips", n: counts.trips },
     { v: "destinations", l: "Destinations", n: counts.destinations },
     { v: "stories", l: "Stories", n: counts.stories },
     { v: "people", l: "People", n: counts.people },
+    { v: "all", l: "All", n: counts.all },
   ];
 
   const showSidebar = intent !== "all";
