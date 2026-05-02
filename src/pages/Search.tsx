@@ -162,10 +162,10 @@ const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { query: ctxQuery, setQuery: setCtxQuery } = useSearch();
 
-  const urlIntent = (searchParams.get("intent") || "all") as Intent;
+  const urlIntent = (searchParams.get("intent") || "trips") as Intent;
   const initialIntent: Intent = (VALID_INTENTS as readonly string[]).includes(urlIntent)
     ? urlIntent
-    : "all";
+    : "trips";
   const initialQ = searchParams.get("q") || ctxQuery || "";
   const initialDest = searchParams.get("destination") || "";
 
@@ -188,8 +188,8 @@ const SearchPage = () => {
 
   // Sync URL → state (back/forward, deep links)
   useEffect(() => {
-    const i = (searchParams.get("intent") || "all") as Intent;
-    const safeIntent: Intent = (VALID_INTENTS as readonly string[]).includes(i) ? i : "all";
+    const i = (searchParams.get("intent") || "trips") as Intent;
+    const safeIntent: Intent = (VALID_INTENTS as readonly string[]).includes(i) ? i : "trips";
     setIntent(safeIntent);
     const q = searchParams.get("q") || "";
     setQueryLocal(q);
@@ -479,7 +479,7 @@ const SearchPage = () => {
     setDestFilters(DEFAULT_DEST_FILTERS);
     setStoryFilters(DEFAULT_STORY_FILTERS);
     setPeopleFilters(DEFAULT_PEOPLE_FILTERS);
-    updateParams({ intent: next === "all" ? null : next });
+    updateParams({ intent: next === "trips" ? null : next });
   };
 
   const handleDestinationClick = (name: string) => {
@@ -723,6 +723,66 @@ const SearchPage = () => {
               <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>
             ))}
             <Badge variant="outline" className="ml-auto">View trips</Badge>
+          </div>
+        </div>
+      </Card>
+    </button>
+  );
+
+  const DestinationCard = ({ d }: { d: DestinationAgg }) => (
+    <button
+      onClick={() => handleDestinationClick(d.name)}
+      className="group block w-full text-left"
+    >
+      <Card className="relative overflow-hidden rounded-2xl border-0 shadow-sm transition-all duration-300 hover:shadow-xl">
+        <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
+          {d.image ? (
+            <img
+              src={d.image}
+              alt={d.name}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <Compass className="h-10 w-10 text-muted-foreground" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+          <div className="absolute right-3 top-3">
+            <Badge className="bg-background/90 text-foreground backdrop-blur-sm hover:bg-background/90">
+              {d.count} trip{d.count !== 1 ? "s" : ""}
+            </Badge>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 text-white">
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4 shrink-0" />
+              <h3 className="truncate text-lg sm:text-xl font-semibold tracking-tight">
+                {d.name}
+              </h3>
+            </div>
+            {d.nextDeparture && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-white/85">
+                <Calendar className="h-3.5 w-3.5 shrink-0" />
+                Next departure{" "}
+                {new Date(d.nextDeparture).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </p>
+            )}
+            {d.topTypes.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {d.topTypes.map((t) => (
+                  <Badge
+                    key={t}
+                    variant="secondary"
+                    className="border-white/20 bg-white/15 text-[10px] font-medium text-white backdrop-blur-sm hover:bg-white/15"
+                  >
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -1070,11 +1130,11 @@ const SearchPage = () => {
 
   // ── Active dataset for current intent ──────────────────────────────────
   const intentChips: { v: Intent; l: string; n: number }[] = [
-    { v: "all", l: "All", n: counts.all },
     { v: "trips", l: "Trips", n: counts.trips },
     { v: "destinations", l: "Destinations", n: counts.destinations },
     { v: "stories", l: "Stories", n: counts.stories },
     { v: "people", l: "People", n: counts.people },
+    { v: "all", l: "All", n: counts.all },
   ];
 
   const showSidebar = intent !== "all";
@@ -1247,10 +1307,16 @@ const SearchPage = () => {
                           Showing {list.from}–{list.to} of {list.total}
                         </div>
                       </div>
-                      <div className="space-y-3">
+                      <div
+                        className={cn(
+                          intent === "destinations"
+                            ? "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+                            : "space-y-3",
+                        )}
+                      >
                         {list.items.map((item: any) => {
                           if (intent === "trips") return <TripRow key={item.id} t={item} />;
-                          if (intent === "destinations") return <DestinationRow key={item.name} d={item} />;
+                          if (intent === "destinations") return <DestinationCard key={item.name} d={item} />;
                           if (intent === "stories") return <StoryRow key={item.slug} s={item} />;
                           return <PersonRow key={item.username} u={item} />;
                         })}
