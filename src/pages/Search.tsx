@@ -188,8 +188,8 @@ const SearchPage = () => {
 
   // Sync URL → state (back/forward, deep links)
   useEffect(() => {
-    const i = (searchParams.get("intent") || "all") as Intent;
-    const safeIntent: Intent = (VALID_INTENTS as readonly string[]).includes(i) ? i : "all";
+    const i = (searchParams.get("intent") || "trips") as Intent;
+    const safeIntent: Intent = (VALID_INTENTS as readonly string[]).includes(i) ? i : "trips";
     setIntent(safeIntent);
     const q = searchParams.get("q") || "";
     setQueryLocal(q);
