@@ -39,8 +39,10 @@ import {
   SlidersHorizontal,
   BookOpen,
   Compass,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import BookmarkButton from "@/features/trip/components/BookmarkButton";
 
 const VALID_INTENTS = ["all", "trips", "destinations", "stories", "people"] as const;
 type Intent = (typeof VALID_INTENTS)[number];
