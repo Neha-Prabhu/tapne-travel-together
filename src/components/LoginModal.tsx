@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +64,12 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
       <DialogContent className="sm:max-w-sm">
+        <VisuallyHidden>
+          <DialogTitle>{mode === "login" ? "Log in to Tapne" : "Create your Tapne account"}</DialogTitle>
+          <DialogDescription>
+            {mode === "login" ? "Sign in to your Tapne account to continue." : "Create a new Tapne account to get started."}
+          </DialogDescription>
+        </VisuallyHidden>
         <div className="space-y-4">
           <div className="text-center">
             <h2 className="text-xl font-bold text-foreground">
