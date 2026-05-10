@@ -28,6 +28,19 @@ import { toast } from "sonner";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 
+interface ReviewEntry {
+  id: number;
+  rating: number;
+  headline?: string;
+  body: string;
+  trip_title?: string;
+  trip_url?: string;
+  author_username?: string;
+  author_display_name?: string;
+  author_avatar_url?: string;
+  created_at: string;
+}
+
 interface ProfileResponse {
   profile: {
     username: string;
@@ -39,10 +52,20 @@ interface ProfileResponse {
     website: string;
     avatar_url?: string;
     travel_tags?: string[];
+    is_host?: boolean;
+    member_since?: string;
+    cover_photo_url?: string;
+    gallery_photos?: string[];
     average_rating?: number;
     reviews_count?: number;
     trips_hosted?: number;
     travelers_hosted?: number;
+    repeat_travelers_count?: number;
+    median_response_hours?: number | null;
+    review_distribution?: Record<string, number>;
+    reviews_received?: ReviewEntry[];
+    reviews_written?: ReviewEntry[];
+    profile_completeness?: { is_complete: boolean; missing_fields: string[] };
     trips_joined?: number;
     followers_count?: number;
     is_following?: boolean;
