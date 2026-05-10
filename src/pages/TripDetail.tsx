@@ -50,7 +50,7 @@ const TripDetail = () => {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelPending, setCancelPending] = useState(false);
-
+  const [appliedBanner, setAppliedBanner] = useState(false);
   useEffect(() => {
     if (!id) return;
     const cfg = window.TAPNE_RUNTIME_CONFIG;
