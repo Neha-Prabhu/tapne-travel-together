@@ -104,6 +104,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         bio: p.bio ?? updates.bio ?? store.user?.bio,
         location: p.location ?? updates.location ?? store.user?.location,
         website: p.website ?? updates.website ?? store.user?.website,
+        instagram_url: p.instagram_url ?? (updates as any).instagram_url ?? (store.user as any)?.instagram_url,
         avatar: p.avatar_url ?? updates.avatar ?? store.user?.avatar,
         travel_tags: p.travel_tags ?? updates.travel_tags ?? store.user?.travel_tags,
         cover_photo_url: p.cover_photo_url ?? (updates as any).cover_photo_url ?? store.user?.cover_photo_url,
