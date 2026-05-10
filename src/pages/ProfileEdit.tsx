@@ -49,6 +49,7 @@ const ProfileEdit = () => {
       setBio(user.bio || "");
       setLocation(user.location || "");
       setWebsite((user as any).website || "");
+      setInstagramUrl((user as any).instagram_url || "");
       setTags((user as any).travel_tags || []);
       setAvatarUrl(user.avatar);
       setCoverPhoto((user as any).cover_photo_url);
