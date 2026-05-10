@@ -812,14 +812,16 @@ const TripDetail = () => {
         }}
       />
       {/* Review Modal */}
-      <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} tripId={trip.id} onReviewSubmitted={() => {
-        const cfg = window.TAPNE_RUNTIME_CONFIG;
-        if (cfg?.api?.trips && id) {
-          apiGet<TripDetailResponse>(`${cfg.api.trips}${id}/`)
-            .then((data) => { setTrip(data.trip); })
-            .catch(() => {});
-        }
-      }} />
+      <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} tripId={trip.id}
+        initialReview={trip.viewer_review ? { rating: trip.viewer_review.rating, headline: trip.viewer_review.headline, body: trip.viewer_review.body } : null}
+        onReviewSubmitted={() => {
+          const cfg = window.TAPNE_RUNTIME_CONFIG;
+          if (cfg?.api?.trips && id) {
+            apiGet<TripDetailResponse>(`${cfg.api.trips}${id}/`)
+              .then((data) => { setTrip(data.trip); })
+              .catch(() => {});
+          }
+        }} />
 
       {/* Cancel Trip dialog */}
       <AlertDialog open={cancelOpen} onOpenChange={(o) => { if (!cancelPending) setCancelOpen(o); }}>
