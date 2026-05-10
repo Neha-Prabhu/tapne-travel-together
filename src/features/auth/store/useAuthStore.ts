@@ -10,6 +10,7 @@ export interface AuthUser {
   bio: string;
   location: string;
   website: string;
+  instagram_url?: string;
   avatar?: string;
   travel_tags?: string[];
   cover_photo_url?: string;
