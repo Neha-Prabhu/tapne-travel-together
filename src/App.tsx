@@ -46,6 +46,7 @@ const App = () => (
             <SearchProvider>
               <BookmarksProvider>
               <ScrollToTop />
+              <GlobalLoginModal />
               <Routes>
                 <Route path="/" element={<Index />} />
 
