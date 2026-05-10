@@ -94,6 +94,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (updates.website !== undefined) payload.website = updates.website;
       if (updates.avatar !== undefined) payload.avatar_url = updates.avatar;
       if (updates.travel_tags !== undefined) payload.travel_tags = updates.travel_tags;
+      if ((updates as any).cover_photo_url !== undefined) payload.cover_photo_url = (updates as any).cover_photo_url;
+      if ((updates as any).gallery_photos !== undefined) payload.gallery_photos = (updates as any).gallery_photos;
       const data = await apiPatch<{ profile: any }>(cfg.api.profile_me, payload);
       const p = data.profile || {};
       store.updateUser({
@@ -103,6 +105,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         website: p.website ?? updates.website ?? store.user?.website,
         avatar: p.avatar_url ?? updates.avatar ?? store.user?.avatar,
         travel_tags: p.travel_tags ?? updates.travel_tags ?? store.user?.travel_tags,
+        cover_photo_url: p.cover_photo_url ?? (updates as any).cover_photo_url ?? store.user?.cover_photo_url,
+        gallery_photos: p.gallery_photos ?? (updates as any).gallery_photos ?? store.user?.gallery_photos,
       });
       return data.profile;
     } catch {

@@ -50,6 +50,27 @@ const TripDetail = () => {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelPending, setCancelPending] = useState(false);
+  const [appliedBanner, setAppliedBanner] = useState(false);
+  const bannerKey = user?.id ? `tapne_apply_banner_${user.id}` : null;
+  const missingProfileFields = (() => {
+    if (!user) return [] as string[];
+    const m: string[] = [];
+    if (!user.avatar) m.push("avatar");
+    if (!user.bio) m.push("bio");
+    if (!user.location) m.push("location");
+    return m;
+  })();
+
+  useEffect(() => {
+    if (!bannerKey) { setAppliedBanner(false); return; }
+    const flag = localStorage.getItem(bannerKey) === "1";
+    if (flag && missingProfileFields.length === 0) {
+      localStorage.removeItem(bannerKey);
+      setAppliedBanner(false);
+    } else {
+      setAppliedBanner(flag);
+    }
+  }, [bannerKey, missingProfileFields.join(",")]);
 
   useEffect(() => {
     if (!id) return;
@@ -304,6 +325,28 @@ const TripDetail = () => {
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
       <main className="flex-1">
+        {appliedBanner && (
+          <div className="border-b border-primary/20 bg-primary/5">
+            <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2 text-sm">
+                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Your application is in — the host will review it shortly.</p>
+                  {missingProfileFields.length > 0 && (
+                    <p className="mt-0.5 text-muted-foreground">
+                      Add a {missingProfileFields.map(f => f === "avatar" ? "profile photo" : f).join(", ")} so the host can get to know you.
+                    </p>
+                  )}
+                </div>
+              </div>
+              {missingProfileFields.length > 0 && (
+                <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${missingProfileFields.join(",")}`)}>
+                  Complete profile
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         {/* ─── HERO ─── */}
         <div className="relative">
           <div className="aspect-[21/9] max-h-[480px] w-full overflow-hidden sm:aspect-[3/1]">
@@ -703,7 +746,15 @@ const TripDetail = () => {
       {/* Booking Modal */}
       <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />
       {/* Application Modal */}
-      <ApplicationModal open={applyModalOpen} onOpenChange={setApplyModalOpen} trip={trip} />
+      <ApplicationModal
+        open={applyModalOpen}
+        onOpenChange={setApplyModalOpen}
+        trip={trip}
+        onSubmitted={() => {
+          if (bannerKey) localStorage.setItem(bannerKey, "1");
+          setAppliedBanner(true);
+        }}
+      />
       {/* Review Modal */}
       <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} tripId={trip.id} onReviewSubmitted={() => {
         const cfg = window.TAPNE_RUNTIME_CONFIG;

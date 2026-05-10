@@ -504,7 +504,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const id = parseInt(draftPublishMatch[1]);
     const existing = _devDrafts.get(id);
     if (existing) _devDrafts.set(id, { ...existing, is_draft: false, is_published: true });
-    return {};
+    return { trip_id: id, id };
   }
 
   // ── Duplicate trip (published/completed) ──
@@ -597,6 +597,25 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     ];
     const userStories = allMockStories.filter(s => s.author_username === su.username);
 
+    const isHost = hostedTrips.length > 0;
+    const reviewsReceived = isHost ? [
+      { id: 1, rating: 5, headline: "Best host ever", body: "Amazing host! Made the entire trip so seamless and fun. Would definitely join again.", trip_title: "Goa Backpacking Adventure", trip_url: `/trips/${hostedTrips[0]?.id ?? 1}`, author_username: "priya_sharma", author_display_name: "Priya Sharma", author_avatar_url: "https://i.pravatar.cc/150?img=5", created_at: "2026-02-10T10:00:00Z" },
+      { id: 2, rating: 4, headline: "Great experience", body: "Great itinerary planning and super friendly. Loved every moment of the trek.", trip_title: "Himachal Pradesh Trek", trip_url: `/trips/${hostedTrips[0]?.id ?? 1}`, author_username: "karan_singh", author_display_name: "Karan Singh", author_avatar_url: "https://i.pravatar.cc/150?img=15", created_at: "2026-01-20T08:00:00Z" },
+      { id: 3, rating: 5, headline: "Unforgettable", body: "Top notch organization and warm vibes throughout.", trip_title: "Coorg Coffee Trail", trip_url: `/trips/${hostedTrips[0]?.id ?? 1}`, author_username: "neha_g", author_display_name: "Neha G.", author_avatar_url: "https://i.pravatar.cc/150?img=21", created_at: "2025-12-12T08:00:00Z" },
+    ] : [];
+    const reviewsWritten = !isHost ? [
+      { id: 11, rating: 5, headline: "Loved this trip", body: "Such a thoughtful host and great people.", trip_title: "Goa Backpacking Adventure", trip_url: "/trips/1", author_username: su.username, author_display_name: su.display_name, author_avatar_url: overlay.avatar_url ?? mu?.avatar, created_at: "2026-01-15T08:00:00Z" },
+    ] : [];
+    const reviewDistribution = isHost ? { "5": 70, "4": 20, "3": 5, "2": 3, "1": 2 } : { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
+
+    const isComplete = !!(overlay.avatar_url || mu?.avatar) && !!(su.bio || mu?.bio) && !!(su.location || mu?.location) && (overlay.gallery_photos?.length ?? mockGallery.length) > 0;
+    const missingFields: string[] = [];
+    if (!(overlay.avatar_url || mu?.avatar)) missingFields.push("avatar");
+    if (!(su.bio || mu?.bio)) missingFields.push("bio");
+    if (!(su.location || mu?.location)) missingFields.push("location");
+    if (isHost && !(overlay.cover_photo_url)) missingFields.push("cover_photo");
+    if (isHost && !((overlay.gallery_photos?.length) ?? 0)) missingFields.push("gallery_photos");
+
     return {
       profile: {
         username: su.username,
@@ -607,18 +626,31 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         website: su.website,
         avatar_url: overlay.avatar_url ?? mu?.avatar,
         travel_tags: overlay.travel_tags ?? ["Mountains", "Backpacking", "Culture", "Photography"],
-        average_rating: hostedTrips.length > 0 ? 4.6 : undefined,
-        reviews_count: hostedTrips.length > 0 ? 12 : 0,
+        is_host: isHost,
+        member_since: "2024-03-15",
+        cover_photo_url: overlay.cover_photo_url ?? (isHost ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80" : undefined),
+        gallery_photos: overlay.gallery_photos ?? (isHost ? mockGallery : []),
+        average_rating: isHost ? 4.6 : undefined,
+        reviews_count: isHost ? reviewsReceived.length : 0,
         trips_hosted: hostedTrips.length,
         travelers_hosted: hostedTrips.length * 6,
+        repeat_travelers_count: isHost ? 4 : 0,
+        median_response_hours: isHost ? 3 : null,
+        review_distribution: reviewDistribution,
+        reviews_received: reviewsReceived,
+        reviews_written: reviewsWritten,
+        profile_completeness: {
+          is_complete: missingFields.length === 0,
+          missing_fields: missingFields,
+        },
         trips_joined: joinedTrips.length + 3,
         followers_count: baseFollowers + (isFollowed ? 1 : 0),
         is_following: isFollowed,
       },
       trips_hosted: hostedTrips,
       trips_joined: joinedTrips,
-      reviews: hostedTrips.length > 0 ? mockReviews : [],
-      gallery: mockGallery,
+      reviews: isHost ? reviewsReceived.map((r: any) => ({ id: r.id, reviewer_name: r.author_display_name, reviewer_avatar: r.author_avatar_url, rating: r.rating, text: r.body, trip_title: r.trip_title, created_at: r.created_at })) : [],
+      gallery: isHost ? mockGallery : [],
       stories: userStories,
     };
   }
@@ -637,6 +669,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       if (b?.website !== undefined) _devUser = { ..._devUser, website: b.website };
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
       if (b?.avatar_url !== undefined) _devUser = { ..._devUser, avatar_url: b.avatar_url } as any;
+      if (b?.cover_photo_url !== undefined) _devUser = { ..._devUser, cover_photo_url: b.cover_photo_url } as any;
+      if (b?.gallery_photos !== undefined) _devUser = { ..._devUser, gallery_photos: b.gallery_photos } as any;
     }
     const u: any = _devUser || {};
     return {
@@ -648,6 +682,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         website: u.website,
         avatar_url: u.avatar_url,
         travel_tags: u.travel_tags,
+        cover_photo_url: u.cover_photo_url,
+        gallery_photos: u.gallery_photos,
       },
     };
   }

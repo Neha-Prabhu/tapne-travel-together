@@ -553,8 +553,11 @@ const CreateTrip = () => {
     localStorage.removeItem("tapne_draft_autosave");
     const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
     try {
-      if (numId) await publishDraft(numId);
+      let publishedId: number | null = null;
+      if (numId) publishedId = await publishDraft(numId);
       toast.success("Trip published! 🎉");
+      if (publishedId) navigate(`/trips/${publishedId}`);
+      else navigate("/dashboard/trips");
     } catch (err: any) {
       toast.error(err?.message || "Could not publish trip");
     } finally {

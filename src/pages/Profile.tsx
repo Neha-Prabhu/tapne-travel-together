@@ -20,13 +20,26 @@ import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
   AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck, CheckCircle2,
-  Calendar,
+  Calendar, Sparkles, Heart, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
 
 /* ─── Types ─────────────────────────────────────────────────────── */
+
+interface ReviewEntry {
+  id: number;
+  rating: number;
+  headline?: string;
+  body: string;
+  trip_title?: string;
+  trip_url?: string;
+  author_username?: string;
+  author_display_name?: string;
+  author_avatar_url?: string;
+  created_at: string;
+}
 
 interface ProfileResponse {
   profile: {
@@ -39,10 +52,20 @@ interface ProfileResponse {
     website: string;
     avatar_url?: string;
     travel_tags?: string[];
+    is_host?: boolean;
+    member_since?: string;
+    cover_photo_url?: string;
+    gallery_photos?: string[];
     average_rating?: number;
     reviews_count?: number;
     trips_hosted?: number;
     travelers_hosted?: number;
+    repeat_travelers_count?: number;
+    median_response_hours?: number | null;
+    review_distribution?: Record<string, number>;
+    reviews_received?: ReviewEntry[];
+    reviews_written?: ReviewEntry[];
+    profile_completeness?: { is_complete: boolean; missing_fields: string[] };
     trips_joined?: number;
     followers_count?: number;
     is_following?: boolean;
@@ -129,7 +152,23 @@ const Profile = () => {
   }, [userId, user]);
 
   const p = profileData?.profile;
-  const isHost = (p?.trips_hosted ?? 0) > 0;
+  const isHost = p?.is_host ?? ((p?.trips_hosted ?? 0) > 0);
+  const galleryPhotos = p?.gallery_photos ?? profileData?.gallery ?? [];
+  const coverImage = p?.cover_photo_url || galleryPhotos[0];
+  const reviewsReceived = p?.reviews_received ?? [];
+  const reviewsWritten = p?.reviews_written ?? [];
+  const reviewDistribution = p?.review_distribution ?? { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
+  const completeness = p?.profile_completeness;
+  const [completionDismissed, setCompletionDismissed] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const memberSinceLabel = p?.member_since ? new Date(p.member_since).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
+  const responseLabel = (() => {
+    const h = p?.median_response_hours;
+    if (h == null) return "—";
+    if (h < 1) return "<1h";
+    if (h < 24) return `${Math.round(h)}h`;
+    return `${Math.round(h / 24)}d`;
+  })();
 
   const openEdit = () => {
     if (!p) return;
@@ -256,140 +295,188 @@ const Profile = () => {
     return bd - ad;
   });
 
+  const showCompletionBanner = isOwner && isHost && completeness && !completeness.is_complete && !completionDismissed;
+  const missingLabels: Record<string, string> = {
+    avatar: "profile photo",
+    bio: "short bio",
+    location: "location",
+    cover_photo: "cover photo",
+    gallery_photos: "gallery photos",
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
 
       <main className="flex-1">
-        <div className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+        {/* ── Host Cover Hero ── */}
+        {isHost && (
+          <div className="relative h-48 w-full overflow-hidden bg-muted sm:h-64 md:h-80">
+            {coverImage ? (
+              <img src={coverImage} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+          </div>
+        )}
 
-          {/* ── Profile Header ─────────────────────────────────── */}
-          <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left gap-6">
-            <Avatar className="h-24 w-24 ring-4 ring-primary/20 sm:h-28 sm:w-28">
+        <div className={cn("mx-auto max-w-5xl px-4 pb-12", isHost ? "-mt-16 sm:-mt-20" : "py-8 sm:py-12")}>
+          {/* ── Completion Banner (host's own profile) ── */}
+          {showCompletionBanner && (
+            <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-3">
+                  <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                  <div className="text-sm">
+                    <p className="font-medium text-foreground">Complete your host profile to build trust with travelers</p>
+                    <p className="mt-0.5 text-muted-foreground">
+                      Missing: {(completeness?.missing_fields ?? []).map(f => missingLabels[f] || f).join(", ")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 sm:shrink-0">
+                  <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${(completeness?.missing_fields ?? []).join(",")}`)}>
+                    Complete profile
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setCompletionDismissed(true)}>
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Profile Header ── */}
+          <div className={cn("flex flex-col gap-5 sm:flex-row sm:items-end", !isHost && "items-center sm:items-start")}>
+            <Avatar className={cn("ring-4 ring-background", isHost ? "h-28 w-28 sm:h-32 sm:w-32" : "h-24 w-24 sm:h-28 sm:w-28")}>
               <AvatarImage src={p.avatar_url} />
-              <AvatarFallback className="text-3xl font-semibold bg-accent text-accent-foreground">
+              <AvatarFallback className="bg-accent text-3xl font-semibold text-accent-foreground">
                 {p.display_name?.[0]?.toUpperCase() ?? "?"}
               </AvatarFallback>
             </Avatar>
 
-            <div className="flex-1 space-y-2">
-              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                <h1 className="text-2xl font-bold text-foreground">{p.display_name}</h1>
+            <div className="flex-1 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{p.display_name}</h1>
                 {isHost && (
                   <Badge variant="secondary" className="gap-1 text-xs font-medium">
                     <Award className="h-3 w-3" /> Host
                   </Badge>
                 )}
+                {isHost && memberSinceLabel && (
+                  <Badge variant="outline" className="gap-1 text-xs font-normal">
+                    <Calendar className="h-3 w-3" /> Member since {memberSinceLabel}
+                  </Badge>
+                )}
               </div>
-
               <p className="text-xs text-muted-foreground">@{p.username}</p>
-
               {p.location && (
-                <p className="flex items-center justify-center gap-1 text-sm text-muted-foreground sm:justify-start">
+                <p className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" /> {p.location}
                 </p>
               )}
-
               {p.bio && (
-                <p className="max-w-md text-sm leading-relaxed text-muted-foreground line-clamp-3">
-                  {p.bio}
-                </p>
+                <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">{p.bio}</p>
               )}
+            </div>
 
-              {p.travel_tags && p.travel_tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1 justify-center sm:justify-start">
-                  {p.travel_tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs font-normal">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* Follower count */}
-              {!isOwner && (
-                <p className="text-xs text-muted-foreground pt-1 flex items-center gap-1 justify-center sm:justify-start">
-                  <Users className="h-3 w-3" /> {followersCount} follower{followersCount !== 1 ? "s" : ""}
-                </p>
+            <div className="flex shrink-0 items-center gap-2">
+              {isOwner ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => navigate("/profile/edit")}>
+                    <Edit className="mr-1 h-4 w-4" /> Edit Profile
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    variant={isFollowing ? "secondary" : "default"}
+                    onClick={() => {
+                      if (!isAuthenticated) { requireAuth(); return; }
+                      const cfg = window.TAPNE_RUNTIME_CONFIG;
+                      const url = `${cfg.api.base}/profile/${p.username}/follow/`;
+                      if (isFollowing) {
+                        setIsFollowing(false); setFollowersCount(c => c - 1);
+                        apiDelete(url).catch(() => { setIsFollowing(true); setFollowersCount(c => c + 1); });
+                      } else {
+                        setIsFollowing(true); setFollowersCount(c => c + 1);
+                        apiPost(url).catch(() => { setIsFollowing(false); setFollowersCount(c => c - 1); });
+                      }
+                    }}
+                  >
+                    {isFollowing ? <><UserCheck className="mr-1 h-4 w-4" /> Following</> : <><UserPlus className="mr-1 h-4 w-4" /> Follow</>}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } navigate(`/messages?dm=${p.username}`); }}>
+                    <MessageCircle className="mr-1 h-4 w-4" /> Message
+                  </Button>
+                </>
               )}
             </div>
           </div>
 
-          {/* ── Trust & Stats ──────────────────────────────────── */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard
-              icon={<Star className="h-4 w-4 text-yellow-500" />}
-              label="Rating"
-              value={p.average_rating ? `${p.average_rating.toFixed(1)}` : "—"}
-              sub={p.reviews_count ? `${p.reviews_count} review${p.reviews_count !== 1 ? "s" : ""}` : "Not enough reviews"}
-            />
-            {isHost && (
-              <>
-                <StatCard icon={<Compass className="h-4 w-4 text-primary" />} label="Trips Hosted" value={String(p.trips_hosted ?? 0)} />
-                <StatCard icon={<Users className="h-4 w-4 text-primary" />} label="Travelers Hosted" value={String(p.travelers_hosted ?? 0)} />
-              </>
-            )}
-            <StatCard icon={<Compass className="h-4 w-4 text-primary" />} label="Trips Joined" value={String(p.trips_joined ?? 0)} />
-          </div>
+          {/* ── Metrics ── */}
+          {isHost ? (
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <StatCard
+                icon={<Star className="h-4 w-4 text-yellow-500" />}
+                label="Rating"
+                value={p.average_rating ? p.average_rating.toFixed(1) : "—"}
+                sub={p.reviews_count ? `${p.reviews_count} review${p.reviews_count !== 1 ? "s" : ""}` : "No reviews yet"}
+              />
+              <StatCard icon={<Compass className="h-4 w-4 text-primary" />} label="Trips hosted" value={String(p.trips_hosted ?? 0)} />
+              <StatCard icon={<Users className="h-4 w-4 text-primary" />} label="Travelers hosted" value={String(p.travelers_hosted ?? 0)} />
+              <StatCard icon={<Heart className="h-4 w-4 text-primary" />} label="Repeat travelers" value={String(p.repeat_travelers_count ?? 0)} />
+              <StatCard icon={<Clock className="h-4 w-4 text-primary" />} label="Typical reply" value={responseLabel} />
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <StatCard icon={<Compass className="h-4 w-4 text-primary" />} label="Trips joined" value={String(p.trips_joined ?? 0)} />
+              <StatCard icon={<Star className="h-4 w-4 text-yellow-500" />} label="Reviews written" value={String(reviewsWritten.length)} />
+            </div>
+          )}
 
-          {/* ── Primary Actions ────────────────────────────────── */}
-          <div className="mt-6 flex items-center justify-center gap-3 sm:justify-start">
-            {isOwner ? (
-              <>
-                <Button variant="outline" size="sm" onClick={openEdit}>
-                  <Edit className="mr-1 h-4 w-4" /> Edit Profile
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
-                  <Settings className="mr-1 h-4 w-4" /> Settings
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  size="sm"
-                  variant={isFollowing ? "secondary" : "default"}
-                  onClick={() => {
-                    if (!isAuthenticated) { requireAuth(); return; }
-                    const cfg = window.TAPNE_RUNTIME_CONFIG;
-                    const url = `${cfg.api.base}/profile/${p.username}/follow/`;
-                    if (isFollowing) {
-                      setIsFollowing(false);
-                      setFollowersCount(c => c - 1);
-                      apiDelete(url).catch(() => { setIsFollowing(true); setFollowersCount(c => c + 1); });
-                    } else {
-                      setIsFollowing(true);
-                      setFollowersCount(c => c + 1);
-                      apiPost(url).catch(() => { setIsFollowing(false); setFollowersCount(c => c - 1); });
-                    }
-                  }}
-                >
-                  {isFollowing ? <><UserCheck className="mr-1 h-4 w-4" /> Following</> : <><UserPlus className="mr-1 h-4 w-4" /> Follow</>}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    if (!isAuthenticated) { requireAuth(); return; }
-                    navigate(`/messages?dm=${p.username}`);
-                  }}
-                >
-                  <MessageCircle className="mr-1 h-4 w-4" /> Message
-                </Button>
-              </>
-            )}
-          </div>
+          {/* ── Travel tags ── */}
+          {isHost && p.travel_tags && p.travel_tags.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-1.5">
+              {p.travel_tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="rounded-full px-3 py-1 text-xs font-normal">{tag}</Badge>
+              ))}
+            </div>
+          )}
 
-          {/* ── Tabs ───────────────────────────────────────────── */}
+          {/* ── Curated Gallery (host only) ── */}
+          {isHost && galleryPhotos.length > 0 && (
+            <div className="mt-8">
+              <h2 className="mb-3 text-base font-semibold text-foreground">Gallery</h2>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                {galleryPhotos.slice(0, 8).map((url, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setLightboxIndex(i)}
+                    className="aspect-square overflow-hidden rounded-xl bg-muted transition-opacity hover:opacity-90"
+                  >
+                    <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Tabs ── */}
           <Tabs defaultValue="trips" className="mt-8">
             <TabsList className="w-full justify-start overflow-x-auto">
-              <TabsTrigger value="trips">Trips</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
-              <TabsTrigger value="stories">Stories</TabsTrigger>
-              <TabsTrigger value="gallery">Gallery</TabsTrigger>
+              <TabsTrigger value="trips">{isHost ? "Trips" : "Trips joined"}</TabsTrigger>
+              <TabsTrigger value="reviews">{isHost ? "Reviews" : "Reviews written"}</TabsTrigger>
+              {isHost && <TabsTrigger value="stories">Stories</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="trips" className="mt-6 space-y-8">
-              {tripsHosted.length > 0 && (
+              {isHost && tripsHosted.length > 0 && (
                 <div>
                   <h2 className="mb-4 text-lg font-semibold text-foreground">Trips Hosted</h2>
                   <HorizontalCarousel>
@@ -413,102 +500,130 @@ const Profile = () => {
                     {tripsJoined.map((t) => (
                       <div key={t.id} className="relative w-[280px] shrink-0 sm:w-[320px]">
                         <TripCard trip={t} />
-                        {(t.status as string) === "completed" && (
-                          <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
-                            <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
-                          </Badge>
-                        )}
                       </div>
                     ))}
                   </HorizontalCarousel>
                 </div>
               )}
               {tripsHosted.length === 0 && tripsJoined.length === 0 && (
-                <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost ? { label: "Host your first trip", to: "/trips/new" } : undefined} />
+                <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost && isOwner ? { label: "Host your first trip", to: "/trips/new" } : undefined} />
               )}
             </TabsContent>
 
-            <TabsContent value="reviews" className="mt-6">
-              {reviews.length > 0 ? (
-                <div className="space-y-4">
-                  {reviews.map((r) => (
-                    <Card key={r.id} className="overflow-hidden">
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-9 w-9 shrink-0">
-                            <AvatarImage src={r.reviewer_avatar} />
-                            <AvatarFallback className="text-xs bg-accent text-accent-foreground">{r.reviewer_name[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">{r.reviewer_name}</span>
-                              <div className="flex items-center gap-0.5">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star key={i} className={`h-3 w-3 ${i < r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
-                                ))}
-                              </div>
-                            </div>
-                            <p className="mt-0.5 text-xs text-muted-foreground">{r.trip_title}</p>
-                            <p className="mt-1.5 text-sm text-foreground/80 line-clamp-3">{r.text}</p>
+            <TabsContent value="reviews" className="mt-6 space-y-6">
+              {isHost && (
+                <Card>
+                  <CardContent className="space-y-2 p-4">
+                    {[5, 4, 3, 2, 1].map((star) => {
+                      const pct = Number(reviewDistribution[String(star)] ?? 0);
+                      return (
+                        <div key={star} className="flex items-center gap-3 text-xs">
+                          <span className="flex w-10 items-center gap-0.5 text-muted-foreground">
+                            {star} <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          </span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-yellow-400" style={{ width: `${pct}%` }} />
                           </div>
+                          <span className="w-10 text-right text-muted-foreground">{pct}%</span>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="No reviews yet" />
+                      );
+                    })}
+                  </CardContent>
+                </Card>
               )}
-            </TabsContent>
 
-            <TabsContent value="stories" className="mt-6">
-              {stories.length > 0 ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {stories.map((story) => (
-                    <Link key={story.slug} to={`/stories/${story.slug}`} className="block">
-                      <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
-                        {story.cover_image_url && (
-                          <div className="relative aspect-[16/10] overflow-hidden">
-                            <img src={story.cover_image_url} alt={story.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                          </div>
-                        )}
+              {(isHost ? reviewsReceived : reviewsWritten).length > 0 ? (
+                <div className="space-y-4">
+                  {(isHost ? reviewsReceived : reviewsWritten)
+                    .slice()
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .map((r) => (
+                      <Card key={r.id}>
                         <CardContent className="p-4">
-                          <h3 className="mb-1.5 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">{story.title}</h3>
-                          {(story.short_description || story.excerpt) && (
-                            <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{story.short_description || story.excerpt}</p>
-                          )}
-                          {story.created_at && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(story.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-9 w-9 shrink-0">
+                              <AvatarImage src={r.author_avatar_url} />
+                              <AvatarFallback className="bg-accent text-xs text-accent-foreground">{r.author_display_name?.[0] ?? "?"}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium text-foreground">{r.author_display_name}</span>
+                                <div className="flex items-center gap-0.5">
+                                  {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star key={i} className={`h-3 w-3 ${i < r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                                  ))}
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  · {new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                </span>
+                              </div>
+                              {r.headline && <p className="mt-1 text-sm font-semibold text-foreground">{r.headline}</p>}
+                              <p className="mt-1 text-sm text-foreground/80">{r.body}</p>
+                              {r.trip_title && r.trip_url && (
+                                <Link to={r.trip_url} className="mt-1.5 inline-block text-xs text-primary hover:underline">
+                                  on {r.trip_title}
+                                </Link>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </CardContent>
                       </Card>
-                    </Link>
-                  ))}
+                    ))}
                 </div>
               ) : (
-                <EmptyState message="No stories shared yet" />
+                <EmptyState message={isHost ? "No reviews yet" : "No reviews written yet"} />
               )}
             </TabsContent>
 
-            <TabsContent value="gallery" className="mt-6">
-              {gallery.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {gallery.map((url, i) => (
-                    <div key={i} className="aspect-square overflow-hidden rounded-xl">
-                      <img src={url} alt="" className="h-full w-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="No photos yet" icon={<ImageIcon className="h-8 w-8 text-muted-foreground/40" />} />
-              )}
-            </TabsContent>
+            {isHost && (
+              <TabsContent value="stories" className="mt-6">
+                {stories.length > 0 ? (
+                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {stories.map((story) => (
+                      <Link key={story.slug} to={`/stories/${story.slug}`} className="block">
+                        <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
+                          {story.cover_image_url && (
+                            <div className="relative aspect-[16/10] overflow-hidden">
+                              <img src={story.cover_image_url} alt={story.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                            </div>
+                          )}
+                          <CardContent className="p-4">
+                            <h3 className="mb-1.5 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary">{story.title}</h3>
+                            {(story.short_description || story.excerpt) && (
+                              <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{story.short_description || story.excerpt}</p>
+                            )}
+                            {story.created_at && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(story.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No stories shared yet" />
+                )}
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </main>
+
+      {/* ── Lightbox ── */}
+      {lightboxIndex !== null && galleryPhotos[lightboxIndex] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <button className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-primary-foreground" onClick={() => setLightboxIndex(null)}>
+            <X className="h-5 w-5" />
+          </button>
+          <img src={galleryPhotos[lightboxIndex]} alt="" className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
 
       {/* ── Edit Profile Dialog ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

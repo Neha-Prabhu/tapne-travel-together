@@ -19,11 +19,12 @@ interface ApplicationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trip: TripData;
+  onSubmitted?: () => void;
 }
 
 const STEPS = ["Your Details", "Submit"];
 
-const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) => {
+const ApplicationModal = ({ open, onOpenChange, trip, onSubmitted }: ApplicationModalProps) => {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -45,6 +46,7 @@ const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) =
       await apiPost(`${cfg.api.trips}${trip.id}/join-request/`, { message });
       setStep(2); // success
       toast.success("Application submitted! 🎉");
+      onSubmitted?.();
     } catch (err: any) {
       if (err?.error === "already_requested") {
         toast.error("You already have a pending application");
