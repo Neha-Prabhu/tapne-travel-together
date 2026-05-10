@@ -20,7 +20,7 @@ import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
   AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck, CheckCircle2,
-  Calendar, Sparkles, Heart, Clock,
+  Calendar, Sparkles, Heart, Clock, Globe, Instagram,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
@@ -50,6 +50,7 @@ interface ProfileResponse {
     bio: string;
     location: string;
     website: string;
+    instagram_url?: string;
     avatar_url?: string;
     travel_tags?: string[];
     is_host?: boolean;
@@ -377,6 +378,30 @@ const Profile = () => {
               {p.bio && (
                 <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">{p.bio}</p>
               )}
+              {(p.website || p.instagram_url) && (
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-sm">
+                  {p.website && (
+                    <a
+                      href={p.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <Globe className="h-3.5 w-3.5" /> Website
+                    </a>
+                  )}
+                  {p.instagram_url && (
+                    <a
+                      href={p.instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <Instagram className="h-3.5 w-3.5" /> Instagram
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
@@ -439,7 +464,7 @@ const Profile = () => {
           )}
 
           {/* ── Travel tags ── */}
-          {isHost && p.travel_tags && p.travel_tags.length > 0 && (
+          {p.travel_tags && p.travel_tags.length > 0 && (
             <div className="mt-5 flex flex-wrap gap-1.5">
               {p.travel_tags.map((tag) => (
                 <Badge key={tag} variant="outline" className="rounded-full px-3 py-1 text-xs font-normal">{tag}</Badge>

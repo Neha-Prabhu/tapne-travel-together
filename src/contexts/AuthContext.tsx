@@ -92,6 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (updates.bio !== undefined) payload.bio = updates.bio;
       if (updates.location !== undefined) payload.location = updates.location;
       if (updates.website !== undefined) payload.website = updates.website;
+      if ((updates as any).instagram_url !== undefined) payload.instagram_url = (updates as any).instagram_url;
       if (updates.avatar !== undefined) payload.avatar_url = updates.avatar;
       if (updates.travel_tags !== undefined) payload.travel_tags = updates.travel_tags;
       if ((updates as any).cover_photo_url !== undefined) payload.cover_photo_url = (updates as any).cover_photo_url;
@@ -103,6 +104,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         bio: p.bio ?? updates.bio ?? store.user?.bio,
         location: p.location ?? updates.location ?? store.user?.location,
         website: p.website ?? updates.website ?? store.user?.website,
+        instagram_url: p.instagram_url ?? (updates as any).instagram_url ?? (store.user as any)?.instagram_url,
         avatar: p.avatar_url ?? updates.avatar ?? store.user?.avatar,
         travel_tags: p.travel_tags ?? updates.travel_tags ?? store.user?.travel_tags,
         cover_photo_url: p.cover_photo_url ?? (updates as any).cover_photo_url ?? store.user?.cover_photo_url,

@@ -27,6 +27,7 @@ const ProfileEdit = () => {
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [website, setWebsite] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>(undefined);
@@ -48,6 +49,7 @@ const ProfileEdit = () => {
       setBio(user.bio || "");
       setLocation(user.location || "");
       setWebsite((user as any).website || "");
+      setInstagramUrl((user as any).instagram_url || "");
       setTags((user as any).travel_tags || []);
       setAvatarUrl(user.avatar);
       setCoverPhoto((user as any).cover_photo_url);
@@ -74,6 +76,20 @@ const ProfileEdit = () => {
 
   const toggleTag = (t: string) => setTags(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
 
+  const MAX_BYTES = 1.8 * 1024 * 1024;
+  const [sizeError, setSizeError] = useState<string | null>(null);
+
+  const checkSize = (f: File) => {
+    if (f.size > MAX_BYTES) {
+      const msg = "Photo is too large. Please use an image under 2 MB.";
+      setSizeError(msg);
+      toast.error(msg);
+      return false;
+    }
+    setSizeError(null);
+    return true;
+  };
+
   const readFile = (file: File) => new Promise<string>((res) => {
     const r = new FileReader();
     r.onload = () => res(r.result as string);
@@ -81,20 +97,21 @@ const ProfileEdit = () => {
   });
 
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; if (!f) return;
+    const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+    if (!checkSize(f)) return;
     setAvatarUrl(await readFile(f));
-    e.target.value = "";
   };
   const handleCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]; if (!f) return;
+    const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+    if (!checkSize(f)) return;
     setCoverPhoto(await readFile(f));
-    e.target.value = "";
   };
   const handleGalleryAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    for (const f of files) { if (!checkSize(f)) return; }
     const urls = await Promise.all(files.map(readFile));
     setGallery(prev => [...prev, ...urls]);
-    e.target.value = "";
   };
   const removeGallery = (i: number) => setGallery(prev => prev.filter((_, idx) => idx !== i));
   const moveGallery = (i: number, dir: -1 | 1) => {
@@ -112,6 +129,8 @@ const ProfileEdit = () => {
     try {
       await updateProfile({
         name, bio, location,
+        website,
+        instagram_url: instagramUrl,
         avatar: avatarUrl,
         travel_tags: tags,
         cover_photo_url: coverPhoto,
@@ -176,6 +195,11 @@ const ProfileEdit = () => {
 
         <Card>
           <CardContent className="space-y-5 p-6">
+            {sizeError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {sizeError}
+              </div>
+            )}
             {/* Avatar */}
             <div className={cn("flex items-center gap-4 rounded-lg p-2 -m-2", focused("avatar") && "ring-2 ring-primary/40")}>
               <Avatar className="h-20 w-20">
@@ -229,6 +253,15 @@ const ProfileEdit = () => {
             <div className="space-y-1.5">
               <Label>Website</Label>
               <Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Instagram URL</Label>
+              <Input
+                value={instagramUrl}
+                onChange={e => setInstagramUrl(e.target.value)}
+                placeholder="https://instagram.com/your_handle"
+                type="url"
+              />
             </div>
 
             {/* Gallery photos */}
