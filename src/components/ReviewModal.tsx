@@ -127,6 +127,11 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, init
         {step === 1 && (
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
+              <label className="text-sm font-medium">Headline <span className="text-xs text-muted-foreground">(optional)</span></label>
+              <input type="text" value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Sum it up in a few words"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            </div>
+            <div className="space-y-1.5">
               <label className="text-sm font-medium">What did you love the most? *</label>
               <Textarea rows={3} value={loved} onChange={e => setLoved(e.target.value)} placeholder="The people, the places, the vibe..." />
               <p className="text-xs text-muted-foreground">{loved.length < 10 ? `${10 - loved.length} more chars needed` : "✓"}</p>
