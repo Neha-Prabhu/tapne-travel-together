@@ -129,6 +129,8 @@ const ProfileEdit = () => {
     try {
       await updateProfile({
         name, bio, location,
+        website,
+        instagram_url: instagramUrl,
         avatar: avatarUrl,
         travel_tags: tags,
         cover_photo_url: coverPhoto,
