@@ -669,6 +669,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       if (b?.website !== undefined) _devUser = { ..._devUser, website: b.website };
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
       if (b?.avatar_url !== undefined) _devUser = { ..._devUser, avatar_url: b.avatar_url } as any;
+      if (b?.cover_photo_url !== undefined) _devUser = { ..._devUser, cover_photo_url: b.cover_photo_url } as any;
+      if (b?.gallery_photos !== undefined) _devUser = { ..._devUser, gallery_photos: b.gallery_photos } as any;
     }
     const u: any = _devUser || {};
     return {
@@ -680,6 +682,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         website: u.website,
         avatar_url: u.avatar_url,
         travel_tags: u.travel_tags,
+        cover_photo_url: u.cover_photo_url,
+        gallery_photos: u.gallery_photos,
       },
     };
   }
