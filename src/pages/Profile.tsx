@@ -378,6 +378,30 @@ const Profile = () => {
               {p.bio && (
                 <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">{p.bio}</p>
               )}
+              {(p.website || p.instagram_url) && (
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-sm">
+                  {p.website && (
+                    <a
+                      href={p.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <Globe className="h-3.5 w-3.5" /> Website
+                    </a>
+                  )}
+                  {p.instagram_url && (
+                    <a
+                      href={p.instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <Instagram className="h-3.5 w-3.5" /> Instagram
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
