@@ -24,7 +24,7 @@ interface ApplicationModalProps {
 
 const STEPS = ["Your Details", "Submit"];
 
-const ApplicationModal = ({ open, onOpenChange, trip }: ApplicationModalProps) => {
+const ApplicationModal = ({ open, onOpenChange, trip, onSubmitted }: ApplicationModalProps) => {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
