@@ -50,6 +50,7 @@ interface ProfileResponse {
     bio: string;
     location: string;
     website: string;
+    instagram_url?: string;
     avatar_url?: string;
     travel_tags?: string[];
     is_host?: boolean;
