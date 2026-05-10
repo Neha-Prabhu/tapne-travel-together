@@ -213,6 +213,19 @@ let _mockMsgIdCounter = 100;
 // Track booking status per trip
 const _tripBookingStatus = new Map<number, "open" | "closed" | "full">();
 
+// Per-trip review store (session-scoped)
+const _tripReviews = new Map<number, any[]>();
+function _seedReviews(tripId: number) {
+  if (_tripReviews.has(tripId)) return _tripReviews.get(tripId)!;
+  const seed = [
+    { id: tripId * 1000 + 1, rating: 5, headline: "Unforgettable trip", body: "The host was super organized and the group had amazing energy. Would absolutely do it again.", author_username: "priya_sharma", author_display_name: "Priya Sharma", author_avatar_url: "https://i.pravatar.cc/150?img=5", created_at: "2026-03-12T10:00:00Z", is_mine: false },
+    { id: tripId * 1000 + 2, rating: 4, headline: "Great vibes", body: "Loved the itinerary and the people. A few small hiccups with timing but overall fantastic.", author_username: "karan_singh", author_display_name: "Karan Singh", author_avatar_url: "https://i.pravatar.cc/150?img=15", created_at: "2026-02-28T08:30:00Z", is_mine: false },
+    { id: tripId * 1000 + 3, rating: 5, headline: "", body: "Worth every rupee. Made friends I still talk to.", author_username: "meera_nair", author_display_name: "Meera Nair", author_avatar_url: "https://i.pravatar.cc/150?img=20", created_at: "2026-02-15T14:15:00Z", is_mine: false },
+  ];
+  _tripReviews.set(tripId, seed);
+  return seed;
+}
+
 // Mock participants for host's trips
 function getMockParticipants(tripId: number): ParticipantData[] {
   const trip = MOCK_TRIPS.find(t => t.id === tripId);
@@ -269,7 +282,24 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   const reviewMatch = path.match(/^\/trips\/(\d+)\/reviews\/$/);
   if (reviewMatch && method === "POST") {
     const b = body as any;
-    return { ok: true, outcome: "created", review: { id: Date.now(), rating: b?.rating || 5, headline: b?.headline || "", body: b?.body || "", author: _devUser?.display_name || "Dev User", created_at: new Date().toISOString() } };
+    const tripId = parseInt(reviewMatch[1]);
+    const list = _seedReviews(tripId);
+    const username = _devUser?.username || "dev_user";
+    const existingIdx = list.findIndex(r => r.author_username === username);
+    const entry = {
+      id: existingIdx >= 0 ? list[existingIdx].id : Date.now(),
+      rating: b?.rating || 5,
+      headline: b?.headline || "",
+      body: b?.body || "",
+      author_username: username,
+      author_display_name: _devUser?.display_name || "Dev User",
+      author_avatar_url: undefined,
+      created_at: existingIdx >= 0 ? list[existingIdx].created_at : new Date().toISOString(),
+      is_mine: true,
+    };
+    if (existingIdx >= 0) list[existingIdx] = entry;
+    else list.unshift(entry);
+    return { ok: true, outcome: existingIdx >= 0 ? "updated" : "created", review: entry };
   }
 
 
@@ -346,8 +376,20 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const id = parseInt(tripDetailMatch[1]);
     const trip = MOCK_TRIPS.find(t => t.id === id) ?? MOCK_TRIPS[0];
     const isHost = _devUser && trip.host_username === _devUser.username;
+    const username = _devUser?.username;
+    const reviews = _seedReviews(trip.id).map(r => ({ ...r, is_mine: !!username && r.author_username === username }));
+    const viewerReview = username ? reviews.find(r => r.is_mine) || null : null;
+    const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : (trip.average_rating || 0);
     const resp: TripDetailResponse = {
-      trip: { ...trip, booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open") },
+      trip: {
+        ...trip,
+        booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open"),
+        reviews,
+        viewer_review: viewerReview,
+        can_review: !!_devUser && !isHost,
+        reviews_count: reviews.length,
+        average_rating: avg,
+      },
       can_manage_trip: !!isHost,
       mode: isHost ? "manage" : "view",
       similar_trips: MOCK_TRIPS.filter(t => t.id !== trip.id).slice(0, 3),

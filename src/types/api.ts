@@ -133,8 +133,23 @@ export interface TripData {
   access_type?: "open" | "apply" | "invite";
   average_rating?: number;
   reviews_count?: number;
+  reviews?: ReviewEntry[];
+  viewer_review?: ReviewEntry | null;
+  can_review?: boolean;
   payment_method?: "direct_contact" | "show_payment_details";
   payment_details?: string;
+}
+
+export interface ReviewEntry {
+  id: number;
+  rating: number;
+  headline?: string;
+  body: string;
+  author_username: string;
+  author_display_name?: string;
+  author_avatar_url?: string;
+  created_at: string;
+  is_mine?: boolean;
 }
 
 export interface ParticipantData {

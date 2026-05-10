@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,18 +24,28 @@ interface ReviewModalProps {
   trip: TripData;
   tripId: number;
   onReviewSubmitted?: () => void;
+  initialReview?: { rating?: number; headline?: string; body?: string } | null;
 }
 
-const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted }: ReviewModalProps) => {
+const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, initialReview }: ReviewModalProps) => {
   const [step, setStep] = useState(0);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [headline, setHeadline] = useState("");
   const [loved, setLoved] = useState("");
   const [improve, setImprove] = useState("");
   const [travelAgain, setTravelAgain] = useState<"Yes" | "Maybe" | "No" | "">("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && initialReview) {
+      setRating(initialReview.rating || 0);
+      setHeadline(initialReview.headline || "");
+      setLoved(initialReview.body || "");
+    }
+  }, [open, initialReview]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
@@ -47,7 +57,7 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted }: Re
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiPost<{ ok: boolean; error?: string }>(
         `${cfg.api.trip_reviews}${tripId}/reviews/`,
-        { rating, body: loved, headline: "" }
+        { rating, body: loved, headline }
       );
       if (data.ok === false && data.error) {
         toast.error(data.error);
@@ -67,6 +77,7 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted }: Re
   const resetForm = () => {
     setStep(0);
     setRating(0);
+    setHeadline("");
     setLoved("");
     setImprove("");
     setTravelAgain("");
@@ -115,6 +126,11 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted }: Re
         {/* Step 1: Feedback */}
         {step === 1 && (
           <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Headline <span className="text-xs text-muted-foreground">(optional)</span></label>
+              <input type="text" value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Sum it up in a few words"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">What did you love the most? *</label>
               <Textarea rows={3} value={loved} onChange={e => setLoved(e.target.value)} placeholder="The people, the places, the vibe..." />

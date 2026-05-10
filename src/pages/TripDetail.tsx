@@ -45,6 +45,7 @@ const TripDetail = () => {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [bookingTogglePending, setBookingTogglePending] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -627,27 +628,84 @@ const TripDetail = () => {
 
               {/* Reviews Section — always visible */}
               <Section id="reviews" icon={Star} title="Reviews & Ratings">
-                {trip.average_rating ? (
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map(s => (
-                        <Star key={s} className={cn("h-5 w-5", s <= Math.round(trip.average_rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
-                      ))}
-                    </div>
-                    <span className="text-lg font-bold text-foreground">{trip.average_rating.toFixed(1)}</span>
-                    <span className="text-sm text-muted-foreground">({trip.reviews_count || 0} review{(trip.reviews_count || 0) !== 1 ? "s" : ""})</span>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground mb-4">Not enough reviews yet. Be the first to share your experience!</p>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-primary/30 text-primary hover:bg-primary/5"
-                  onClick={() => requireAuth(() => setReviewModalOpen(true))}
-                >
-                  <Star className="mr-1.5 h-4 w-4" /> Write a Review
-                </Button>
+                {(() => {
+                  const reviews = trip.reviews || [];
+                  const viewerReview = trip.viewer_review || null;
+                  const others = reviews.filter(r => !r.is_mine);
+                  const cap = 10;
+                  const visible = (showAllReviews ? others : others.slice(0, cap));
+                  const hasAggregate = (trip.reviews_count || 0) > 0 || !!trip.average_rating;
+                  return (
+                    <>
+                      {hasAggregate ? (
+                        <div className="mb-4 flex items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} className={cn("h-5 w-5", s <= Math.round(trip.average_rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                            ))}
+                          </div>
+                          <span className="text-lg font-bold text-foreground">{(trip.average_rating || 0).toFixed(1)}</span>
+                          <span className="text-sm text-muted-foreground">({trip.reviews_count || reviews.length} review{(trip.reviews_count || reviews.length) !== 1 ? "s" : ""})</span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground mb-4">Be the first to share your experience!</p>
+                      )}
+
+                      {viewerReview && (
+                        <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-primary">Your review</span>
+                            <span className="text-xs text-muted-foreground">{new Date(viewerReview.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <div className="mb-1 flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} className={cn("h-4 w-4", s <= viewerReview.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                            ))}
+                          </div>
+                          {viewerReview.headline && <p className="text-sm font-semibold text-foreground">{viewerReview.headline}</p>}
+                          <p className="text-sm text-muted-foreground">{viewerReview.body}</p>
+                        </div>
+                      )}
+
+                      {visible.length > 0 && (
+                        <div className="space-y-3 mb-4">
+                          {visible.map(r => (
+                            <div key={r.id} className="rounded-lg border p-4">
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="text-sm font-medium text-foreground">@{r.author_username}</span>
+                                <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                              </div>
+                              <div className="mb-1 flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map(s => (
+                                  <Star key={s} className={cn("h-4 w-4", s <= r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                                ))}
+                              </div>
+                              {r.headline && <p className="text-sm font-semibold text-foreground">{r.headline}</p>}
+                              <p className="text-sm text-muted-foreground">{r.body}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {others.length > cap && !showAllReviews && (
+                        <Button variant="ghost" size="sm" className="mb-3" onClick={() => setShowAllReviews(true)}>
+                          Show all reviews ({others.length})
+                        </Button>
+                      )}
+
+                      {trip.can_review && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-primary/30 text-primary hover:bg-primary/5"
+                          onClick={() => requireAuth(() => setReviewModalOpen(true))}
+                        >
+                          <Star className="mr-1.5 h-4 w-4" /> {viewerReview ? "Edit your review" : "Write a Review"}
+                        </Button>
+                      )}
+                    </>
+                  );
+                })()}
               </Section>
 
 
@@ -754,14 +812,16 @@ const TripDetail = () => {
         }}
       />
       {/* Review Modal */}
-      <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} tripId={trip.id} onReviewSubmitted={() => {
-        const cfg = window.TAPNE_RUNTIME_CONFIG;
-        if (cfg?.api?.trips && id) {
-          apiGet<TripDetailResponse>(`${cfg.api.trips}${id}/`)
-            .then((data) => { setTrip(data.trip); })
-            .catch(() => {});
-        }
-      }} />
+      <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} tripId={trip.id}
+        initialReview={trip.viewer_review ? { rating: trip.viewer_review.rating, headline: trip.viewer_review.headline, body: trip.viewer_review.body } : null}
+        onReviewSubmitted={() => {
+          const cfg = window.TAPNE_RUNTIME_CONFIG;
+          if (cfg?.api?.trips && id) {
+            apiGet<TripDetailResponse>(`${cfg.api.trips}${id}/`)
+              .then((data) => { setTrip(data.trip); })
+              .catch(() => {});
+          }
+        }} />
 
       {/* Cancel Trip dialog */}
       <AlertDialog open={cancelOpen} onOpenChange={(o) => { if (!cancelPending) setCancelOpen(o); }}>
