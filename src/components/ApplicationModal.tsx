@@ -46,6 +46,7 @@ const ApplicationModal = ({ open, onOpenChange, trip, onSubmitted }: Application
       await apiPost(`${cfg.api.trips}${trip.id}/join-request/`, { message });
       setStep(2); // success
       toast.success("Application submitted! 🎉");
+      onSubmitted?.();
     } catch (err: any) {
       if (err?.error === "already_requested") {
         toast.error("You already have a pending application");
