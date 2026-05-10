@@ -249,6 +249,15 @@ const ProfileEdit = () => {
               <Label>Website</Label>
               <Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://" />
             </div>
+            <div className="space-y-1.5">
+              <Label>Instagram URL</Label>
+              <Input
+                value={instagramUrl}
+                onChange={e => setInstagramUrl(e.target.value)}
+                placeholder="https://instagram.com/your_handle"
+                type="url"
+              />
+            </div>
 
             {/* Gallery photos */}
             <div ref={galleryRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("gallery_photos") && "ring-2 ring-primary/40")}>
