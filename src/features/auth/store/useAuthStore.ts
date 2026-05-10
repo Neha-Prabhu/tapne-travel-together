@@ -12,9 +12,11 @@ export interface AuthUser {
   website: string;
   avatar?: string;
   travel_tags?: string[];
+  cover_photo_url?: string;
+  gallery_photos?: string[];
 }
 
-export function sessionUserToAuthUser(su: SessionUser & { avatar_url?: string; travel_tags?: string[] }): AuthUser {
+export function sessionUserToAuthUser(su: SessionUser & { avatar_url?: string; travel_tags?: string[]; cover_photo_url?: string; gallery_photos?: string[] }): AuthUser {
   return {
     id: su.id,
     username: su.username,
@@ -25,6 +27,8 @@ export function sessionUserToAuthUser(su: SessionUser & { avatar_url?: string; t
     website: su.website,
     avatar: su.avatar_url,
     travel_tags: su.travel_tags,
+    cover_photo_url: su.cover_photo_url,
+    gallery_photos: su.gallery_photos,
   };
 }
 
