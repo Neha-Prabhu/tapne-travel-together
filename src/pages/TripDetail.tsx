@@ -724,7 +724,15 @@ const TripDetail = () => {
       {/* Booking Modal */}
       <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />
       {/* Application Modal */}
-      <ApplicationModal open={applyModalOpen} onOpenChange={setApplyModalOpen} trip={trip} />
+      <ApplicationModal
+        open={applyModalOpen}
+        onOpenChange={setApplyModalOpen}
+        trip={trip}
+        onSubmitted={() => {
+          if (bannerKey) localStorage.setItem(bannerKey, "1");
+          setAppliedBanner(true);
+        }}
+      />
       {/* Review Modal */}
       <ReviewModal open={reviewModalOpen} onOpenChange={setReviewModalOpen} trip={trip} tripId={trip.id} onReviewSubmitted={() => {
         const cfg = window.TAPNE_RUNTIME_CONFIG;
