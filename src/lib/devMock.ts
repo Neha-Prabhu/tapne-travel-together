@@ -376,8 +376,20 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const id = parseInt(tripDetailMatch[1]);
     const trip = MOCK_TRIPS.find(t => t.id === id) ?? MOCK_TRIPS[0];
     const isHost = _devUser && trip.host_username === _devUser.username;
+    const username = _devUser?.username;
+    const reviews = _seedReviews(trip.id).map(r => ({ ...r, is_mine: !!username && r.author_username === username }));
+    const viewerReview = username ? reviews.find(r => r.is_mine) || null : null;
+    const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : (trip.average_rating || 0);
     const resp: TripDetailResponse = {
-      trip: { ...trip, booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open") },
+      trip: {
+        ...trip,
+        booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open"),
+        reviews,
+        viewer_review: viewerReview,
+        can_review: !!_devUser && !isHost,
+        reviews_count: reviews.length,
+        average_rating: avg,
+      },
       can_manage_trip: !!isHost,
       mode: isHost ? "manage" : "view",
       similar_trips: MOCK_TRIPS.filter(t => t.id !== trip.id).slice(0, 3),
