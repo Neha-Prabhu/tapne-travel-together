@@ -19,6 +19,7 @@ interface ApplicationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trip: TripData;
+  onSubmitted?: () => void;
 }
 
 const STEPS = ["Your Details", "Submit"];
