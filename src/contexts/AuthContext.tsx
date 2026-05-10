@@ -143,13 +143,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       pendingAuthAction,
     }}>
       {children}
-      <LoginModal
-        open={loginModalOpen}
-        onOpenChange={handleLoginModalChange}
-        onSuccess={() => {
-          pendingAuthAction?.();
-        }}
-      />
     </AuthContext.Provider>
   );
 };
