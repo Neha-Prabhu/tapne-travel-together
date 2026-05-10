@@ -346,8 +346,8 @@ const Profile = () => {
           )}
 
           {/* ── Profile Header ── */}
-          <div className={cn("flex flex-col gap-5 sm:flex-row sm:items-end", !isHost && "items-center sm:items-start")}>
-            <Avatar className={cn("ring-4 ring-background", isHost ? "h-28 w-28 sm:h-32 sm:w-32" : "h-24 w-24 sm:h-28 sm:w-28")}>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <Avatar className={cn("-mt-20 ring-4 ring-background sm:-mt-24", isHost ? "h-28 w-28 sm:h-32 sm:w-32" : "h-24 w-24 sm:h-28 sm:w-28")}>
               <AvatarImage src={p.avatar_url} />
               <AvatarFallback className="bg-accent text-3xl font-semibold text-accent-foreground">
                 {p.display_name?.[0]?.toUpperCase() ?? "?"}
