@@ -45,6 +45,7 @@ const TripDetail = () => {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [bookingTogglePending, setBookingTogglePending] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
