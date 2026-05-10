@@ -183,7 +183,6 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const publishDraft = useCallback(async (id: number, currentFormData?: Record<string, any>) => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
 
-    // If caller passes unsaved form data, PATCH it first to avoid race condition
     if (currentFormData && Object.keys(currentFormData).length > 0) {
       const payload = draftToServerPayload({ formData: currentFormData } as Partial<TripDraft>);
       if (Object.keys(payload).length > 0) {
@@ -191,15 +190,17 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
 
+    let publishedId: number | null = null;
     try {
-      await apiPost(`${cfg.api.trip_drafts}${id}/publish/`, {});
+      const res = await apiPost<{ trip_id?: number; id?: number }>(`${cfg.api.trip_drafts}${id}/publish/`, {});
+      publishedId = res?.trip_id ?? res?.id ?? id;
     } catch (err: any) {
       throw new Error(err?.message || err?.error || "Could not publish trip");
     }
 
     setDrafts((prev) => prev.filter((d) => d.id !== id));
-    navigate("/dashboard/trips");
-  }, [navigate]);
+    return publishedId;
+  }, []);
 
   return (
     <DraftContext.Provider value={{ drafts, createDraft, updateDraft, deleteDraft, duplicateDraft, getDraft, publishDraft, loading }}>
