@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, typ
 import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import type { SessionResponse, SessionUser } from "@/types/api";
 import { useAuthStore, sessionUserToAuthUser, type AuthUser } from "@/features/auth/store/useAuthStore";
-import LoginModal from "@/components/LoginModal";
+
 
 export type User = AuthUser;
 
@@ -143,13 +143,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       pendingAuthAction,
     }}>
       {children}
-      <LoginModal
-        open={loginModalOpen}
-        onOpenChange={handleLoginModalChange}
-        onSuccess={() => {
-          pendingAuthAction?.();
-        }}
-      />
     </AuthContext.Provider>
   );
 };

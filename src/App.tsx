@@ -9,6 +9,7 @@ import { SearchProvider } from "@/contexts/SearchContext";
 import { BookmarksProvider } from "@/contexts/BookmarksContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import RequireAuth from "@/components/RequireAuth";
+import GlobalLoginModal from "@/components/GlobalLoginModal";
 import Index from "./pages/Index";
 
 import TripDetail from "./pages/TripDetail";
@@ -45,6 +46,7 @@ const App = () => (
             <SearchProvider>
               <BookmarksProvider>
               <ScrollToTop />
+              <GlobalLoginModal />
               <Routes>
                 <Route path="/" element={<Index />} />
 
