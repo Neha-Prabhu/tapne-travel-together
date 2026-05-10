@@ -309,19 +309,17 @@ const Profile = () => {
       <Navbar />
 
       <main className="flex-1">
-        {/* ── Host Cover Hero ── */}
-        {isHost && (
-          <div className="relative h-48 w-full overflow-hidden bg-muted sm:h-64 md:h-80">
-            {coverImage ? (
-              <img src={coverImage} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
-          </div>
-        )}
+        {/* ── Cover Hero (every member) ── */}
+        <div className="relative h-48 w-full overflow-hidden bg-muted sm:h-64 md:h-80">
+          {coverImage ? (
+            <img src={coverImage} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        </div>
 
-        <div className={cn("mx-auto max-w-5xl px-4 pb-12", isHost ? "-mt-16 sm:-mt-20" : "py-8 sm:py-12")}>
+        <div className="mx-auto max-w-5xl px-4 pb-12 pt-6 sm:pt-8">
           {/* ── Completion Banner (host's own profile) ── */}
           {showCompletionBanner && (
             <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
@@ -348,8 +346,8 @@ const Profile = () => {
           )}
 
           {/* ── Profile Header ── */}
-          <div className={cn("flex flex-col gap-5 sm:flex-row sm:items-end", !isHost && "items-center sm:items-start")}>
-            <Avatar className={cn("ring-4 ring-background", isHost ? "h-28 w-28 sm:h-32 sm:w-32" : "h-24 w-24 sm:h-28 sm:w-28")}>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <Avatar className={cn("-mt-20 ring-4 ring-background sm:-mt-24", isHost ? "h-28 w-28 sm:h-32 sm:w-32" : "h-24 w-24 sm:h-28 sm:w-28")}>
               <AvatarImage src={p.avatar_url} />
               <AvatarFallback className="bg-accent text-3xl font-semibold text-accent-foreground">
                 {p.display_name?.[0]?.toUpperCase() ?? "?"}
