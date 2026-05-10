@@ -24,18 +24,28 @@ interface ReviewModalProps {
   trip: TripData;
   tripId: number;
   onReviewSubmitted?: () => void;
+  initialReview?: { rating?: number; headline?: string; body?: string } | null;
 }
 
-const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted }: ReviewModalProps) => {
+const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, initialReview }: ReviewModalProps) => {
   const [step, setStep] = useState(0);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [headline, setHeadline] = useState("");
   const [loved, setLoved] = useState("");
   const [improve, setImprove] = useState("");
   const [travelAgain, setTravelAgain] = useState<"Yes" | "Maybe" | "No" | "">("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && initialReview) {
+      setRating(initialReview.rating || 0);
+      setHeadline(initialReview.headline || "");
+      setLoved(initialReview.body || "");
+    }
+  }, [open, initialReview]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
