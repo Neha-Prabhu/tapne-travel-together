@@ -51,6 +51,27 @@ const TripDetail = () => {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelPending, setCancelPending] = useState(false);
   const [appliedBanner, setAppliedBanner] = useState(false);
+  const bannerKey = user?.id ? `tapne_apply_banner_${user.id}` : null;
+  const missingProfileFields = (() => {
+    if (!user) return [] as string[];
+    const m: string[] = [];
+    if (!user.avatar) m.push("avatar");
+    if (!user.bio) m.push("bio");
+    if (!user.location) m.push("location");
+    return m;
+  })();
+
+  useEffect(() => {
+    if (!bannerKey) { setAppliedBanner(false); return; }
+    const flag = localStorage.getItem(bannerKey) === "1";
+    if (flag && missingProfileFields.length === 0) {
+      localStorage.removeItem(bannerKey);
+      setAppliedBanner(false);
+    } else {
+      setAppliedBanner(flag);
+    }
+  }, [bannerKey, missingProfileFields.join(",")]);
+
   useEffect(() => {
     if (!id) return;
     const cfg = window.TAPNE_RUNTIME_CONFIG;
