@@ -195,6 +195,11 @@ const ProfileEdit = () => {
 
         <Card>
           <CardContent className="space-y-5 p-6">
+            {sizeError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {sizeError}
+              </div>
+            )}
             {/* Avatar */}
             <div className={cn("flex items-center gap-4 rounded-lg p-2 -m-2", focused("avatar") && "ring-2 ring-primary/40")}>
               <Avatar className="h-20 w-20">
