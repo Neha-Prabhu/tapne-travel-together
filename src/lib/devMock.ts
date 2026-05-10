@@ -213,6 +213,19 @@ let _mockMsgIdCounter = 100;
 // Track booking status per trip
 const _tripBookingStatus = new Map<number, "open" | "closed" | "full">();
 
+// Per-trip review store (session-scoped)
+const _tripReviews = new Map<number, any[]>();
+function _seedReviews(tripId: number) {
+  if (_tripReviews.has(tripId)) return _tripReviews.get(tripId)!;
+  const seed = [
+    { id: tripId * 1000 + 1, rating: 5, headline: "Unforgettable trip", body: "The host was super organized and the group had amazing energy. Would absolutely do it again.", author_username: "priya_sharma", author_display_name: "Priya Sharma", author_avatar_url: "https://i.pravatar.cc/150?img=5", created_at: "2026-03-12T10:00:00Z", is_mine: false },
+    { id: tripId * 1000 + 2, rating: 4, headline: "Great vibes", body: "Loved the itinerary and the people. A few small hiccups with timing but overall fantastic.", author_username: "karan_singh", author_display_name: "Karan Singh", author_avatar_url: "https://i.pravatar.cc/150?img=15", created_at: "2026-02-28T08:30:00Z", is_mine: false },
+    { id: tripId * 1000 + 3, rating: 5, headline: "", body: "Worth every rupee. Made friends I still talk to.", author_username: "meera_nair", author_display_name: "Meera Nair", author_avatar_url: "https://i.pravatar.cc/150?img=20", created_at: "2026-02-15T14:15:00Z", is_mine: false },
+  ];
+  _tripReviews.set(tripId, seed);
+  return seed;
+}
+
 // Mock participants for host's trips
 function getMockParticipants(tripId: number): ParticipantData[] {
   const trip = MOCK_TRIPS.find(t => t.id === tripId);
