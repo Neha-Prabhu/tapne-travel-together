@@ -141,8 +141,6 @@ const TripDetail = () => {
     { id: "reviews", label: "Reviews" },
   ];
 
-  const { requireAuth } = useAuth();
-
   const requiresApplication = trip.access_type === "apply" || trip.access_type === "invite";
 
   const handleAction = () => {
