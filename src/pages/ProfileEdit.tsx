@@ -27,6 +27,7 @@ const ProfileEdit = () => {
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [website, setWebsite] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [coverPhoto, setCoverPhoto] = useState<string | undefined>(undefined);
