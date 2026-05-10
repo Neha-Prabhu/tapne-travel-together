@@ -152,7 +152,23 @@ const Profile = () => {
   }, [userId, user]);
 
   const p = profileData?.profile;
-  const isHost = (p?.trips_hosted ?? 0) > 0;
+  const isHost = p?.is_host ?? ((p?.trips_hosted ?? 0) > 0);
+  const galleryPhotos = p?.gallery_photos ?? profileData?.gallery ?? [];
+  const coverImage = p?.cover_photo_url || galleryPhotos[0];
+  const reviewsReceived = p?.reviews_received ?? [];
+  const reviewsWritten = p?.reviews_written ?? [];
+  const reviewDistribution = p?.review_distribution ?? { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
+  const completeness = p?.profile_completeness;
+  const [completionDismissed, setCompletionDismissed] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const memberSinceLabel = p?.member_since ? new Date(p.member_since).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
+  const responseLabel = (() => {
+    const h = p?.median_response_hours;
+    if (h == null) return "—";
+    if (h < 1) return "<1h";
+    if (h < 24) return `${Math.round(h)}h`;
+    return `${Math.round(h / 24)}d`;
+  })();
 
   const openEdit = () => {
     if (!p) return;
