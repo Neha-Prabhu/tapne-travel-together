@@ -104,7 +104,7 @@ interface DraftContextType {
   deleteDraft: (id: number) => void;
   duplicateDraft: (id: number) => Promise<number>;
   getDraft: (id: number) => TripDraft | undefined;
-  publishDraft: (id: number, currentFormData?: Record<string, any>) => Promise<void>;
+  publishDraft: (id: number, currentFormData?: Record<string, any>) => Promise<number | null>;
   loading: boolean;
 }
 
