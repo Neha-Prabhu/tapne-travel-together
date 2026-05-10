@@ -504,7 +504,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const id = parseInt(draftPublishMatch[1]);
     const existing = _devDrafts.get(id);
     if (existing) _devDrafts.set(id, { ...existing, is_draft: false, is_published: true });
-    return {};
+    return { trip_id: id, id };
   }
 
   // ── Duplicate trip (published/completed) ──
