@@ -37,7 +37,7 @@ const TripDetail = () => {
   const { tripId } = useParams<{ tripId: string }>();
   const id = tripId;
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, requireAuth } = useAuth();
   const [trip, setTrip] = useState<TripData | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [similarTrips, setSimilarTrips] = useState<TripData[]>([]);
@@ -140,8 +140,6 @@ const TripDetail = () => {
     ...(trip.faqs && trip.faqs.length > 0 ? [{ id: "faqs", label: "FAQs" }] : []),
     { id: "reviews", label: "Reviews" },
   ];
-
-  const { requireAuth } = useAuth();
 
   const requiresApplication = trip.access_type === "apply" || trip.access_type === "invite";
 
