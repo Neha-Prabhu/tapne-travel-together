@@ -464,7 +464,7 @@ const Profile = () => {
           )}
 
           {/* ── Travel tags ── */}
-          {isHost && p.travel_tags && p.travel_tags.length > 0 && (
+          {p.travel_tags && p.travel_tags.length > 0 && (
             <div className="mt-5 flex flex-wrap gap-1.5">
               {p.travel_tags.map((tag) => (
                 <Badge key={tag} variant="outline" className="rounded-full px-3 py-1 text-xs font-normal">{tag}</Badge>
