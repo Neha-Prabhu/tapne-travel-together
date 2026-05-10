@@ -77,6 +77,7 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, init
   const resetForm = () => {
     setStep(0);
     setRating(0);
+    setHeadline("");
     setLoved("");
     setImprove("");
     setTravelAgain("");
