@@ -57,7 +57,7 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, init
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiPost<{ ok: boolean; error?: string }>(
         `${cfg.api.trip_reviews}${tripId}/reviews/`,
-        { rating, body: loved, headline: "" }
+        { rating, body: loved, headline }
       );
       if (data.ok === false && data.error) {
         toast.error(data.error);
