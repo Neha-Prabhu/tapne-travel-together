@@ -282,7 +282,24 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   const reviewMatch = path.match(/^\/trips\/(\d+)\/reviews\/$/);
   if (reviewMatch && method === "POST") {
     const b = body as any;
-    return { ok: true, outcome: "created", review: { id: Date.now(), rating: b?.rating || 5, headline: b?.headline || "", body: b?.body || "", author: _devUser?.display_name || "Dev User", created_at: new Date().toISOString() } };
+    const tripId = parseInt(reviewMatch[1]);
+    const list = _seedReviews(tripId);
+    const username = _devUser?.username || "dev_user";
+    const existingIdx = list.findIndex(r => r.author_username === username);
+    const entry = {
+      id: existingIdx >= 0 ? list[existingIdx].id : Date.now(),
+      rating: b?.rating || 5,
+      headline: b?.headline || "",
+      body: b?.body || "",
+      author_username: username,
+      author_display_name: _devUser?.display_name || "Dev User",
+      author_avatar_url: undefined,
+      created_at: existingIdx >= 0 ? list[existingIdx].created_at : new Date().toISOString(),
+      is_mine: true,
+    };
+    if (existingIdx >= 0) list[existingIdx] = entry;
+    else list.unshift(entry);
+    return { ok: true, outcome: existingIdx >= 0 ? "updated" : "created", review: entry };
   }
 
 
