@@ -98,6 +98,11 @@ function draftToServerPayload(updates: Partial<TripDraft>): Record<string, any> 
     if (fd.paceLevel !== undefined) p.pace_level = fd.paceLevel;
     if (fd.cancellationPolicy !== undefined) p.cancellation_policy = fd.cancellationPolicy;
     if (fd.faqs !== undefined) p.faqs = fd.faqs.map((f: any) => ({ question: f.question, answer: f.answer }));
+    if (fd.accessType !== undefined) p.access_type = fd.accessType;
+    if (fd.customQuestions !== undefined) p.application_questions = fd.customQuestions;
+    if (fd.autoApprove !== undefined) p.auto_approve = fd.autoApprove;
+    if (fd.paymentMethod !== undefined) p.payment_method = fd.paymentMethod;
+    if (fd.paymentDetails !== undefined) p.payment_details = fd.paymentDetails;
   }
   return p;
 }
