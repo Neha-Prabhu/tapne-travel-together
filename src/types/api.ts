@@ -138,6 +138,16 @@ export interface TripData {
   can_review?: boolean;
   payment_method?: "direct_contact" | "show_payment_details";
   payment_details?: string;
+  application_questions?: ApplicationQuestionData[];
+  auto_approve?: boolean;
+}
+
+export interface ApplicationQuestionData {
+  id: string;
+  question: string;
+  type: "short" | "long" | "single_select" | "multiple_choice";
+  required: boolean;
+  options?: string[];
 }
 
 export interface ReviewEntry {
