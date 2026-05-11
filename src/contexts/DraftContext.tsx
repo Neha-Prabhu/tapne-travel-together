@@ -53,6 +53,11 @@ function tripDataToDraft(t: TripData): TripDraft {
       paceLevel: t.pace_level || "",
       cancellationPolicy: t.cancellation_policy || "",
       faqs: (t.faqs || []).map((f, i) => ({ id: `f${i}`, question: f.question, answer: f.answer })),
+      accessType: t.access_type || "open",
+      customQuestions: t.application_questions || [],
+      autoApprove: t.auto_approve || false,
+      paymentMethod: t.payment_method || "direct_contact",
+      paymentDetails: t.payment_details || "",
     },
   };
 }
