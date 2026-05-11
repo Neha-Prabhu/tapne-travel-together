@@ -335,6 +335,8 @@ const CreateTrip = () => {
     if (fd.hosts) setHosts(fd.hosts);
     if (fd.customQuestions) setCustomQuestions(fd.customQuestions);
     if (fd.autoApprove !== undefined) setAutoApprove(fd.autoApprove);
+    if (fd.paymentMethod) setPaymentMethod(fd.paymentMethod);
+    if (fd.paymentDetails !== undefined) setPaymentDetails(fd.paymentDetails);
   }, [draftId, draftIdParam, getDraft]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
