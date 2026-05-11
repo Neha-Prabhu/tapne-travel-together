@@ -374,7 +374,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   const tripDetailMatch = path.match(/^\/trips\/(\d+)\/$/);
   if (method === "GET" && tripDetailMatch) {
     const id = parseInt(tripDetailMatch[1]);
-    const trip = MOCK_TRIPS.find(t => t.id === id) ?? MOCK_TRIPS[0];
+    const trip = MOCK_TRIPS.find(t => t.id === id) ?? _devDrafts.get(id) ?? MOCK_TRIPS[0];
     const isHost = _devUser && trip.host_username === _devUser.username;
     const username = _devUser?.username;
     const reviews = _seedReviews(trip.id).map(r => ({ ...r, is_mine: !!username && r.author_username === username }));
