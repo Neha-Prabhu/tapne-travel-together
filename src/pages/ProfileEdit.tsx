@@ -75,22 +75,23 @@ const ProfileEdit = () => {
     }
   }, [user]);
 
-  // Scroll to first focused field after data loads
+  // Scroll to currently-focused walkthrough field
+  const avatarRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!user || focusFields.length === 0) return;
-    const target = focusFields[0];
+    if (!user || !currentFocus) return;
     const map: Record<string, React.RefObject<HTMLElement>> = {
+      avatar: avatarRef,
       bio: bioRef,
       location: locationRef,
       cover_photo: coverRef,
       gallery_photos: galleryRef,
     };
-    const ref = map[target];
+    const ref = map[currentFocus];
     if (ref?.current) {
       setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
       if ("focus" in (ref.current as any)) (ref.current as any).focus?.();
     }
-  }, [user]);
+  }, [user, currentFocus]);
 
   const toggleTag = (t: string) => setTags(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
 
