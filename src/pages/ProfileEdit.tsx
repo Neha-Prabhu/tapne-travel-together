@@ -201,7 +201,7 @@ const ProfileEdit = () => {
     );
   }
 
-  const focused = (k: string) => focusFields.includes(k);
+  const focused = (k: string) => currentFocus === k;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -212,6 +212,36 @@ const ProfileEdit = () => {
         </Button>
         <h1 className="mb-6 text-2xl font-bold text-foreground">Edit Profile</h1>
 
+        {currentFocus && (
+          <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-3">
+                <Lightbulb className="h-5 w-5 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">
+                    {FIELD_LABELS[currentFocus] || currentFocus}
+                    {focusFields.length > 1 && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({walkIndex + 1} of {focusFields.length})
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-muted-foreground">{FIELD_HELP[currentFocus] || "Add this to make your profile more complete."}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 sm:shrink-0">
+                <Button size="sm" variant="outline" disabled={walkIndex === 0} onClick={() => setWalkIndex(i => Math.max(0, i - 1))}>
+                  <ChevronLeft className="h-4 w-4" /> Previous
+                </Button>
+                <Button size="sm" variant="outline" disabled={walkIndex >= focusFields.length - 1} onClick={() => setWalkIndex(i => Math.min(focusFields.length - 1, i + 1))}>
+                  Next <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setWalkDismissed(true)}>Dismiss</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Card>
           <CardContent className="space-y-5 p-6">
             {sizeError && (
@@ -220,7 +250,7 @@ const ProfileEdit = () => {
               </div>
             )}
             {/* Avatar */}
-            <div className={cn("flex items-center gap-4 rounded-lg p-2 -m-2", focused("avatar") && "ring-2 ring-primary/40")}>
+            <div ref={avatarRef} className={cn("flex items-center gap-4 rounded-lg p-2 -m-2 transition-all", focused("avatar") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarUrl} />
                 <AvatarFallback className="text-2xl bg-accent text-accent-foreground">{name[0]?.toUpperCase() || "?"}</AvatarFallback>
