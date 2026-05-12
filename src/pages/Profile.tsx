@@ -310,10 +310,35 @@ const Profile = () => {
       <Navbar />
 
       <main className="flex-1">
+        {/* ── Completion Banner (above cover, never overlaps avatar) ── */}
+        {showCompletionBanner && (
+          <div className="border-b border-primary/20 bg-primary/5">
+            <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex gap-3">
+                <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">Complete your host profile to build trust with travelers</p>
+                  <p className="mt-0.5 text-muted-foreground">
+                    Missing: {(completeness?.missing_fields ?? []).map(f => missingLabels[f] || f).join(", ")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 sm:shrink-0">
+                <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${(completeness?.missing_fields ?? []).join(",")}`)}>
+                  Complete profile
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setCompletionDismissed(true)}>
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Cover Hero (every member) ── */}
         <div className="relative h-48 w-full overflow-hidden bg-muted sm:h-64 md:h-80">
           {coverImage ? (
-            <img src={coverImage} alt="" className="h-full w-full object-cover" />
+            <img src={coverImage} alt="" className="h-full w-full object-cover object-center" />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
           )}
@@ -321,30 +346,6 @@ const Profile = () => {
         </div>
 
         <div className="mx-auto max-w-5xl px-4 pb-12 pt-6 sm:pt-8">
-          {/* ── Completion Banner (host's own profile) ── */}
-          {showCompletionBanner && (
-            <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex gap-3">
-                  <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">Complete your host profile to build trust with travelers</p>
-                    <p className="mt-0.5 text-muted-foreground">
-                      Missing: {(completeness?.missing_fields ?? []).map(f => missingLabels[f] || f).join(", ")}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 sm:shrink-0">
-                  <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${(completeness?.missing_fields ?? []).join(",")}`)}>
-                    Complete profile
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setCompletionDismissed(true)}>
-                    Dismiss
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ── Profile Header ── */}
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
