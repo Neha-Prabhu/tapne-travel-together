@@ -262,7 +262,7 @@ const ProfileEdit = () => {
             </div>
 
             {/* Cover photo */}
-            <div ref={coverRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("cover_photo") && "ring-2 ring-primary/40")}>
+            <div ref={coverRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("cover_photo") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Cover photo</Label>
               <div className="relative h-40 w-full overflow-hidden rounded-lg border bg-muted">
                 {coverPhoto ? (
@@ -291,11 +291,11 @@ const ProfileEdit = () => {
               <Label>Display name</Label>
               <Input value={name} onChange={e => setName(e.target.value)} />
             </div>
-            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("bio") && "ring-2 ring-primary/40")}>
+            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("bio") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Bio</Label>
               <Textarea ref={bioRef} value={bio} onChange={e => setBio(e.target.value)} rows={4} />
             </div>
-            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("location") && "ring-2 ring-primary/40")}>
+            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("location") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Location</Label>
               <Input ref={locationRef} value={location} onChange={e => setLocation(e.target.value)} />
             </div>
@@ -314,7 +314,7 @@ const ProfileEdit = () => {
             </div>
 
             {/* Gallery photos */}
-            <div ref={galleryRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("gallery_photos") && "ring-2 ring-primary/40")}>
+            <div ref={galleryRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("gallery_photos") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Gallery photos</Label>
               <p className="text-xs text-muted-foreground">Up to 12 photos. Reorder with arrows.</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
