@@ -364,11 +364,6 @@ const Profile = () => {
                     <Award className="h-3 w-3" /> Host
                   </Badge>
                 )}
-                {isHost && memberSinceLabel && (
-                  <Badge variant="outline" className="gap-1 text-xs font-normal">
-                    <Calendar className="h-3 w-3" /> Member since {memberSinceLabel}
-                  </Badge>
-                )}
               </div>
               <p className="text-xs text-muted-foreground">@{p.username}</p>
               {p.location && (
@@ -379,29 +374,31 @@ const Profile = () => {
               {p.bio && (
                 <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">{p.bio}</p>
               )}
+              {p.travel_tags && p.travel_tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {p.travel_tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="rounded-full px-3 py-1 text-xs font-normal">{tag}</Badge>
+                  ))}
+                </div>
+              )}
               {(p.website || p.instagram_url) && (
                 <div className="flex flex-wrap items-center gap-3 pt-1 text-sm">
                   {p.website && (
-                    <a
-                      href={p.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
-                    >
+                    <a href={p.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
                       <Globe className="h-3.5 w-3.5" /> Website
                     </a>
                   )}
                   {p.instagram_url && (
-                    <a
-                      href={p.instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
-                    >
+                    <a href={p.instagram_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
                       <Instagram className="h-3.5 w-3.5" /> Instagram
                     </a>
                   )}
                 </div>
+              )}
+              {memberSinceLabel && (
+                <p className="flex items-center gap-1 pt-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" /> Member since {memberSinceLabel}
+                </p>
               )}
             </div>
 
@@ -464,14 +461,6 @@ const Profile = () => {
             </div>
           )}
 
-          {/* ── Travel tags ── */}
-          {p.travel_tags && p.travel_tags.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-1.5">
-              {p.travel_tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="rounded-full px-3 py-1 text-xs font-normal">{tag}</Badge>
-              ))}
-            </div>
-          )}
 
           {/* ── Curated Gallery (host only) ── */}
           {isHost && galleryPhotos.length > 0 && (
