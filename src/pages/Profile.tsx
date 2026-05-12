@@ -163,6 +163,9 @@ const Profile = () => {
   const completeness = p?.profile_completeness;
   const [completionDismissed, setCompletionDismissed] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [reviewSort, setReviewSort] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
+  const [reviewPage, setReviewPage] = useState(1);
+  const REVIEWS_PER_PAGE = 5;
   const memberSinceLabel = p?.member_since ? new Date(p.member_since).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
   const responseLabel = (() => {
     const h = p?.median_response_hours;
