@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Loader2, Save, Eye, ArrowLeft, Camera, ImagePlus, X, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, Save, Eye, ArrowLeft, Camera, ImagePlus, X, ArrowUp, ArrowDown, Lightbulb, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TRAVEL_TAGS = ["Backpacking", "Culture", "Trek", "Social", "Workation", "Beach", "Mountains", "Photography", "Food", "Wellness", "Adventure", "Road Trip", "Solo", "Luxury", "Budget"];
