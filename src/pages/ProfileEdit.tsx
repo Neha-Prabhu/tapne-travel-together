@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Loader2, Save, Eye, ArrowLeft, Camera, ImagePlus, X, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, Save, Eye, ArrowLeft, Camera, ImagePlus, X, ArrowUp, ArrowDown, Lightbulb, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TRAVEL_TAGS = ["Backpacking", "Culture", "Trek", "Social", "Workation", "Beach", "Mountains", "Photography", "Food", "Wellness", "Adventure", "Road Trip", "Solo", "Luxury", "Budget"];
@@ -22,6 +22,24 @@ const ProfileEdit = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isPreview = searchParams.get("mode") === "preview";
   const focusFields = (searchParams.get("focus") || "").split(",").filter(Boolean);
+  const [walkIndex, setWalkIndex] = useState(0);
+  const [walkDismissed, setWalkDismissed] = useState(false);
+  const currentFocus = !walkDismissed && focusFields.length > 0 ? focusFields[walkIndex] : null;
+
+  const FIELD_HELP: Record<string, string> = {
+    avatar: "A clear profile photo helps travelers recognize and trust you.",
+    bio: "A short bio gives travelers a feel for who you are and your travel style.",
+    location: "Your home base helps travelers find hosts near them.",
+    cover_photo: "A cover photo sets the tone of your profile and makes it memorable.",
+    gallery_photos: "Gallery photos help travelers quickly understand what your trips look like.",
+  };
+  const FIELD_LABELS: Record<string, string> = {
+    avatar: "Profile photo",
+    bio: "Short bio",
+    location: "Location",
+    cover_photo: "Cover photo",
+    gallery_photos: "Gallery photos",
+  };
 
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
@@ -57,22 +75,23 @@ const ProfileEdit = () => {
     }
   }, [user]);
 
-  // Scroll to first focused field after data loads
+  // Scroll to currently-focused walkthrough field
+  const avatarRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!user || focusFields.length === 0) return;
-    const target = focusFields[0];
+    if (!user || !currentFocus) return;
     const map: Record<string, React.RefObject<HTMLElement>> = {
+      avatar: avatarRef,
       bio: bioRef,
       location: locationRef,
       cover_photo: coverRef,
       gallery_photos: galleryRef,
     };
-    const ref = map[target];
+    const ref = map[currentFocus];
     if (ref?.current) {
       setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
       if ("focus" in (ref.current as any)) (ref.current as any).focus?.();
     }
-  }, [user]);
+  }, [user, currentFocus]);
 
   const toggleTag = (t: string) => setTags(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
 
@@ -182,7 +201,7 @@ const ProfileEdit = () => {
     );
   }
 
-  const focused = (k: string) => focusFields.includes(k);
+  const focused = (k: string) => currentFocus === k;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -193,6 +212,36 @@ const ProfileEdit = () => {
         </Button>
         <h1 className="mb-6 text-2xl font-bold text-foreground">Edit Profile</h1>
 
+        {currentFocus && (
+          <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-3">
+                <Lightbulb className="h-5 w-5 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">
+                    {FIELD_LABELS[currentFocus] || currentFocus}
+                    {focusFields.length > 1 && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({walkIndex + 1} of {focusFields.length})
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-muted-foreground">{FIELD_HELP[currentFocus] || "Add this to make your profile more complete."}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 sm:shrink-0">
+                <Button size="sm" variant="outline" disabled={walkIndex === 0} onClick={() => setWalkIndex(i => Math.max(0, i - 1))}>
+                  <ChevronLeft className="h-4 w-4" /> Previous
+                </Button>
+                <Button size="sm" variant="outline" disabled={walkIndex >= focusFields.length - 1} onClick={() => setWalkIndex(i => Math.min(focusFields.length - 1, i + 1))}>
+                  Next <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setWalkDismissed(true)}>Dismiss</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Card>
           <CardContent className="space-y-5 p-6">
             {sizeError && (
@@ -201,7 +250,7 @@ const ProfileEdit = () => {
               </div>
             )}
             {/* Avatar */}
-            <div className={cn("flex items-center gap-4 rounded-lg p-2 -m-2", focused("avatar") && "ring-2 ring-primary/40")}>
+            <div ref={avatarRef} className={cn("flex items-center gap-4 rounded-lg p-2 -m-2 transition-all", focused("avatar") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarUrl} />
                 <AvatarFallback className="text-2xl bg-accent text-accent-foreground">{name[0]?.toUpperCase() || "?"}</AvatarFallback>
@@ -213,7 +262,7 @@ const ProfileEdit = () => {
             </div>
 
             {/* Cover photo */}
-            <div ref={coverRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("cover_photo") && "ring-2 ring-primary/40")}>
+            <div ref={coverRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("cover_photo") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Cover photo</Label>
               <div className="relative h-40 w-full overflow-hidden rounded-lg border bg-muted">
                 {coverPhoto ? (
@@ -242,11 +291,11 @@ const ProfileEdit = () => {
               <Label>Display name</Label>
               <Input value={name} onChange={e => setName(e.target.value)} />
             </div>
-            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("bio") && "ring-2 ring-primary/40")}>
+            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("bio") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Bio</Label>
               <Textarea ref={bioRef} value={bio} onChange={e => setBio(e.target.value)} rows={4} />
             </div>
-            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("location") && "ring-2 ring-primary/40")}>
+            <div className={cn("space-y-1.5 rounded-lg p-2 -m-2", focused("location") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Location</Label>
               <Input ref={locationRef} value={location} onChange={e => setLocation(e.target.value)} />
             </div>
@@ -265,7 +314,7 @@ const ProfileEdit = () => {
             </div>
 
             {/* Gallery photos */}
-            <div ref={galleryRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("gallery_photos") && "ring-2 ring-primary/40")}>
+            <div ref={galleryRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("gallery_photos") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Gallery photos</Label>
               <p className="text-xs text-muted-foreground">Up to 12 photos. Reorder with arrows.</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">

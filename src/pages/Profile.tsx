@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -162,6 +163,9 @@ const Profile = () => {
   const completeness = p?.profile_completeness;
   const [completionDismissed, setCompletionDismissed] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [reviewSort, setReviewSort] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
+  const [reviewPage, setReviewPage] = useState(1);
+  const REVIEWS_PER_PAGE = 5;
   const memberSinceLabel = p?.member_since ? new Date(p.member_since).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
   const responseLabel = (() => {
     const h = p?.median_response_hours;
@@ -310,10 +314,35 @@ const Profile = () => {
       <Navbar />
 
       <main className="flex-1">
+        {/* ── Completion Banner (above cover, never overlaps avatar) ── */}
+        {showCompletionBanner && (
+          <div className="border-b border-primary/20 bg-primary/5">
+            <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex gap-3">
+                <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">Complete your host profile to build trust with travelers</p>
+                  <p className="mt-0.5 text-muted-foreground">
+                    Missing: {(completeness?.missing_fields ?? []).map(f => missingLabels[f] || f).join(", ")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 sm:shrink-0">
+                <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${(completeness?.missing_fields ?? []).join(",")}`)}>
+                  Complete profile
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setCompletionDismissed(true)}>
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Cover Hero (every member) ── */}
         <div className="relative h-48 w-full overflow-hidden bg-muted sm:h-64 md:h-80">
           {coverImage ? (
-            <img src={coverImage} alt="" className="h-full w-full object-cover" />
+            <img src={coverImage} alt="" className="h-full w-full object-cover object-center" />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
           )}
@@ -321,30 +350,6 @@ const Profile = () => {
         </div>
 
         <div className="mx-auto max-w-5xl px-4 pb-12 pt-6 sm:pt-8">
-          {/* ── Completion Banner (host's own profile) ── */}
-          {showCompletionBanner && (
-            <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex gap-3">
-                  <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">Complete your host profile to build trust with travelers</p>
-                    <p className="mt-0.5 text-muted-foreground">
-                      Missing: {(completeness?.missing_fields ?? []).map(f => missingLabels[f] || f).join(", ")}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 sm:shrink-0">
-                  <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${(completeness?.missing_fields ?? []).join(",")}`)}>
-                    Complete profile
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setCompletionDismissed(true)}>
-                    Dismiss
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* ── Profile Header ── */}
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
@@ -363,11 +368,6 @@ const Profile = () => {
                     <Award className="h-3 w-3" /> Host
                   </Badge>
                 )}
-                {isHost && memberSinceLabel && (
-                  <Badge variant="outline" className="gap-1 text-xs font-normal">
-                    <Calendar className="h-3 w-3" /> Member since {memberSinceLabel}
-                  </Badge>
-                )}
               </div>
               <p className="text-xs text-muted-foreground">@{p.username}</p>
               {p.location && (
@@ -378,29 +378,31 @@ const Profile = () => {
               {p.bio && (
                 <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">{p.bio}</p>
               )}
+              {p.travel_tags && p.travel_tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {p.travel_tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="rounded-full px-3 py-1 text-xs font-normal">{tag}</Badge>
+                  ))}
+                </div>
+              )}
               {(p.website || p.instagram_url) && (
                 <div className="flex flex-wrap items-center gap-3 pt-1 text-sm">
                   {p.website && (
-                    <a
-                      href={p.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
-                    >
+                    <a href={p.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
                       <Globe className="h-3.5 w-3.5" /> Website
                     </a>
                   )}
                   {p.instagram_url && (
-                    <a
-                      href={p.instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline"
-                    >
+                    <a href={p.instagram_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
                       <Instagram className="h-3.5 w-3.5" /> Instagram
                     </a>
                   )}
                 </div>
+              )}
+              {memberSinceLabel && (
+                <p className="flex items-center gap-1 pt-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" /> Member since {memberSinceLabel}
+                </p>
               )}
             </div>
 
@@ -463,30 +465,22 @@ const Profile = () => {
             </div>
           )}
 
-          {/* ── Travel tags ── */}
-          {p.travel_tags && p.travel_tags.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-1.5">
-              {p.travel_tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="rounded-full px-3 py-1 text-xs font-normal">{tag}</Badge>
-              ))}
-            </div>
-          )}
 
-          {/* ── Curated Gallery (host only) ── */}
+          {/* ── Curated Gallery (host only) — horizontal carousel ── */}
           {isHost && galleryPhotos.length > 0 && (
             <div className="mt-8">
               <h2 className="mb-3 text-base font-semibold text-foreground">Gallery</h2>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {galleryPhotos.slice(0, 8).map((url, i) => (
+              <HorizontalCarousel>
+                {galleryPhotos.map((url, i) => (
                   <button
                     key={i}
                     onClick={() => setLightboxIndex(i)}
-                    className="aspect-square overflow-hidden rounded-xl bg-muted transition-opacity hover:opacity-90"
+                    className="aspect-square w-[180px] shrink-0 overflow-hidden rounded-xl bg-muted transition-opacity hover:opacity-90 sm:w-[220px]"
                   >
-                    <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <img src={url} alt="" className="h-full w-full object-cover object-center" loading="lazy" />
                   </button>
                 ))}
-              </div>
+              </HorizontalCarousel>
             </div>
           )}
 
@@ -499,38 +493,56 @@ const Profile = () => {
             </TabsList>
 
             <TabsContent value="trips" className="mt-6 space-y-8">
-              {isHost && tripsHosted.length > 0 && (
-                <div>
-                  <h2 className="mb-4 text-lg font-semibold text-foreground">Trips Hosted</h2>
-                  <HorizontalCarousel>
-                    {tripsHosted.map((t) => (
-                      <div key={t.id} className="relative w-[280px] shrink-0 sm:w-[320px]">
-                        <TripCard trip={t} />
-                        {(t.status as string) === "completed" && (
-                          <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
-                            <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </HorizontalCarousel>
-                </div>
-              )}
-              {tripsJoined.length > 0 && (
-                <div>
-                  <h2 className="mb-4 text-lg font-semibold text-foreground">Trips Joined</h2>
-                  <HorizontalCarousel>
-                    {tripsJoined.map((t) => (
-                      <div key={t.id} className="relative w-[280px] shrink-0 sm:w-[320px]">
-                        <TripCard trip={t} />
-                      </div>
-                    ))}
-                  </HorizontalCarousel>
-                </div>
-              )}
-              {tripsHosted.length === 0 && tripsJoined.length === 0 && (
-                <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost && isOwner ? { label: "Host your first trip", to: "/trips/new" } : undefined} />
-              )}
+              {(() => {
+                const now = Date.now();
+                const isPast = (t: TripData) => {
+                  if (t.status === "completed") return true;
+                  if (t.starts_at) return new Date(t.starts_at).getTime() < now;
+                  return false;
+                };
+                const allTrips = [
+                  ...tripsHosted.map(t => ({ trip: t, role: "hosted" as const })),
+                  ...tripsJoined.map(t => ({ trip: t, role: "joined" as const })),
+                ];
+                const upcoming = allTrips.filter(x => !isPast(x.trip));
+                const past = allTrips.filter(x => isPast(x.trip));
+
+                const renderGroup = (label: string, items: typeof allTrips) => (
+                  items.length > 0 && (
+                    <div>
+                      <h2 className="mb-4 text-lg font-semibold text-foreground">{label}</h2>
+                      <HorizontalCarousel>
+                        {items.map(({ trip: t, role }) => (
+                          <div key={`${role}-${t.id}`} className="relative w-[280px] shrink-0 sm:w-[320px]">
+                            <TripCard trip={t} />
+                            <Badge
+                              variant={role === "hosted" ? "default" : "secondary"}
+                              className="absolute left-2 top-2 z-10 text-xs"
+                            >
+                              {role === "hosted" ? "Hosted" : "Joined"}
+                            </Badge>
+                            {(t.status as string) === "completed" && (
+                              <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
+                                <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </HorizontalCarousel>
+                    </div>
+                  )
+                );
+
+                if (allTrips.length === 0) {
+                  return <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost && isOwner ? { label: "Host your first trip", to: "/trips/new" } : undefined} />;
+                }
+                return (
+                  <>
+                    {renderGroup("Upcoming trips", upcoming)}
+                    {renderGroup("Past trips", past)}
+                  </>
+                );
+              })()}
             </TabsContent>
 
             <TabsContent value="reviews" className="mt-6 space-y-6">
@@ -555,59 +567,97 @@ const Profile = () => {
                 </Card>
               )}
 
-              {(isHost ? reviewsReceived : reviewsWritten).length > 0 ? (
-                <div className="space-y-4">
-                  {(isHost ? reviewsReceived : reviewsWritten)
-                    .slice()
-                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                    .map((r) => (
-                      <Card key={r.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <Avatar className="h-9 w-9 shrink-0">
-                              <AvatarImage src={r.author_avatar_url} />
-                              <AvatarFallback className="bg-accent text-xs text-accent-foreground">{r.author_display_name?.[0] ?? "?"}</AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-medium text-foreground">{r.author_display_name}</span>
-                                <div className="flex items-center gap-0.5">
-                                  {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star key={i} className={`h-3 w-3 ${i < r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
-                                  ))}
+              {(() => {
+                const all = (isHost ? reviewsReceived : reviewsWritten).slice();
+                if (all.length === 0) {
+                  return <EmptyState message={isHost ? "No reviews yet" : "No reviews written yet"} />;
+                }
+                all.sort((a, b) => {
+                  if (reviewSort === "newest") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                  if (reviewSort === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                  if (reviewSort === "highest") return b.rating - a.rating;
+                  return a.rating - b.rating;
+                });
+                const totalPages = Math.max(1, Math.ceil(all.length / REVIEWS_PER_PAGE));
+                const page = Math.min(reviewPage, totalPages);
+                const pageItems = all.slice((page - 1) * REVIEWS_PER_PAGE, page * REVIEWS_PER_PAGE);
+
+                return (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">{all.length} review{all.length !== 1 ? "s" : ""}</p>
+                      <Select value={reviewSort} onValueChange={(v) => { setReviewSort(v as typeof reviewSort); setReviewPage(1); }}>
+                        <SelectTrigger className="h-8 w-[160px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="newest">Newest first</SelectItem>
+                          <SelectItem value="oldest">Oldest first</SelectItem>
+                          <SelectItem value="highest">Highest rating</SelectItem>
+                          <SelectItem value="lowest">Lowest rating</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-4">
+                      {pageItems.map((r) => (
+                        <Card key={r.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <Avatar className="h-9 w-9 shrink-0">
+                                <AvatarImage src={r.author_avatar_url} />
+                                <AvatarFallback className="bg-accent text-xs text-accent-foreground">{r.author_display_name?.[0] ?? "?"}</AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-sm font-medium text-foreground">{r.author_display_name}</span>
+                                  <div className="flex items-center gap-0.5">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <Star key={i} className={`h-3 w-3 ${i < r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    · {new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                  </span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">
-                                  · {new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                                </span>
+                                {r.headline && <p className="mt-1 text-sm font-semibold text-foreground">{r.headline}</p>}
+                                <p className="mt-1 text-sm text-foreground/80">{r.body}</p>
+                                {r.trip_title && r.trip_url && (
+                                  <Link to={r.trip_url} className="mt-1.5 inline-block text-xs text-primary hover:underline">
+                                    on {r.trip_title}
+                                  </Link>
+                                )}
                               </div>
-                              {r.headline && <p className="mt-1 text-sm font-semibold text-foreground">{r.headline}</p>}
-                              <p className="mt-1 text-sm text-foreground/80">{r.body}</p>
-                              {r.trip_title && r.trip_url && (
-                                <Link to={r.trip_url} className="mt-1.5 inline-block text-xs text-primary hover:underline">
-                                  on {r.trip_title}
-                                </Link>
-                              )}
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                </div>
-              ) : (
-                <EmptyState message={isHost ? "No reviews yet" : "No reviews written yet"} />
-              )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 pt-2">
+                        <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setReviewPage(p => Math.max(1, p - 1))}>
+                          Previous
+                        </Button>
+                        <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
+                        <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setReviewPage(p => Math.min(totalPages, p + 1))}>
+                          Next
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </TabsContent>
 
             {isHost && (
               <TabsContent value="stories" className="mt-6">
                 {stories.length > 0 ? (
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <HorizontalCarousel>
                     {stories.map((story) => (
-                      <Link key={story.slug} to={`/stories/${story.slug}`} className="block">
-                        <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
+                      <Link key={story.slug} to={`/stories/${story.slug}`} className="block w-[280px] shrink-0 sm:w-[320px]">
+                        <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
                           {story.cover_image_url && (
                             <div className="relative aspect-[16/10] overflow-hidden">
-                              <img src={story.cover_image_url} alt={story.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                              <img src={story.cover_image_url} alt={story.title} className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105" />
                             </div>
                           )}
                           <CardContent className="p-4">
@@ -625,7 +675,7 @@ const Profile = () => {
                         </Card>
                       </Link>
                     ))}
-                  </div>
+                  </HorizontalCarousel>
                 ) : (
                   <EmptyState message="No stories shared yet" />
                 )}
