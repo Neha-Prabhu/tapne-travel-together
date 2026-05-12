@@ -22,6 +22,24 @@ const ProfileEdit = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isPreview = searchParams.get("mode") === "preview";
   const focusFields = (searchParams.get("focus") || "").split(",").filter(Boolean);
+  const [walkIndex, setWalkIndex] = useState(0);
+  const [walkDismissed, setWalkDismissed] = useState(false);
+  const currentFocus = !walkDismissed && focusFields.length > 0 ? focusFields[walkIndex] : null;
+
+  const FIELD_HELP: Record<string, string> = {
+    avatar: "A clear profile photo helps travelers recognize and trust you.",
+    bio: "A short bio gives travelers a feel for who you are and your travel style.",
+    location: "Your home base helps travelers find hosts near them.",
+    cover_photo: "A cover photo sets the tone of your profile and makes it memorable.",
+    gallery_photos: "Gallery photos help travelers quickly understand what your trips look like.",
+  };
+  const FIELD_LABELS: Record<string, string> = {
+    avatar: "Profile photo",
+    bio: "Short bio",
+    location: "Location",
+    cover_photo: "Cover photo",
+    gallery_photos: "Gallery photos",
+  };
 
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
