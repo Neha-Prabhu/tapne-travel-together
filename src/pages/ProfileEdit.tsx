@@ -21,7 +21,9 @@ const ProfileEdit = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const isPreview = searchParams.get("mode") === "preview";
-  const focusFields = (searchParams.get("focus") || "").split(",").filter(Boolean);
+  const FIELD_ALIASES: Record<string, string> = { avatar_url: "avatar" };
+  const rawFocus = (searchParams.get("focus") || "").split(",").filter(Boolean);
+  const focusFields = Array.from(new Set(rawFocus.map(f => FIELD_ALIASES[f] || f)));
   const [walkIndex, setWalkIndex] = useState(0);
   const [walkDismissed, setWalkDismissed] = useState(false);
   const currentFocus = !walkDismissed && focusFields.length > 0 ? focusFields[walkIndex] : null;
@@ -32,6 +34,7 @@ const ProfileEdit = () => {
     location: "Your home base helps travelers find hosts near them.",
     cover_photo: "A cover photo sets the tone of your profile and makes it memorable.",
     gallery_photos: "Gallery photos help travelers quickly understand what your trips look like.",
+    travel_tags: "Travel tags help travelers understand your travel style and the kinds of trips you host.",
   };
   const FIELD_LABELS: Record<string, string> = {
     avatar: "Profile photo",
@@ -39,6 +42,7 @@ const ProfileEdit = () => {
     location: "Location",
     cover_photo: "Cover photo",
     gallery_photos: "Gallery photos",
+    travel_tags: "Travel tags",
   };
 
   const [name, setName] = useState("");
