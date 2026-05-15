@@ -330,12 +330,12 @@ const Profile = () => {
                 <div className="text-sm">
                   <p className="font-medium text-foreground">Complete your host profile to build trust with travelers</p>
                   <p className="mt-0.5 text-muted-foreground">
-                    Missing: {(completeness?.missing_fields ?? []).map(f => missingLabels[f] || f).join(", ")}
+                    Missing: {normalizedMissing.map(f => missingLabels[f] || f).join(", ")}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:shrink-0">
-                <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${(completeness?.missing_fields ?? []).join(",")}`)}>
+                <Button size="sm" onClick={() => navigate(`/profile/edit?focus=${normalizedMissing.join(",")}`)}>
                   Complete profile
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setCompletionDismissed(true)}>
