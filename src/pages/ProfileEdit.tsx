@@ -352,7 +352,7 @@ const ProfileEdit = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div ref={tagsRef} className={cn("space-y-2 rounded-lg p-2 -m-2 transition-all", focused("travel_tags") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Label>Travel tags</Label>
               <div className="flex flex-wrap gap-1.5">
                 {TRAVEL_TAGS.map(t => (
