@@ -301,12 +301,19 @@ const Profile = () => {
   });
 
   const showCompletionBanner = isOwner && isHost && completeness && !completeness.is_complete && !completionDismissed;
+  const fieldAliases: Record<string, string> = {
+    avatar_url: "avatar",
+  };
+  const normalizedMissing = Array.from(new Set(
+    (completeness?.missing_fields ?? []).map(f => fieldAliases[f] || f)
+  ));
   const missingLabels: Record<string, string> = {
-    avatar: "profile photo",
-    bio: "short bio",
-    location: "location",
-    cover_photo: "cover photo",
-    gallery_photos: "gallery photos",
+    avatar: "Profile photo",
+    bio: "Short bio",
+    location: "Location",
+    cover_photo: "Cover photo",
+    gallery_photos: "Gallery photos",
+    travel_tags: "Travel tags",
   };
 
   return (
