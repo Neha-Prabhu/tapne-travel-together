@@ -90,6 +90,7 @@ const ProfileEdit = () => {
       location: locationRef,
       cover_photo: coverRef,
       gallery_photos: galleryRef,
+      travel_tags: tagsRef,
     };
     const ref = map[currentFocus];
     if (ref?.current) {
