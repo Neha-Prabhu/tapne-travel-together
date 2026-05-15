@@ -60,6 +60,7 @@ const ProfileEdit = () => {
   const locationRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
+  const tagsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isAuthenticated) requireAuth(() => {});
