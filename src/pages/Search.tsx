@@ -502,6 +502,19 @@ const SearchPage = () => {
     updateParams({ destination: null });
   };
 
+  const clearHost = () => {
+    setHostFilter("");
+    updateParams({ host: null });
+  };
+
+  const hostDisplay = useMemo(() => {
+    if (!hostFilter) return "";
+    const match = trips.find(
+      (t) => (t.host_username || "").toLowerCase() === hostFilter.toLowerCase(),
+    );
+    return match?.host_display_name || hostFilter;
+  }, [trips, hostFilter]);
+
   // ── Pagination ─────────────────────────────────────────────────────────
   const paginate = <T,>(items: T[]) => {
     const total = items.length;
