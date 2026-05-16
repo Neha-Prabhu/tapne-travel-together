@@ -198,6 +198,7 @@ const SearchPage = () => {
     setSubmitted(q);
     const destParam = searchParams.get("destination") || "";
     setDestination(destParam);
+    setHostFilter(searchParams.get("host") || "");
     // Mirror handleDestinationClick: arriving with a destination under Trips
     // resets trip filters + sort so every destination-entry path lands in the
     // exact same browser-visible Trips arrival state.
