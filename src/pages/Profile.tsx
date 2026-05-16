@@ -534,17 +534,19 @@ const Profile = () => {
                         {items.map(({ trip: t, role }) => (
                           <div key={`${role}-${t.id}`} className="relative w-[280px] shrink-0 sm:w-[320px]">
                             <TripCard trip={t} />
-                            <Badge
-                              variant={role === "hosted" ? "default" : "secondary"}
-                              className="absolute bottom-[88px] left-3 z-10 text-xs shadow-sm"
-                            >
-                              {role === "hosted" ? "Hosted" : "Joined"}
-                            </Badge>
                             {(t.status as string) === "completed" && (
                               <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
                                 <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
                               </Badge>
                             )}
+                            <div className="mt-2 flex items-center">
+                              <Badge
+                                variant={role === "hosted" ? "default" : "secondary"}
+                                className="text-[11px]"
+                              >
+                                {role === "hosted" ? "Hosted" : "Joined"}
+                              </Badge>
+                            </div>
                           </div>
                         ))}
                       </HorizontalCarousel>
