@@ -240,7 +240,7 @@ const SearchPage = () => {
         setPeople(d.users || []),
       ),
     ]).finally(() => setLoading(false));
-  }, [submitted, destination]);
+  }, [submitted, destination, hostFilter]);
 
   // Reset page on any control change
   useEffect(() => {
