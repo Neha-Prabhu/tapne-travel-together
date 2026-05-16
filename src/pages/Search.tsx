@@ -279,6 +279,10 @@ const SearchPage = () => {
   // ── Filtering ──────────────────────────────────────────────────────────
   const filteredTrips = useMemo(() => {
     let out = trips;
+    if (hostFilter) {
+      const h = hostFilter.toLowerCase();
+      out = out.filter((t) => (t.host_username || "").toLowerCase() === h);
+    }
     const f = tripFilters;
     if (f.origin) {
       const o = f.origin.toLowerCase();
@@ -308,7 +312,7 @@ const SearchPage = () => {
       return p >= f.priceRange[0] && p <= f.priceRange[1];
     });
     return out;
-  }, [trips, tripFilters]);
+  }, [trips, tripFilters, hostFilter]);
 
   const filteredDestinations = useMemo(() => {
     // Apply destination filters via underlying trips
