@@ -168,11 +168,13 @@ const SearchPage = () => {
     : "trips";
   const initialQ = searchParams.get("q") || ctxQuery || "";
   const initialDest = searchParams.get("destination") || "";
+  const initialHost = searchParams.get("host") || "";
 
   const [intent, setIntent] = useState<Intent>(initialIntent);
   const [query, setQueryLocal] = useState(initialQ);
   const [submitted, setSubmitted] = useState(initialQ);
   const [destination, setDestination] = useState(initialDest);
+  const [hostFilter, setHostFilter] = useState(initialHost);
   const [trips, setTrips] = useState<TripData[]>([]);
   const [stories, setStories] = useState<BlogData[]>([]);
   const [people, setPeople] = useState<PersonData[]>([]);
@@ -196,6 +198,7 @@ const SearchPage = () => {
     setSubmitted(q);
     const destParam = searchParams.get("destination") || "";
     setDestination(destParam);
+    setHostFilter(searchParams.get("host") || "");
     // Mirror handleDestinationClick: arriving with a destination under Trips
     // resets trip filters + sort so every destination-entry path lands in the
     // exact same browser-visible Trips arrival state.
@@ -276,6 +279,10 @@ const SearchPage = () => {
   // ── Filtering ──────────────────────────────────────────────────────────
   const filteredTrips = useMemo(() => {
     let out = trips;
+    if (hostFilter) {
+      const h = hostFilter.toLowerCase();
+      out = out.filter((t) => (t.host_username || "").toLowerCase() === h);
+    }
     const f = tripFilters;
     if (f.origin) {
       const o = f.origin.toLowerCase();
@@ -305,7 +312,7 @@ const SearchPage = () => {
       return p >= f.priceRange[0] && p <= f.priceRange[1];
     });
     return out;
-  }, [trips, tripFilters]);
+  }, [trips, tripFilters, hostFilter]);
 
   const filteredDestinations = useMemo(() => {
     // Apply destination filters via underlying trips
@@ -494,6 +501,19 @@ const SearchPage = () => {
     setDestination("");
     updateParams({ destination: null });
   };
+
+  const clearHost = () => {
+    setHostFilter("");
+    updateParams({ host: null });
+  };
+
+  const hostDisplay = useMemo(() => {
+    if (!hostFilter) return "";
+    const match = trips.find(
+      (t) => (t.host_username || "").toLowerCase() === hostFilter.toLowerCase(),
+    );
+    return match?.host_display_name || hostFilter;
+  }, [trips, hostFilter]);
 
   // ── Pagination ─────────────────────────────────────────────────────────
   const paginate = <T,>(items: T[]) => {
@@ -1207,6 +1227,21 @@ const SearchPage = () => {
             >
               <MapPin className="h-3 w-3" />
               {destination}
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
+        {/* Host filter cue on Trips */}
+        {hostFilter && intent === "trips" && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Hosted by</span>
+            <button
+              onClick={clearHost}
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+              aria-label={`Clear host filter ${hostDisplay}`}
+            >
+              {hostDisplay}
               <X className="h-3 w-3" />
             </button>
           </div>

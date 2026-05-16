@@ -514,31 +514,45 @@ const Profile = () => {
                 const upcoming = allTrips.filter(x => !isPast(x.trip));
                 const past = allTrips.filter(x => isPast(x.trip));
 
-                const renderGroup = (label: string, items: typeof allTrips) => (
-                  items.length > 0 && (
+                const renderGroup = (label: string, items: typeof allTrips) => {
+                  if (items.length === 0) return null;
+                  const hasHosted = items.some((x) => x.role === "hosted");
+                  return (
                     <div>
-                      <h2 className="mb-4 text-lg font-semibold text-foreground">{label}</h2>
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <h2 className="text-lg font-semibold text-foreground">{label}</h2>
+                        {hasHosted && p?.username && (
+                          <Link
+                            to={`/search?intent=trips&host=${encodeURIComponent(p.username)}`}
+                            className="text-sm font-medium text-primary hover:underline shrink-0"
+                          >
+                            View all
+                          </Link>
+                        )}
+                      </div>
                       <HorizontalCarousel>
                         {items.map(({ trip: t, role }) => (
                           <div key={`${role}-${t.id}`} className="relative w-[280px] shrink-0 sm:w-[320px]">
                             <TripCard trip={t} />
-                            <Badge
-                              variant={role === "hosted" ? "default" : "secondary"}
-                              className="absolute left-2 top-2 z-10 text-xs"
-                            >
-                              {role === "hosted" ? "Hosted" : "Joined"}
-                            </Badge>
                             {(t.status as string) === "completed" && (
                               <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
                                 <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
                               </Badge>
                             )}
+                            <div className="mt-2 flex items-center">
+                              <Badge
+                                variant={role === "hosted" ? "default" : "secondary"}
+                                className="text-[11px]"
+                              >
+                                {role === "hosted" ? "Hosted" : "Joined"}
+                              </Badge>
+                            </div>
                           </div>
                         ))}
                       </HorizontalCarousel>
                     </div>
-                  )
-                );
+                  );
+                };
 
                 if (allTrips.length === 0) {
                   return <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost && isOwner ? { label: "Host your first trip", to: "/trips/new" } : undefined} />;
