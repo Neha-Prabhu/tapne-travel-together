@@ -1232,6 +1232,20 @@ const SearchPage = () => {
           </div>
         )}
 
+        {/* Host filter cue on Trips */}
+        {hostFilter && intent === "trips" && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Hosted by</span>
+            <button
+              onClick={clearHost}
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
+              aria-label={`Clear host filter ${hostDisplay}`}
+            >
+              {hostDisplay}
+              <X className="h-3 w-3" />
+            </button>
+        )}
+
         {/* Mobile filter trigger (only for non-All) */}
         {showSidebar && (
           <div className="mb-4 lg:hidden">
