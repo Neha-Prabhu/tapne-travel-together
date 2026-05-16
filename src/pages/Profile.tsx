@@ -514,14 +514,13 @@ const Profile = () => {
                 const upcoming = allTrips.filter(x => !isPast(x.trip));
                 const past = allTrips.filter(x => isPast(x.trip));
 
-                const renderGroup = (label: string, items: typeof allTrips) => {
+                const renderGroup = (label: string, items: typeof allTrips, showViewAll: boolean) => {
                   if (items.length === 0) return null;
-                  const hasHosted = items.some((x) => x.role === "hosted");
                   return (
                     <div>
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <h2 className="text-lg font-semibold text-foreground">{label}</h2>
-                        {hasHosted && p?.username && (
+                        {showViewAll && p?.username && (
                           <Link
                             to={`/search?intent=trips&host=${encodeURIComponent(p.username)}`}
                             className="text-sm font-medium text-primary hover:underline shrink-0"
@@ -554,10 +553,16 @@ const Profile = () => {
                 if (allTrips.length === 0) {
                   return <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost && isOwner ? { label: "Host your first trip", to: "/trips/new" } : undefined} />;
                 }
+                const upcomingHosted = upcoming.filter(x => x.role === "hosted");
+                const upcomingJoined = upcoming.filter(x => x.role === "joined");
+                const pastHosted = past.filter(x => x.role === "hosted");
+                const pastJoined = past.filter(x => x.role === "joined");
                 return (
                   <>
-                    {renderGroup("Upcoming trips", upcoming)}
-                    {renderGroup("Past trips", past)}
+                    {renderGroup("Upcoming hosted trips", upcomingHosted, true)}
+                    {renderGroup("Upcoming joined trips", upcomingJoined, false)}
+                    {renderGroup("Past hosted trips", pastHosted, true)}
+                    {renderGroup("Past joined trips", pastJoined, false)}
                   </>
                 );
               })()}
