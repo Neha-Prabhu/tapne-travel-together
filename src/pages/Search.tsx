@@ -168,11 +168,13 @@ const SearchPage = () => {
     : "trips";
   const initialQ = searchParams.get("q") || ctxQuery || "";
   const initialDest = searchParams.get("destination") || "";
+  const initialHost = searchParams.get("host") || "";
 
   const [intent, setIntent] = useState<Intent>(initialIntent);
   const [query, setQueryLocal] = useState(initialQ);
   const [submitted, setSubmitted] = useState(initialQ);
   const [destination, setDestination] = useState(initialDest);
+  const [hostFilter, setHostFilter] = useState(initialHost);
   const [trips, setTrips] = useState<TripData[]>([]);
   const [stories, setStories] = useState<BlogData[]>([]);
   const [people, setPeople] = useState<PersonData[]>([]);
