@@ -530,7 +530,7 @@ const Profile = () => {
                           </Link>
                         )}
                       </div>
-                      <HorizontalCarousel>
+                       <HorizontalCarousel>
                         {items.map(({ trip: t, role }) => (
                           <div key={`${role}-${t.id}`} className="relative w-[280px] shrink-0 sm:w-[320px]">
                             <TripCard trip={t} />
@@ -539,13 +539,10 @@ const Profile = () => {
                                 <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
                               </Badge>
                             )}
-                            <div className="mt-2 flex items-center">
-                              <Badge
-                                variant={role === "hosted" ? "default" : "secondary"}
-                                className="text-[11px]"
-                              >
-                                {role === "hosted" ? "Hosted" : "Joined"}
-                              </Badge>
+                            <div className="pointer-events-none absolute bottom-3 left-4 z-10 text-xs font-medium text-muted-foreground">
+                              {role === "hosted"
+                                ? `Hosted by ${p?.display_name || p?.username || ""}`.trim()
+                                : `Joined by ${p?.display_name || p?.username || ""}`.trim()}
                             </div>
                           </div>
                         ))}
