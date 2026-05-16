@@ -1244,6 +1244,7 @@ const SearchPage = () => {
               {hostDisplay}
               <X className="h-3 w-3" />
             </button>
+          </div>
         )}
 
         {/* Mobile filter trigger (only for non-All) */}
