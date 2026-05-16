@@ -228,7 +228,8 @@ const SearchPage = () => {
     setLoading(true);
     const q = encodeURIComponent(submitted.trim());
     const dest = encodeURIComponent(destination.trim());
-    const tripsUrl = `${cfg.api.trips}?q=${q}${dest ? `&destination=${dest}` : ""}`;
+    const host = encodeURIComponent(hostFilter.trim());
+    const tripsUrl = `${cfg.api.trips}?q=${q}${dest ? `&destination=${dest}` : ""}${host ? `&host=${host}` : ""}`;
 
     Promise.allSettled([
       apiGet<{ trips: TripData[] }>(tripsUrl).then((d) => setTrips(d.trips || [])),
