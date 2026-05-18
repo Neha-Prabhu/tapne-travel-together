@@ -37,6 +37,14 @@ const TripCard = ({ trip, initialBookmarked = false, roleLabel }: TripCardProps)
             size="sm"
             className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 md:opacity-0 max-md:opacity-100"
           />
+          {roleLabel && (
+            <Badge
+              variant="secondary"
+              className="absolute bottom-3 left-3 bg-background/90 text-foreground backdrop-blur-sm"
+            >
+              {roleLabel}
+            </Badge>
+          )}
         </div>
         <CardContent className="p-4">
           <h3 className="mb-0.5 truncate text-lg font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
