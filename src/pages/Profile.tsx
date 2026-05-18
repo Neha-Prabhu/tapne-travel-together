@@ -495,7 +495,7 @@ const Profile = () => {
           )}
 
           {/* ── Tabs ── */}
-          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== "trips") setPastExpanded(false); }} className="mt-8">
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== "trips") { setTripsExpanded(null); setTripsFilter("all"); } }} className="mt-8">
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="trips">{isHost ? "Trips" : "Trips joined"}</TabsTrigger>
               <TabsTrigger value="reviews">{isHost ? "Reviews" : "Reviews written"}</TabsTrigger>
