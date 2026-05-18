@@ -165,6 +165,9 @@ const Profile = () => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [reviewSort, setReviewSort] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
   const [reviewPage, setReviewPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("trips");
+  const [pastExpanded, setPastExpanded] = useState(false);
+  const [pastFilter, setPastFilter] = useState<"all" | "hosted" | "joined">("all");
   const REVIEWS_PER_PAGE = 5;
   const memberSinceLabel = p?.member_since ? new Date(p.member_since).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
   const responseLabel = (() => {
