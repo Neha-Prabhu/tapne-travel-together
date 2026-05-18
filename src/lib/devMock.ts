@@ -655,8 +655,10 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     if (!(overlay.avatar_url || mu?.avatar)) missingFields.push("avatar");
     if (!(su.bio || mu?.bio)) missingFields.push("bio");
     if (!(su.location || mu?.location)) missingFields.push("location");
-    if (isHost && !(overlay.cover_photo_url)) missingFields.push("cover_photo");
-    if (isHost && !((overlay.gallery_photos?.length) ?? 0)) missingFields.push("gallery_photos");
+    const effectiveCover = overlay.cover_photo_url ?? (isHost ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80" : undefined);
+    const effectiveGallery = overlay.gallery_photos ?? (isHost ? mockGallery : []);
+    if (isHost && !effectiveCover) missingFields.push("cover_photo");
+    if (isHost && !(effectiveGallery?.length)) missingFields.push("gallery_photos");
 
     return {
       profile: {
