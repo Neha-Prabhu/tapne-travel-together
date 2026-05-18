@@ -527,15 +527,9 @@ const Profile = () => {
                 }
 
                 const renderCard = ({ trip: t, role }: { trip: TripData; role: "hosted" | "joined" }) => (
-                  <div key={`${role}-${t.id}`} className="relative">
-                    <TripCard trip={t} roleLabel={role === "hosted" ? "Hosted" : "Joined"} />
-                    {(t.status as string) === "completed" && (
-                      <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
-                        <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
-                      </Badge>
-                    )}
-                  </div>
+                  <TripCard key={`${role}-${t.id}`} trip={t} roleLabel={role === "hosted" ? "Hosted" : "Joined"} />
                 );
+
 
                 const renderSection = (
                   key: "upcoming" | "past",
