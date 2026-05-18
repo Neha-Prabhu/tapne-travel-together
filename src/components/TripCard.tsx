@@ -9,6 +9,7 @@ import BookmarkButton from "@/features/trip/components/BookmarkButton";
 interface TripCardProps {
   trip: TripData;
   initialBookmarked?: boolean;
+  roleLabel?: "Hosted" | "Joined";
 }
 
 const TripCard = ({ trip, initialBookmarked = false }: TripCardProps) => {
