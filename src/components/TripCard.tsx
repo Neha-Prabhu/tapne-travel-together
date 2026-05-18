@@ -12,7 +12,7 @@ interface TripCardProps {
   roleLabel?: "Hosted" | "Joined";
 }
 
-const TripCard = ({ trip, initialBookmarked = false }: TripCardProps) => {
+const TripCard = ({ trip, initialBookmarked = false, roleLabel }: TripCardProps) => {
   const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
   const DEFAULT_HERO = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80";
   const heroImg = trip.banner_image_url || DEFAULT_HERO;
