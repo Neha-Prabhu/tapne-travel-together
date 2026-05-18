@@ -166,8 +166,8 @@ const Profile = () => {
   const [reviewSort, setReviewSort] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
   const [reviewPage, setReviewPage] = useState(1);
   const [activeTab, setActiveTab] = useState("trips");
-  const [pastExpanded, setPastExpanded] = useState(false);
-  const [pastFilter, setPastFilter] = useState<"all" | "hosted" | "joined">("all");
+  const [tripsExpanded, setTripsExpanded] = useState<null | "upcoming" | "past">(null);
+  const [tripsFilter, setTripsFilter] = useState<"all" | "hosted" | "joined">("all");
   const REVIEWS_PER_PAGE = 5;
   const memberSinceLabel = p?.member_since ? new Date(p.member_since).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "";
   const responseLabel = (() => {
@@ -495,7 +495,7 @@ const Profile = () => {
           )}
 
           {/* ── Tabs ── */}
-          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== "trips") setPastExpanded(false); }} className="mt-8">
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== "trips") { setTripsExpanded(null); setTripsFilter("all"); } }} className="mt-8">
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="trips">{isHost ? "Trips" : "Trips joined"}</TabsTrigger>
               <TabsTrigger value="reviews">{isHost ? "Reviews" : "Reviews written"}</TabsTrigger>
@@ -528,105 +528,94 @@ const Profile = () => {
 
                 const renderCard = ({ trip: t, role }: { trip: TripData; role: "hosted" | "joined" }) => (
                   <div key={`${role}-${t.id}`} className="relative">
-                    <TripCard trip={t} />
+                    <TripCard trip={t} roleLabel={role === "hosted" ? "Hosted" : "Joined"} />
                     {(t.status as string) === "completed" && (
                       <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
                         <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
                       </Badge>
                     )}
-                    <div className="pointer-events-none absolute bottom-3 left-3 z-10">
-                      <Badge variant={role === "hosted" ? "default" : "secondary"} className="text-[10px] px-2 py-0.5">
-                        {role === "hosted" ? "Hosted" : "Joined"}
-                      </Badge>
-                    </div>
                   </div>
                 );
 
-                const pastFiltered = past.filter(x =>
-                  pastFilter === "all" ? true : x.role === pastFilter
-                );
+                const renderSection = (
+                  key: "upcoming" | "past",
+                  title: string,
+                  items: { trip: TripData; role: "hosted" | "joined" }[],
+                ) => {
+                  if (items.length === 0) return null;
+                  const expanded = tripsExpanded === key;
+                  const filtered = items.filter(x => tripsFilter === "all" ? true : x.role === tripsFilter);
+                  return (
+                    <div>
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+                        {!expanded ? (
+                          <button
+                            onClick={() => { setTripsExpanded(key); setTripsFilter("all"); }}
+                            className="text-sm font-medium text-primary hover:underline shrink-0"
+                          >
+                            See all
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setTripsExpanded(null); setTripsFilter("all"); }}
+                            className="text-sm font-medium text-primary hover:underline shrink-0"
+                          >
+                            Show less
+                          </button>
+                        )}
+                      </div>
 
-                return (
-                  <>
-                    {upcoming.length > 0 && (
-                      <div>
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <h2 className="text-lg font-semibold text-foreground">Upcoming trips</h2>
-                        </div>
+                      {!expanded ? (
                         <HorizontalCarousel>
-                          {upcoming.map((x) => (
-                            <div key={`up-${x.role}-${x.trip.id}`} className="w-[280px] shrink-0 sm:w-[320px]">
+                          {items.map((x) => (
+                            <div key={`${key}-c-${x.role}-${x.trip.id}`} className="w-[280px] shrink-0 sm:w-[320px]">
                               {renderCard(x)}
                             </div>
                           ))}
                         </HorizontalCarousel>
-                      </div>
-                    )}
-
-                    {past.length > 0 && (
-                      <div>
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <h2 className="text-lg font-semibold text-foreground">Past trips</h2>
-                          {!pastExpanded ? (
-                            <button
-                              onClick={() => setPastExpanded(true)}
-                              className="text-sm font-medium text-primary hover:underline shrink-0"
-                            >
-                              See all
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => { setPastExpanded(false); setPastFilter("all"); }}
-                              className="text-sm font-medium text-primary hover:underline shrink-0"
-                            >
-                              Show less
-                            </button>
-                          )}
-                        </div>
-
-                        {!pastExpanded ? (
-                          <HorizontalCarousel>
-                            {past.map((x) => (
-                              <div key={`pc-${x.role}-${x.trip.id}`} className="w-[280px] shrink-0 sm:w-[320px]">
-                                {renderCard(x)}
-                              </div>
+                      ) : (
+                        <>
+                          <div className="mb-4 flex flex-wrap gap-2">
+                            {(["all", "hosted", "joined"] as const).map((f) => (
+                              <button
+                                key={f}
+                                onClick={() => setTripsFilter(f)}
+                                className={cn(
+                                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                  tripsFilter === f
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                )}
+                              >
+                                {f === "all" ? "All" : f === "hosted" ? "Hosted" : "Joined"}
+                              </button>
                             ))}
-                          </HorizontalCarousel>
-                        ) : (
-                          <>
-                            <div className="mb-4 flex flex-wrap gap-2">
-                              {(["all", "hosted", "joined"] as const).map((f) => (
-                                <button
-                                  key={f}
-                                  onClick={() => setPastFilter(f)}
-                                  className={cn(
-                                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                                    pastFilter === f
-                                      ? "border-primary bg-primary text-primary-foreground"
-                                      : "border-border bg-background text-muted-foreground hover:bg-muted"
-                                  )}
-                                >
-                                  {f === "all" ? "All" : f === "hosted" ? "Hosted" : "Joined"}
-                                </button>
+                          </div>
+                          {filtered.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No trips match this filter.</p>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                              {filtered.map((x) => (
+                                <div key={`${key}-g-${x.role}-${x.trip.id}`}>
+                                  {renderCard(x)}
+                                </div>
                               ))}
                             </div>
-                            {pastFiltered.length === 0 ? (
-                              <p className="text-sm text-muted-foreground">No trips match this filter.</p>
-                            ) : (
-                              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {pastFiltered.map((x) => (
-                                  <div key={`pg-${x.role}-${x.trip.id}`}>
-                                    {renderCard(x)}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                };
+
+                return (
+                  <>
+                    {tripsExpanded !== "past" && renderSection("upcoming", "Upcoming trips", upcoming)}
+                    {tripsExpanded !== "upcoming" && renderSection("past", "Past trips", past)}
                   </>
                 );
+
               })()}
             </TabsContent>
 
