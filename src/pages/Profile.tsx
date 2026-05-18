@@ -605,8 +605,8 @@ const Profile = () => {
 
                 return (
                   <>
-                    {tripsExpanded !== "past" && renderSection("upcoming", "Upcoming trips", upcoming)}
-                    {tripsExpanded !== "upcoming" && renderSection("past", "Past trips", past)}
+                    {renderSection("upcoming", "Upcoming trips", upcoming)}
+                    {renderSection("past", "Past trips", past)}
                   </>
                 );
 
