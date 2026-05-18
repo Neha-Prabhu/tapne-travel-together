@@ -495,7 +495,7 @@ const Profile = () => {
           )}
 
           {/* ── Tabs ── */}
-          <Tabs defaultValue="trips" className="mt-8">
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== "trips") setPastExpanded(false); }} className="mt-8">
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="trips">{isHost ? "Trips" : "Trips joined"}</TabsTrigger>
               <TabsTrigger value="reviews">{isHost ? "Reviews" : "Reviews written"}</TabsTrigger>
@@ -514,58 +514,117 @@ const Profile = () => {
                   ...tripsHosted.map(t => ({ trip: t, role: "hosted" as const })),
                   ...tripsJoined.map(t => ({ trip: t, role: "joined" as const })),
                 ];
-                const upcoming = allTrips.filter(x => !isPast(x.trip));
-                const past = allTrips.filter(x => isPast(x.trip));
-
-                const renderGroup = (label: string, items: typeof allTrips, showViewAll: boolean) => {
-                  if (items.length === 0) return null;
-                  return (
-                    <div>
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <h2 className="text-lg font-semibold text-foreground">{label}</h2>
-                        {showViewAll && p?.username && (
-                          <Link
-                            to={`/search?intent=trips&host=${encodeURIComponent(p.username)}`}
-                            className="text-sm font-medium text-primary hover:underline shrink-0"
-                          >
-                            View all
-                          </Link>
-                        )}
-                      </div>
-                       <HorizontalCarousel>
-                        {items.map(({ trip: t, role }) => (
-                          <div key={`${role}-${t.id}`} className="relative w-[280px] shrink-0 sm:w-[320px]">
-                            <TripCard trip={t} />
-                            {(t.status as string) === "completed" && (
-                              <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
-                                <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
-                              </Badge>
-                            )}
-                            <div className="pointer-events-none absolute bottom-3 left-4 z-10 text-xs font-medium text-muted-foreground">
-                              {role === "hosted"
-                                ? `Hosted by ${p?.display_name || p?.username || ""}`.trim()
-                                : `Joined by ${p?.display_name || p?.username || ""}`.trim()}
-                            </div>
-                          </div>
-                        ))}
-                      </HorizontalCarousel>
-                    </div>
-                  );
-                };
+                const ts = (t: TripData) => (t.starts_at ? new Date(t.starts_at).getTime() : 0);
+                const upcoming = allTrips
+                  .filter(x => !isPast(x.trip))
+                  .sort((a, b) => ts(a.trip) - ts(b.trip));
+                const past = allTrips
+                  .filter(x => isPast(x.trip))
+                  .sort((a, b) => ts(b.trip) - ts(a.trip));
 
                 if (allTrips.length === 0) {
                   return <EmptyState message={isHost ? "No trips hosted yet" : "No trips yet"} cta={isHost && isOwner ? { label: "Host your first trip", to: "/trips/new" } : undefined} />;
                 }
-                const upcomingHosted = upcoming.filter(x => x.role === "hosted");
-                const upcomingJoined = upcoming.filter(x => x.role === "joined");
-                const pastHosted = past.filter(x => x.role === "hosted");
-                const pastJoined = past.filter(x => x.role === "joined");
+
+                const renderCard = ({ trip: t, role }: { trip: TripData; role: "hosted" | "joined" }) => (
+                  <div key={`${role}-${t.id}`} className="relative">
+                    <TripCard trip={t} />
+                    {(t.status as string) === "completed" && (
+                      <Badge variant="secondary" className="absolute right-2 top-2 z-10 text-xs">
+                        <CheckCircle2 className="mr-1 h-3 w-3" /> Completed
+                      </Badge>
+                    )}
+                    <div className="pointer-events-none absolute bottom-3 left-3 z-10">
+                      <Badge variant={role === "hosted" ? "default" : "secondary"} className="text-[10px] px-2 py-0.5">
+                        {role === "hosted" ? "Hosted" : "Joined"}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+
+                const pastFiltered = past.filter(x =>
+                  pastFilter === "all" ? true : x.role === pastFilter
+                );
+
                 return (
                   <>
-                    {renderGroup("Upcoming hosted trips", upcomingHosted, true)}
-                    {renderGroup("Upcoming joined trips", upcomingJoined, false)}
-                    {renderGroup("Past hosted trips", pastHosted, true)}
-                    {renderGroup("Past joined trips", pastJoined, false)}
+                    {upcoming.length > 0 && (
+                      <div>
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                          <h2 className="text-lg font-semibold text-foreground">Upcoming trips</h2>
+                        </div>
+                        <HorizontalCarousel>
+                          {upcoming.map((x) => (
+                            <div key={`up-${x.role}-${x.trip.id}`} className="w-[280px] shrink-0 sm:w-[320px]">
+                              {renderCard(x)}
+                            </div>
+                          ))}
+                        </HorizontalCarousel>
+                      </div>
+                    )}
+
+                    {past.length > 0 && (
+                      <div>
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                          <h2 className="text-lg font-semibold text-foreground">Past trips</h2>
+                          {!pastExpanded ? (
+                            <button
+                              onClick={() => setPastExpanded(true)}
+                              className="text-sm font-medium text-primary hover:underline shrink-0"
+                            >
+                              See all
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => { setPastExpanded(false); setPastFilter("all"); }}
+                              className="text-sm font-medium text-primary hover:underline shrink-0"
+                            >
+                              Show less
+                            </button>
+                          )}
+                        </div>
+
+                        {!pastExpanded ? (
+                          <HorizontalCarousel>
+                            {past.map((x) => (
+                              <div key={`pc-${x.role}-${x.trip.id}`} className="w-[280px] shrink-0 sm:w-[320px]">
+                                {renderCard(x)}
+                              </div>
+                            ))}
+                          </HorizontalCarousel>
+                        ) : (
+                          <>
+                            <div className="mb-4 flex flex-wrap gap-2">
+                              {(["all", "hosted", "joined"] as const).map((f) => (
+                                <button
+                                  key={f}
+                                  onClick={() => setPastFilter(f)}
+                                  className={cn(
+                                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                    pastFilter === f
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  {f === "all" ? "All" : f === "hosted" ? "Hosted" : "Joined"}
+                                </button>
+                              ))}
+                            </div>
+                            {pastFiltered.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">No trips match this filter.</p>
+                            ) : (
+                              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {pastFiltered.map((x) => (
+                                  <div key={`pg-${x.role}-${x.trip.id}`}>
+                                    {renderCard(x)}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </>
                 );
               })()}
