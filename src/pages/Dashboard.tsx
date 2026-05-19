@@ -4,10 +4,11 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import { MapPin, BookOpen, Star, Users } from "lucide-react";
+import { LayoutDashboard, MapPin, BookOpen, Star, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
+  { to: "/dashboard", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/dashboard/trips", label: "Trips", icon: MapPin },
   { to: "/dashboard/stories", label: "Stories", icon: BookOpen },
   { to: "/dashboard/reviews", label: "Reviews", icon: Star },
