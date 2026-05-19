@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DraftProvider } from "@/contexts/DraftContext";
 import { SearchProvider } from "@/contexts/SearchContext";
@@ -27,6 +27,7 @@ import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
+import DashboardOverview from "./pages/dashboard/DashboardOverview";
 import DashboardTrips from "./pages/dashboard/DashboardTrips";
 import DashboardStories from "./pages/dashboard/DashboardStories";
 import DashboardReviews from "./pages/dashboard/DashboardReviews";
@@ -73,7 +74,7 @@ const App = () => (
 
                 {/* Dashboard — fully protected */}
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>}>
-                  <Route index element={<Navigate to="/dashboard/trips" replace />} />
+                  <Route index element={<DashboardOverview />} />
                   <Route path="trips" element={<DashboardTrips />} />
                   <Route path="stories" element={<DashboardStories />} />
                   <Route path="reviews" element={<DashboardReviews />} />
