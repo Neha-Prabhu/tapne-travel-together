@@ -167,7 +167,7 @@ const Navbar = () => {
                 <DropdownMenuItem onClick={() => navigate(`/users/${user?.username || user?.id}`)}>
                   <User className="mr-2 h-4 w-4" /> My Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/dashboard/trips")}>
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                   <MapPinIcon className="mr-2 h-4 w-4" /> Dashboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/messages")}>
@@ -237,7 +237,7 @@ const Navbar = () => {
                 Create Trip
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
-                <Link to="/dashboard/trips">Dashboard</Link>
+                <Link to="/dashboard">Dashboard</Link>
               </Button>
               <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileOpen(false)}>
                 <Link to={`/users/${user?.username || user?.id}`}>My Profile</Link>
