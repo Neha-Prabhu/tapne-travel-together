@@ -27,6 +27,7 @@ import Search from "./pages/Search";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
+import DashboardOverview from "./pages/dashboard/DashboardOverview";
 import DashboardTrips from "./pages/dashboard/DashboardTrips";
 import DashboardStories from "./pages/dashboard/DashboardStories";
 import DashboardReviews from "./pages/dashboard/DashboardReviews";
