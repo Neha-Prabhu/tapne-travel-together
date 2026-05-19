@@ -74,7 +74,7 @@ const App = () => (
 
                 {/* Dashboard — fully protected */}
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>}>
-                  <Route index element={<Navigate to="/dashboard/trips" replace />} />
+                  <Route index element={<DashboardOverview />} />
                   <Route path="trips" element={<DashboardTrips />} />
                   <Route path="stories" element={<DashboardStories />} />
                   <Route path="reviews" element={<DashboardReviews />} />
