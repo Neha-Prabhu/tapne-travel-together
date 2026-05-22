@@ -236,23 +236,34 @@ const TripDetail = () => {
         </CardContent>
       </Card>
 
-      {/* Meet Your Hosts card */}
+      {/* Hosted By card */}
       {trip.host_display_name && (
         <Card>
           <CardContent className="p-4 space-y-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Meet Your Hosts</p>
-            <button
-              onClick={() => navigate(`/users/${trip.host_username}`)}
-              className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
-            >
-              <Avatar className="h-11 w-11 border-2 border-primary/20">
-                <AvatarFallback>{(trip.host_display_name || "H")[0]}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{trip.host_display_name}</p>
-                {trip.host_bio && <p className="text-xs text-muted-foreground line-clamp-1">{trip.host_bio}</p>}
-              </div>
-            </button>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Hosted by</p>
+            {(() => {
+              const hostRating = (trip as any).host_average_rating as number | undefined;
+              return (
+                <button
+                  onClick={() => navigate(`/users/${trip.host_username}`)}
+                  className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
+                >
+                  <Avatar className="h-11 w-11 border-2 border-primary/20">
+                    <AvatarFallback>{(trip.host_display_name || "H")[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground">{trip.host_display_name}</p>
+                    {typeof hostRating === "number" && hostRating > 0 && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs font-medium text-foreground">{hostRating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    {trip.host_bio && <p className="text-xs text-muted-foreground line-clamp-1">{trip.host_bio}</p>}
+                  </div>
+                </button>
+              );
+            })()}
             {(trip as any).co_hosts_profiles?.map((ch: any) => (
               <button
                 key={ch.username}
