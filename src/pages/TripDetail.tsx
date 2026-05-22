@@ -706,7 +706,41 @@ const TripDetail = () => {
                         </Button>
                       )}
 
-                      {trip.can_review && (
+                      {!isCompleted && (() => {
+                        const hostRating = (trip as any).host_average_rating as number | undefined;
+                        const hostLocationRating = (trip as any).host_location_average_rating as number | undefined;
+                        return (
+                          <div className="mt-2 rounded-lg border bg-muted/30 p-4 space-y-2">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Host trust</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-foreground">Host's overall rating</span>
+                              {typeof hostRating === "number" && hostRating > 0 ? (
+                                <span className="flex items-center gap-1 text-sm font-semibold">
+                                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                  {hostRating.toFixed(1)}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No ratings yet</span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-foreground">
+                                Host's rating for {trip.destination || "this location"}
+                              </span>
+                              {typeof hostLocationRating === "number" && hostLocationRating > 0 ? (
+                                <span className="flex items-center gap-1 text-sm font-semibold">
+                                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                  {hostLocationRating.toFixed(1)}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No location-specific reviews yet.</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {isCompleted && trip.can_review && (
                         <Button
                           variant="outline"
                           size="sm"
