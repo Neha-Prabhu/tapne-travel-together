@@ -126,7 +126,8 @@ const TripDetail = () => {
   const joinStatus = trip.join_request_status;
   const isJoined = joinStatus === "approved";
   const isCompleted = trip.status === "completed";
-  const canReview = isAuthenticated && isJoined && isCompleted;
+  const hasEnded = trip.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
+  const canReview = isAuthenticated && isJoined && hasEnded;
 
   // Build visible sections dynamically based on trip data
   const visibleSections = [
@@ -213,7 +214,7 @@ const TripDetail = () => {
             <span>{isCompleted && !isHost ? "Trip completed" : ctaLabel}</span>
           </Button>
 
-          {isCompleted && trip.can_review && (
+          {hasEnded && trip.can_review && (
             <Button
               variant="outline"
               className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
@@ -706,7 +707,7 @@ const TripDetail = () => {
                         </Button>
                       )}
 
-                      {!isCompleted && (() => {
+                      {!hasEnded && (() => {
                         const hostRating = (trip as any).host_average_rating as number | undefined;
                         const hostLocationRating = (trip as any).host_location_average_rating as number | undefined;
                         return (
@@ -740,7 +741,7 @@ const TripDetail = () => {
                         );
                       })()}
 
-                      {isCompleted && trip.can_review && (
+                      {hasEnded && trip.can_review && (
                         <Button
                           variant="outline"
                           size="sm"
