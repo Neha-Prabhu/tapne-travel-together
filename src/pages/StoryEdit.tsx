@@ -138,9 +138,6 @@ const StoryEdit = () => {
           <Button variant="outline" onClick={() => handleSubmit(false)} disabled={saving}>
             <Save className="mr-1.5 h-4 w-4" />Save
           </Button>
-          <Button variant="outline" onClick={togglePreview}>
-            <Eye className="mr-1.5 h-4 w-4" />Preview
-          </Button>
         </div>
       </main>
       <Footer />
