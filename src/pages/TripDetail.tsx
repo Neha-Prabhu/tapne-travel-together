@@ -126,7 +126,8 @@ const TripDetail = () => {
   const joinStatus = trip.join_request_status;
   const isJoined = joinStatus === "approved";
   const isCompleted = trip.status === "completed";
-  const canReview = isAuthenticated && isJoined && isCompleted;
+  const hasEnded = trip.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
+  const canReview = isAuthenticated && isJoined && hasEnded;
 
   // Build visible sections dynamically based on trip data
   const visibleSections = [
