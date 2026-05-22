@@ -303,13 +303,15 @@ const Profile = () => {
     return bd - ad;
   });
 
-  const showCompletionBanner = isOwner && isHost && completeness && !completeness.is_complete && !completionDismissed;
   const fieldAliases: Record<string, string> = {
     avatar_url: "avatar",
   };
-  const normalizedMissing = Array.from(new Set(
+  const travelerFields = new Set(["avatar", "bio", "location"]);
+  const rawMissing = Array.from(new Set(
     (completeness?.missing_fields ?? []).map(f => fieldAliases[f] || f)
   ));
+  const normalizedMissing = isHost ? rawMissing : rawMissing.filter(f => travelerFields.has(f));
+  const showCompletionBanner = isOwner && completeness && !completeness.is_complete && !completionDismissed && normalizedMissing.length > 0;
   const missingLabels: Record<string, string> = {
     avatar: "Profile photo",
     bio: "Short bio",
@@ -318,6 +320,9 @@ const Profile = () => {
     gallery_photos: "Gallery photos",
     travel_tags: "Travel tags",
   };
+  const bannerTitle = isHost
+    ? "Complete your host profile to build trust with travelers"
+    : "Complete your profile so travelers and hosts can get to know you";
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -331,7 +336,7 @@ const Profile = () => {
               <div className="flex gap-3">
                 <Sparkles className="h-5 w-5 shrink-0 text-primary" />
                 <div className="text-sm">
-                  <p className="font-medium text-foreground">Complete your host profile to build trust with travelers</p>
+                  <p className="font-medium text-foreground">{bannerTitle}</p>
                   <p className="mt-0.5 text-muted-foreground">
                     Missing: {normalizedMissing.map(f => missingLabels[f] || f).join(", ")}
                   </p>
