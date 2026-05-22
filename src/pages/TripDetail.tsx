@@ -741,7 +741,7 @@ const TripDetail = () => {
                         );
                       })()}
 
-                      {isCompleted && trip.can_review && (
+                      {hasEnded && trip.can_review && (
                         <Button
                           variant="outline"
                           size="sm"
