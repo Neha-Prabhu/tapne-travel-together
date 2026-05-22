@@ -374,9 +374,6 @@ const ProfileEdit = () => {
           <Button onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}Save
           </Button>
-          <Button variant="outline" onClick={togglePreview}>
-            <Eye className="mr-1.5 h-4 w-4" />Preview
-          </Button>
         </div>
       </main>
       <Footer />
