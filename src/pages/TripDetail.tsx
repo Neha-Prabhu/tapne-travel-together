@@ -213,15 +213,17 @@ const TripDetail = () => {
             <span>{isCompleted && !isHost ? "Trip completed" : ctaLabel}</span>
           </Button>
 
-          <Button
-            variant="outline"
-            className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
-            onClick={() => {
-              requireAuth(() => setReviewModalOpen(true));
-            }}
-          >
-            <Star className="mr-2 h-4 w-4" /> Write a Review
-          </Button>
+          {isCompleted && trip.can_review && (
+            <Button
+              variant="outline"
+              className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
+              onClick={() => {
+                requireAuth(() => setReviewModalOpen(true));
+              }}
+            >
+              <Star className="mr-2 h-4 w-4" /> {trip.viewer_review ? "Edit your review" : "Write a Review"}
+            </Button>
+          )}
 
           {!isAuthenticated && (
             <p className="mt-2 text-center text-xs text-muted-foreground">
