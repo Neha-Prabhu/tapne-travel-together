@@ -18,7 +18,7 @@ type DashboardTrip = TripData & {
   lifecycle?: Lifecycle;
   filled_seats?: number;
   pending_count?: number;
-  estimated_value?: number;
+  estimated_value?: number | string;
   bookmarks_count?: number;
 };
 
@@ -27,7 +27,7 @@ interface DashboardTripsResponse {
   portfolio?: {
     total_trips?: number;
     filled_seats?: number;
-    estimated_value?: number;
+    estimated_value?: number | string;
     pending?: number;
     average_rating?: number;
   };
@@ -60,21 +60,42 @@ const statusPill = (label: string, tone: "muted" | "primary" | "warn" | "ok" | "
 const fmtCurrency = (n: number) =>
   n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${n.toFixed(0)}`;
 
+// Display estimated value as-is when server sends a formatted string, else format the number.
+const fmtEstimated = (v: number | string | undefined): string => {
+  if (v === undefined || v === null) return "—";
+  if (typeof v === "string") return v.trim() || "—";
+  if (!Number.isFinite(v) || v === 0) return "—";
+  return fmtCurrency(v);
+};
+
+// Numeric coercion for summing in the rollup.
+const numericValue = (v: number | string | undefined): number => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v.replace(/[^0-9.\-]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+};
+
 const filledFor = (t: DashboardTrip) => t.filled_seats ?? t.participants_count ?? 0;
 const pendingFor = (t: DashboardTrip) => t.pending_count ?? t.applications_count ?? 0;
-const valueFor = (t: DashboardTrip) => {
-  if (typeof t.estimated_value === "number") return t.estimated_value;
+// Trust provided estimated value (number or string) — only compute when absent.
+const valueFor = (t: DashboardTrip): number | string => {
+  if (t.estimated_value !== undefined && t.estimated_value !== null && t.estimated_value !== "") {
+    return t.estimated_value;
+  }
   const filled = filledFor(t);
   const price = t.price_per_person ?? 0;
   return filled * price;
 };
 
-const EstBadge = ({ value }: { value: number }) => (
+const EstBadge = ({ value }: { value: number | string }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <span className="inline-flex items-center gap-1 rounded-md bg-accent px-1.5 py-0.5 text-xs font-medium text-accent-foreground">
         <BarChart3 className="h-3 w-3" />
-        est. {fmtCurrency(value)}
+        est. {fmtEstimated(value)}
       </span>
     </TooltipTrigger>
     <TooltipContent>
@@ -195,19 +216,22 @@ const PortfolioRollup = ({
   const totals = useMemo(() => {
     const total = serverTotals?.total_trips ?? managed.length;
     const seats = serverTotals?.filled_seats ?? managed.reduce((s, t) => s + filledFor(t), 0);
-    const value = serverTotals?.estimated_value ?? managed.reduce((s, t) => s + valueFor(t), 0);
+    // Display server-provided string verbatim; otherwise format the summed numeric value.
+    const valueDisplay = serverTotals?.estimated_value !== undefined && serverTotals.estimated_value !== null && serverTotals.estimated_value !== ""
+      ? fmtEstimated(serverTotals.estimated_value)
+      : fmtCurrency(managed.reduce((s, t) => s + numericValue(valueFor(t)), 0));
     const pending = serverTotals?.pending ?? managed.reduce((s, t) => s + pendingFor(t), 0);
     const rated = managed.filter(t => (t.average_rating ?? 0) > 0);
     const avgRating = serverTotals?.average_rating ?? (rated.length
       ? rated.reduce((s, t) => s + (t.average_rating ?? 0), 0) / rated.length
       : 0);
-    return { total, seats, value, pending, avgRating };
+    return { total, seats, valueDisplay, pending, avgRating };
   }, [managed, serverTotals]);
 
   const items = [
     { label: "Trips", value: totals.total },
     { label: "Filled seats", value: totals.seats },
-    { label: "Est. value", value: fmtCurrency(totals.value), hint: "Lifetime filled × price per person" },
+    { label: "Est. value", value: totals.valueDisplay, hint: "Lifetime filled × price per person" },
     { label: "Avg rating", value: totals.avgRating > 0 ? totals.avgRating.toFixed(2) : "—" },
     { label: "Pending", value: totals.pending },
   ];
@@ -246,25 +270,28 @@ const DashboardTrips = () => {
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return; }
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    const base = cfg.api.base;
-    // Prefer the dashboard-specific endpoint; fall back to my_trips.
-    apiGet<DashboardTripsResponse>(`${base}/dashboard/trips/`)
-      .then(d => {
-        if (d && Array.isArray(d.trips) && d.trips.length > 0) {
-          setTrips(d.trips);
-          setPortfolio(d.portfolio);
-          return true;
-        }
-        return false;
-      })
-      .catch(() => false)
-      .then((handled) => {
-        if (handled) return;
-        return apiGet<MyTripsResponse>(cfg.api.my_trips)
-          .then(d => setTrips((d.trips || []) as DashboardTrip[]))
-          .catch(() => {});
-      })
-      .finally(() => setLoading(false));
+    // Use the named dashboard location only when the page config exposes it.
+    const dashboardUrl = cfg.api.dashboard_trips;
+    const fallback = () =>
+      apiGet<MyTripsResponse>(cfg.api.my_trips)
+        .then(d => setTrips((d.trips || []) as DashboardTrip[]))
+        .catch(() => {});
+
+    const work = dashboardUrl
+      ? apiGet<DashboardTripsResponse>(dashboardUrl)
+          .then(d => {
+            if (d && Array.isArray(d.trips) && d.trips.length > 0) {
+              setTrips(d.trips);
+              setPortfolio(d.portfolio);
+              return true;
+            }
+            return false;
+          })
+          .catch(() => false)
+          .then(handled => (handled ? undefined : fallback()))
+      : fallback();
+
+    work.finally(() => setLoading(false));
   }, [isAuthenticated]);
 
   const joined = trips.filter(t => !t.can_manage);

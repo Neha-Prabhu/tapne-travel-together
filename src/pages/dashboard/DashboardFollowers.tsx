@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,16 +16,44 @@ interface UserItem {
 }
 
 interface SavedTripPanel {
-  trip: { id: number; title: string };
+  trip: { id?: number; title: string; destination?: string };
   savers: (UserItem & { saved_at?: string })[];
+}
+
+// A flat save record (per saver) that we may receive instead of pre-grouped panels.
+interface FlatSaveItem extends UserItem {
+  saved_at?: string;
+  trip_id?: number;
+  trip_title?: string;
+  trip_destination?: string;
 }
 
 interface DashboardFollowersResponse {
   followers?: UserItem[];
   following?: UserItem[];
   saved_by_trip?: SavedTripPanel[];
+  // Alternative shapes a backend might emit:
+  saved_by?: FlatSaveItem[];
+  saves?: FlatSaveItem[];
   is_host?: boolean;
 }
+
+const groupFlatSaves = (flat: FlatSaveItem[]): SavedTripPanel[] => {
+  const map = new Map<string, SavedTripPanel>();
+  for (const s of flat) {
+    const title = s.trip_title || (s.trip_id ? `Trip ${s.trip_id}` : "Untitled trip");
+    const key = `${s.trip_id ?? ""}|${title}|${s.trip_destination ?? ""}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        trip: { id: s.trip_id, title, destination: s.trip_destination },
+        savers: [],
+      });
+    }
+    const { trip_id, trip_title, trip_destination, ...saver } = s;
+    map.get(key)!.savers.push(saver);
+  }
+  return Array.from(map.values());
+};
 
 const UserGrid = ({
   users,
@@ -81,36 +109,53 @@ const DashboardFollowers = () => {
   const [savedPanels, setSavedPanels] = useState<SavedTripPanel[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Read everything the page already provides; group flat save lists when needed.
+  const ingest = (d: DashboardFollowersResponse) => {
+    setFollowers(d.followers || []);
+    setFollowing(d.following || []);
+    if (d.saved_by_trip && d.saved_by_trip.length > 0) {
+      setSavedPanels(d.saved_by_trip);
+    } else if (d.saved_by && d.saved_by.length > 0) {
+      setSavedPanels(groupFlatSaves(d.saved_by));
+    } else if (d.saves && d.saves.length > 0) {
+      setSavedPanels(groupFlatSaves(d.saves));
+    } else {
+      setSavedPanels([]);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return; }
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    const base = cfg.api.base;
+    const dashboardUrl = cfg.api.dashboard_followers;
+    const followersUrl = cfg.api.followers;
+    const followingUrl = cfg.api.following;
 
-    // Prefer one consolidated dashboard endpoint.
-    apiGet<DashboardFollowersResponse>(`${base}/dashboard/followers/`)
-      .then(d => {
-        if (!d) return false;
-        setFollowers(d.followers || []);
-        setFollowing(d.following || []);
-        setSavedPanels(d.saved_by_trip || []);
-        return true;
-      })
-      .catch(() => false)
-      .then(handled => {
-        if (handled) return;
-        // Fallback: per-list endpoints.
-        return Promise.allSettled([
-          apiGet<{ users: UserItem[] }>(`${base}/profile/me/followers/`)
-            .then(d => setFollowers(d.users || [])),
-          apiGet<{ users: UserItem[] }>(`${base}/profile/me/following/`)
-            .then(d => setFollowing(d.users || [])),
-          apiGet<{ saved_by_trip?: SavedTripPanel[] }>(`${base}/dashboard/saved-by-trips/`)
-            .then(d => setSavedPanels(d.saved_by_trip || []))
-            .catch(() => setSavedPanels([])),
-        ]);
-      })
-      .finally(() => setLoading(false));
+    const fallback = async () => {
+      const tasks: Promise<unknown>[] = [];
+      if (followersUrl) {
+        tasks.push(apiGet<{ users: UserItem[] }>(followersUrl).then(d => setFollowers(d.users || [])).catch(() => {}));
+      }
+      if (followingUrl) {
+        tasks.push(apiGet<{ users: UserItem[] }>(followingUrl).then(d => setFollowing(d.users || [])).catch(() => {}));
+      }
+      await Promise.allSettled(tasks);
+    };
+
+    const work = dashboardUrl
+      ? apiGet<DashboardFollowersResponse>(dashboardUrl)
+          .then(d => { if (d) { ingest(d); return true; } return false; })
+          .catch(() => false)
+          .then(handled => (handled ? undefined : fallback()))
+      : fallback();
+
+    work.finally(() => setLoading(false));
   }, [isAuthenticated]);
+
+  const hasSaved = useMemo(
+    () => savedPanels.some(p => p.savers.length > 0),
+    [savedPanels],
+  );
 
   return (
     <div>
@@ -128,20 +173,26 @@ const DashboardFollowers = () => {
         </TabsContent>
       </Tabs>
 
-      {savedPanels.length > 0 && (
+      {hasSaved && (
         <section className="mt-10">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             <Bookmark className="h-4 w-4" /> Who saved my trips
           </h3>
           <div className="space-y-4">
             {savedPanels.map(p => (
-              <Card key={p.trip.id}>
+              <Card key={`${p.trip.id ?? ""}-${p.trip.title}`}>
                 <CardContent className="p-4">
-                  <Link to={`/trips/${p.trip.id}`} className="text-sm font-medium text-foreground hover:text-primary">
-                    {p.trip.title}
-                  </Link>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {p.savers.length} {p.savers.length === 1 ? "saver" : "savers"}
+                  {p.trip.id ? (
+                    <Link to={`/trips/${p.trip.id}`} className="text-sm font-medium text-foreground hover:text-primary">
+                      {p.trip.title}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium text-foreground">{p.trip.title}</span>
+                  )}
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {p.trip.destination && <span>{p.trip.destination}</span>}
+                    <span>·</span>
+                    <span>{p.savers.length} {p.savers.length === 1 ? "saver" : "savers"}</span>
                   </div>
                   <div className="mt-3">
                     <UserGrid users={p.savers} empty="No saves yet." />

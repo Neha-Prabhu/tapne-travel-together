@@ -226,29 +226,33 @@ const DashboardReviews = () => {
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return; }
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    const base = cfg.api.base;
+    // Only call a dashboard-reviews endpoint when explicitly available in the page config.
+    const dashboardReviewsUrl = cfg.api.dashboard_reviews;
 
-    // Prefer consolidated dashboard reviews endpoint.
-    apiGet<DashboardReviewsResponse>(`${base}/dashboard/reviews/`)
-      .then(d => {
-        if (!d || (!d.received && !d.written && !d.distribution)) return false;
-        setReceived(d.received || []);
-        setWritten(d.written || []);
-        setDistribution(d.distribution);
-        setAverageRating(d.average_rating);
-        setPerTrip(d.per_trip);
-        return true;
-      })
-      .catch(() => false)
-      .then(handled => {
-        if (handled) return;
-        if (!cfg?.api?.trip_reviews) return;
-        return Promise.allSettled([
-          apiGet<{ reviews: Review[] }>(`${cfg.api.trip_reviews}?author=me`).then(d => setWritten(d.reviews || [])),
-          apiGet<{ reviews: Review[] }>(`${cfg.api.trip_reviews}?recipient=me`).then(d => setReceived(d.reviews || [])),
-        ]);
-      })
-      .finally(() => setLoading(false));
+    const fallback = () => {
+      if (!cfg?.api?.trip_reviews) return Promise.resolve();
+      return Promise.allSettled([
+        apiGet<{ reviews: Review[] }>(`${cfg.api.trip_reviews}?author=me`).then(d => setWritten(d.reviews || [])),
+        apiGet<{ reviews: Review[] }>(`${cfg.api.trip_reviews}?recipient=me`).then(d => setReceived(d.reviews || [])),
+      ]).then(() => undefined);
+    };
+
+    const work = dashboardReviewsUrl
+      ? apiGet<DashboardReviewsResponse>(dashboardReviewsUrl)
+          .then(d => {
+            if (!d || (!d.received && !d.written && !d.distribution)) return false;
+            setReceived(d.received || []);
+            setWritten(d.written || []);
+            setDistribution(d.distribution);
+            setAverageRating(d.average_rating);
+            setPerTrip(d.per_trip);
+            return true;
+          })
+          .catch(() => false)
+          .then(handled => (handled ? undefined : fallback()))
+      : fallback();
+
+    work.finally(() => setLoading(false));
   }, [isAuthenticated]);
 
   if (loading) {
