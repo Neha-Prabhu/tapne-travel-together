@@ -119,7 +119,7 @@ const Index = () => {
             <HorizontalCarousel>
               {filteredTrips.slice(0, 6).map((trip) => (
                 <div key={trip.id} className="flex min-w-[300px] max-w-[320px] shrink-0">
-                  <div className="w-full">
+                  <div className="h-full w-full">
                     <TripCard trip={trip} />
                   </div>
                 </div>
