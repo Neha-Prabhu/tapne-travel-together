@@ -27,7 +27,7 @@ interface DashboardTripsResponse {
   portfolio?: {
     total_trips?: number;
     filled_seats?: number;
-    estimated_value?: number;
+    estimated_value?: number | string;
     pending?: number;
     average_rating?: number;
   };
