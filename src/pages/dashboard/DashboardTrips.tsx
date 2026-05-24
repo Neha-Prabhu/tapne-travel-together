@@ -18,7 +18,7 @@ type DashboardTrip = TripData & {
   lifecycle?: Lifecycle;
   filled_seats?: number;
   pending_count?: number;
-  estimated_value?: number;
+  estimated_value?: number | string;
   bookmarks_count?: number;
 };
 
