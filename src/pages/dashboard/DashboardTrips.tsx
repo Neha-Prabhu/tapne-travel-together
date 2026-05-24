@@ -216,19 +216,22 @@ const PortfolioRollup = ({
   const totals = useMemo(() => {
     const total = serverTotals?.total_trips ?? managed.length;
     const seats = serverTotals?.filled_seats ?? managed.reduce((s, t) => s + filledFor(t), 0);
-    const value = serverTotals?.estimated_value ?? managed.reduce((s, t) => s + valueFor(t), 0);
+    // Display server-provided string verbatim; otherwise format the summed numeric value.
+    const valueDisplay = serverTotals?.estimated_value !== undefined && serverTotals.estimated_value !== null && serverTotals.estimated_value !== ""
+      ? fmtEstimated(serverTotals.estimated_value)
+      : fmtCurrency(managed.reduce((s, t) => s + numericValue(valueFor(t)), 0));
     const pending = serverTotals?.pending ?? managed.reduce((s, t) => s + pendingFor(t), 0);
     const rated = managed.filter(t => (t.average_rating ?? 0) > 0);
     const avgRating = serverTotals?.average_rating ?? (rated.length
       ? rated.reduce((s, t) => s + (t.average_rating ?? 0), 0) / rated.length
       : 0);
-    return { total, seats, value, pending, avgRating };
+    return { total, seats, valueDisplay, pending, avgRating };
   }, [managed, serverTotals]);
 
   const items = [
     { label: "Trips", value: totals.total },
     { label: "Filled seats", value: totals.seats },
-    { label: "Est. value", value: fmtCurrency(totals.value), hint: "Lifetime filled × price per person" },
+    { label: "Est. value", value: totals.valueDisplay, hint: "Lifetime filled × price per person" },
     { label: "Avg rating", value: totals.avgRating > 0 ? totals.avgRating.toFixed(2) : "—" },
     { label: "Pending", value: totals.pending },
   ];
