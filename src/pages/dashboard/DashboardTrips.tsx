@@ -60,21 +60,42 @@ const statusPill = (label: string, tone: "muted" | "primary" | "warn" | "ok" | "
 const fmtCurrency = (n: number) =>
   n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${n.toFixed(0)}`;
 
+// Display estimated value as-is when server sends a formatted string, else format the number.
+const fmtEstimated = (v: number | string | undefined): string => {
+  if (v === undefined || v === null) return "—";
+  if (typeof v === "string") return v.trim() || "—";
+  if (!Number.isFinite(v) || v === 0) return "—";
+  return fmtCurrency(v);
+};
+
+// Numeric coercion for summing in the rollup.
+const numericValue = (v: number | string | undefined): number => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v.replace(/[^0-9.\-]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+};
+
 const filledFor = (t: DashboardTrip) => t.filled_seats ?? t.participants_count ?? 0;
 const pendingFor = (t: DashboardTrip) => t.pending_count ?? t.applications_count ?? 0;
-const valueFor = (t: DashboardTrip) => {
-  if (typeof t.estimated_value === "number") return t.estimated_value;
+// Trust provided estimated value (number or string) — only compute when absent.
+const valueFor = (t: DashboardTrip): number | string => {
+  if (t.estimated_value !== undefined && t.estimated_value !== null && t.estimated_value !== "") {
+    return t.estimated_value;
+  }
   const filled = filledFor(t);
   const price = t.price_per_person ?? 0;
   return filled * price;
 };
 
-const EstBadge = ({ value }: { value: number }) => (
+const EstBadge = ({ value }: { value: number | string }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <span className="inline-flex items-center gap-1 rounded-md bg-accent px-1.5 py-0.5 text-xs font-medium text-accent-foreground">
         <BarChart3 className="h-3 w-3" />
-        est. {fmtCurrency(value)}
+        est. {fmtEstimated(value)}
       </span>
     </TooltipTrigger>
     <TooltipContent>
