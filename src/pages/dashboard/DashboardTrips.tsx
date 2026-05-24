@@ -13,14 +13,36 @@ import { Plus, MapPin, Calendar, Users, Star, Bookmark, Inbox, Info, BarChart3 }
 
 type Lifecycle = "draft" | "upcoming" | "in_progress" | "completed";
 
-const tripLifecycle = (t: TripData): Lifecycle => {
+// Server-side dashboard fields that may augment TripData.
+type DashboardTrip = TripData & {
+  lifecycle?: Lifecycle;
+  filled_seats?: number;
+  pending_count?: number;
+  estimated_value?: number;
+  bookmarks_count?: number;
+};
+
+interface DashboardTripsResponse {
+  trips: DashboardTrip[];
+  portfolio?: {
+    total_trips?: number;
+    filled_seats?: number;
+    estimated_value?: number;
+    pending?: number;
+    average_rating?: number;
+  };
+}
+
+const computeLifecycle = (t: DashboardTrip): Lifecycle => {
+  if (t.lifecycle) return t.lifecycle;
   if (t.status === "draft" || t.is_draft) return "draft";
-  if (t.status === "completed") return "completed";
   const now = Date.now();
   const starts = t.starts_at ? new Date(t.starts_at).getTime() : null;
   const ends = t.ends_at ? new Date(t.ends_at).getTime() : null;
+  // Trust dates over a stale "completed" status: a trip still inside its date window is in progress.
   if (ends && ends < now) return "completed";
   if (starts && starts <= now && (!ends || ends >= now)) return "in_progress";
+  if (t.status === "completed") return "completed";
   return "upcoming";
 };
 
@@ -38,8 +60,11 @@ const statusPill = (label: string, tone: "muted" | "primary" | "warn" | "ok" | "
 const fmtCurrency = (n: number) =>
   n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${n.toFixed(0)}`;
 
-const estimatedValue = (t: TripData) => {
-  const filled = t.participants_count ?? 0;
+const filledFor = (t: DashboardTrip) => t.filled_seats ?? t.participants_count ?? 0;
+const pendingFor = (t: DashboardTrip) => t.pending_count ?? t.applications_count ?? 0;
+const valueFor = (t: DashboardTrip) => {
+  if (typeof t.estimated_value === "number") return t.estimated_value;
+  const filled = filledFor(t);
   const price = t.price_per_person ?? 0;
   return filled * price;
 };
@@ -58,7 +83,7 @@ const EstBadge = ({ value }: { value: number }) => (
   </Tooltip>
 );
 
-const JoinedRow = ({ trip }: { trip: TripData }) => (
+const JoinedRow = ({ trip }: { trip: DashboardTrip }) => (
   <Card>
     <CardContent className="flex items-center gap-4 p-4">
       <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -80,16 +105,15 @@ const JoinedRow = ({ trip }: { trip: TripData }) => (
   </Card>
 );
 
-const ManagedRow = ({ trip }: { trip: TripData }) => {
-  const lc = tripLifecycle(trip);
-  const filled = trip.participants_count ?? 0;
+const ManagedRow = ({ trip }: { trip: DashboardTrip }) => {
+  const lc = computeLifecycle(trip);
+  const filled = filledFor(trip);
   const seats = trip.total_seats ?? 0;
-  const pending = trip.applications_count ?? 0;
+  const pending = pendingFor(trip);
   const reviews = trip.reviews_count ?? 0;
   const rating = trip.average_rating ?? 0;
-  const est = estimatedValue(trip);
-  // bookmarks not exposed via API; show — if absent
-  const bookmarks = (trip as TripData & { bookmarks_count?: number }).bookmarks_count;
+  const est = valueFor(trip);
+  const bookmarks = trip.bookmarks_count;
 
   return (
     <Card>
@@ -147,8 +171,8 @@ const Section = ({
   title, items, render, emptyMsg,
 }: {
   title: string;
-  items: TripData[];
-  render: (t: TripData) => JSX.Element;
+  items: DashboardTrip[];
+  render: (t: DashboardTrip) => JSX.Element;
   emptyMsg: string;
 }) => (
   <div>
@@ -161,18 +185,24 @@ const Section = ({
   </div>
 );
 
-const PortfolioRollup = ({ managed }: { managed: TripData[] }) => {
+const PortfolioRollup = ({
+  managed,
+  serverTotals,
+}: {
+  managed: DashboardTrip[];
+  serverTotals?: DashboardTripsResponse["portfolio"];
+}) => {
   const totals = useMemo(() => {
-    const total = managed.length;
-    const seats = managed.reduce((s, t) => s + (t.participants_count ?? 0), 0);
-    const value = managed.reduce((s, t) => s + estimatedValue(t), 0);
-    const pending = managed.reduce((s, t) => s + (t.applications_count ?? 0), 0);
+    const total = serverTotals?.total_trips ?? managed.length;
+    const seats = serverTotals?.filled_seats ?? managed.reduce((s, t) => s + filledFor(t), 0);
+    const value = serverTotals?.estimated_value ?? managed.reduce((s, t) => s + valueFor(t), 0);
+    const pending = serverTotals?.pending ?? managed.reduce((s, t) => s + pendingFor(t), 0);
     const rated = managed.filter(t => (t.average_rating ?? 0) > 0);
-    const avgRating = rated.length
+    const avgRating = serverTotals?.average_rating ?? (rated.length
       ? rated.reduce((s, t) => s + (t.average_rating ?? 0), 0) / rated.length
-      : 0;
+      : 0);
     return { total, seats, value, pending, avgRating };
-  }, [managed]);
+  }, [managed, serverTotals]);
 
   const items = [
     { label: "Trips", value: totals.total },
@@ -209,15 +239,31 @@ const PortfolioRollup = ({ managed }: { managed: TripData[] }) => {
 
 const DashboardTrips = () => {
   const { isAuthenticated } = useAuth();
-  const [trips, setTrips] = useState<TripData[]>([]);
+  const [trips, setTrips] = useState<DashboardTrip[]>([]);
+  const [portfolio, setPortfolio] = useState<DashboardTripsResponse["portfolio"]>();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return; }
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    apiGet<MyTripsResponse>(cfg.api.my_trips)
-      .then((d) => setTrips(d.trips || []))
-      .catch(() => {})
+    const base = cfg.api.base;
+    // Prefer the dashboard-specific endpoint; fall back to my_trips.
+    apiGet<DashboardTripsResponse>(`${base}/dashboard/trips/`)
+      .then(d => {
+        if (d && Array.isArray(d.trips) && d.trips.length > 0) {
+          setTrips(d.trips);
+          setPortfolio(d.portfolio);
+          return true;
+        }
+        return false;
+      })
+      .catch(() => false)
+      .then((handled) => {
+        if (handled) return;
+        return apiGet<MyTripsResponse>(cfg.api.my_trips)
+          .then(d => setTrips((d.trips || []) as DashboardTrip[]))
+          .catch(() => {});
+      })
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
@@ -227,20 +273,23 @@ const DashboardTrips = () => {
   const hasManaged = managed.length > 0;
 
   const joinedSections = useMemo(() => {
+    const lc = (t: DashboardTrip) => computeLifecycle(t);
     const pending = joined.filter(t => t.join_request_status === "pending");
-    const approved = joined.filter(t => t.join_request_status === "approved" && tripLifecycle(t) !== "upcoming" && tripLifecycle(t) !== "in_progress" && tripLifecycle(t) !== "completed");
-    // "Approved" = approved but no lifecycle info yet (e.g. no dates). Upcoming/In-progress/Completed split by dates.
-    const upcoming = joined.filter(t => t.join_request_status === "approved" && tripLifecycle(t) === "upcoming");
-    const inProgress = joined.filter(t => t.join_request_status === "approved" && tripLifecycle(t) === "in_progress");
-    const completed = joined.filter(t => tripLifecycle(t) === "completed");
+    const completed = joined.filter(t => lc(t) === "completed");
+    const inProgress = joined.filter(t => t.join_request_status === "approved" && lc(t) === "in_progress");
+    const upcoming = joined.filter(t => t.join_request_status === "approved" && lc(t) === "upcoming");
+    const approved = joined.filter(t =>
+      t.join_request_status === "approved" &&
+      lc(t) !== "upcoming" && lc(t) !== "in_progress" && lc(t) !== "completed"
+    );
     return { pending, approved, upcoming, inProgress, completed };
   }, [joined]);
 
   const managedSections = useMemo(() => {
-    const drafts = managed.filter(t => tripLifecycle(t) === "draft");
-    const upcoming = managed.filter(t => tripLifecycle(t) === "upcoming");
-    const inProgress = managed.filter(t => tripLifecycle(t) === "in_progress");
-    const completed = managed.filter(t => tripLifecycle(t) === "completed");
+    const drafts = managed.filter(t => computeLifecycle(t) === "draft");
+    const upcoming = managed.filter(t => computeLifecycle(t) === "upcoming");
+    const inProgress = managed.filter(t => computeLifecycle(t) === "in_progress");
+    const completed = managed.filter(t => computeLifecycle(t) === "completed");
     return { drafts, upcoming, inProgress, completed };
   }, [managed]);
 
@@ -258,7 +307,7 @@ const DashboardTrips = () => {
 
   const renderManaged = () => (
     <div className="mt-6 space-y-6">
-      {hasManaged && <PortfolioRollup managed={managed} />}
+      {hasManaged && <PortfolioRollup managed={managed} serverTotals={portfolio} />}
       <Section title="Drafts" items={managedSections.drafts} render={t => <ManagedRow key={t.id} trip={t} />} emptyMsg="No drafts." />
       <Section title="Upcoming" items={managedSections.upcoming} render={t => <ManagedRow key={t.id} trip={t} />} emptyMsg="No upcoming trips." />
       <Section title="In progress" items={managedSections.inProgress} render={t => <ManagedRow key={t.id} trip={t} />} emptyMsg="No trips currently running." />
