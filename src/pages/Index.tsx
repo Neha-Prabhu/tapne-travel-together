@@ -264,26 +264,29 @@ const Index = () => {
                   <Link
                     key={blog.slug}
                     to={`/stories/${blog.slug}`}
-                    className="block w-[280px] shrink-0 sm:w-[320px]"
+                    // Match Trips card wrapper dimensions for a consistent footprint
+                    className="block min-w-[300px] max-w-[320px] shrink-0"
                   >
-                    <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
-                      {blog.cover_image_url && (
-                        <div className="relative aspect-[16/10] overflow-hidden">
+                    <Card className="group flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg">
+                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                        {blog.cover_image_url ? (
                           <img
                             src={blog.cover_image_url}
                             alt={blog.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="mb-1 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+                        ) : null}
+                      </div>
+                      <CardContent className="flex flex-1 flex-col p-4">
+                        {/* Title — reserve 2 lines so footprint matches Trips card */}
+                        <h3 className="mb-1 line-clamp-2 min-h-[2.75rem] text-base font-semibold leading-tight text-foreground transition-colors group-hover:text-primary">
                           {blog.title}
                         </h3>
-                        {blog.excerpt && (
-                          <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">{blog.excerpt}</p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        {/* Excerpt — always reserve 2 lines */}
+                        <p className="mb-2 line-clamp-2 min-h-[2.5rem] text-sm text-muted-foreground">
+                          {blog.excerpt || "\u00A0"}
+                        </p>
+                        <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {blog.author_display_name || blog.author_username}
