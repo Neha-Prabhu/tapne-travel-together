@@ -8,7 +8,7 @@ const SECTIONS = [
   { to: "/dashboard/trips", label: "Trips", icon: MapPin, desc: "Manage trips you host and trips you've joined." },
   { to: "/dashboard/stories", label: "Stories", icon: BookOpen, desc: "Draft, publish, and review your travel stories." },
   { to: "/dashboard/reviews", label: "Reviews", icon: Star, desc: "See reviews from hosts and travelers." },
-  { to: "/dashboard/subscriptions", label: "Subscriptions", icon: Users, desc: "Manage followers and people you follow." },
+  { to: "/dashboard/followers", label: "Followers", icon: Users, desc: "See your followers and the people you follow." },
 ];
 
 const DashboardOverview = () => {
