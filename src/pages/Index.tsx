@@ -51,23 +51,38 @@ const Index = () => {
   }, [trips, activeFilter]);
 
   const destinations = useMemo(() => {
-    // Mirror Search.tsx destination aggregation so homepage destination cards
-    // produce the exact same destination name (and therefore the exact same
-    // /search?intent=trips&destination=… arrival state) as a destination-result
-    // click-through from the Destinations search flow.
-    const destMap = new Map<string, { name: string; image: string; count: number }>();
+    // Mirror Search.tsx destination aggregation (name, image, count,
+    // nextDeparture, topTypes) so home destination cards match the visual
+    // structure of Search destination cards exactly.
+    const destMap = new Map<
+      string,
+      { name: string; image: string; count: number; nextDeparture?: string; topTypes: string[] }
+    >();
     trips.forEach((t) => {
       const name = (t.destination || "").split(",")[0].trim();
       if (!name) return;
       const key = name.toLowerCase();
-      const existing = destMap.get(key);
-      if (existing) {
-        existing.count++;
-      } else {
-        destMap.set(key, { name, image: t.banner_image_url || "", count: 1 });
+      let entry = destMap.get(key);
+      if (!entry) {
+        entry = {
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          image: t.banner_image_url || "",
+          count: 0,
+          nextDeparture: undefined,
+          topTypes: [],
+        };
+        destMap.set(key, entry);
       }
+      entry.count++;
+      if (!entry.image && t.banner_image_url) entry.image = t.banner_image_url;
+      if (t.starts_at) {
+        if (!entry.nextDeparture || new Date(t.starts_at) < new Date(entry.nextDeparture)) {
+          entry.nextDeparture = t.starts_at;
+        }
+      }
+      if (t.trip_type && !entry.topTypes.includes(t.trip_type)) entry.topTypes.push(t.trip_type);
     });
-    return Array.from(destMap.values());
+    return Array.from(destMap.values()).map((d) => ({ ...d, topTypes: d.topTypes.slice(0, 3) }));
   }, [trips]);
 
   return (
