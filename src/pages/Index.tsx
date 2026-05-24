@@ -14,9 +14,10 @@ import WhyTapne from "@/components/home/WhyTapne";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import FinalCTA from "@/components/home/FinalCTA";
+import { Badge } from "@/components/ui/badge";
 import { apiGet } from "@/lib/api";
 import type { HomeResponse, TripData, BlogData, TestimonialData, CommunityProfile } from "@/types/api";
-import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
+import { MapPin, ArrowRight, User, Calendar, Loader2, Compass } from "lucide-react";
 
 const Index = () => {
   const [trips, setTrips] = useState<TripData[]>([]);
