@@ -18,7 +18,7 @@ const TripCard = ({ trip, initialBookmarked = false, roleLabel }: TripCardProps)
   const heroImg = trip.banner_image_url || DEFAULT_HERO;
 
   return (
-    <Link to={`/trips/${trip.id}`}>
+    <Link to={`/trips/${trip.id}`} className="block h-full">
       <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
         <div className="relative aspect-[16/10] overflow-hidden">
           <img

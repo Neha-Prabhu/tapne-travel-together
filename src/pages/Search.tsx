@@ -811,23 +811,29 @@ const SearchPage = () => {
   );
 
   const StoryRow = ({ s }: { s: BlogData }) => (
-    <Link to={`/stories/${s.slug}`} className="block">
-      <Card className="flex overflow-hidden transition-shadow hover:shadow-md">
+    <Link to={`/stories/${s.slug}`} className="block group">
+      <Card className="flex flex-col overflow-hidden transition-shadow hover:shadow-md sm:h-[220px] sm:flex-row">
         {s.cover_image_url ? (
-          <img src={s.cover_image_url} alt={s.title} className="h-32 w-44 shrink-0 object-cover sm:h-36 sm:w-56" />
+          <img
+            src={s.cover_image_url}
+            alt={s.title}
+            className="h-44 w-full shrink-0 object-cover sm:h-full sm:w-56 md:w-64"
+          />
         ) : (
-          <div className="flex h-32 w-44 shrink-0 items-center justify-center bg-muted sm:h-36 sm:w-56">
+          <div className="flex h-44 w-full shrink-0 items-center justify-center bg-muted sm:h-full sm:w-56 md:w-64">
             <BookOpen className="h-8 w-8 text-muted-foreground" />
           </div>
         )}
-        <div className="flex min-w-0 flex-1 flex-col justify-between p-4">
+        <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-5">
           <div className="min-w-0">
-            <h3 className="line-clamp-1 text-base font-semibold text-foreground">{s.title}</h3>
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-              {s.short_description || s.excerpt}
+            <h3 className="line-clamp-1 text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+              {s.title}
+            </h3>
+            <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-muted-foreground">
+              {s.short_description || s.excerpt || "\u00A0"}
             </p>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 text-xs text-muted-foreground">
             {(s.author_display_name || s.author_username) && (
               <span>by {s.author_display_name || s.author_username}</span>
             )}

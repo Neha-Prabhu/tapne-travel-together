@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface HorizontalCarouselProps {
@@ -8,6 +8,31 @@ interface HorizontalCarouselProps {
 
 const HorizontalCarousel = ({ children, className }: HorizontalCarouselProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const [arrowTop, setArrowTop] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const overflow = el.scrollWidth > el.clientWidth + 1;
+      setHasOverflow(overflow);
+      const first = el.firstElementChild as HTMLElement | null;
+      const h = first?.offsetHeight ?? el.clientHeight;
+      setArrowTop(h / 2);
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    Array.from(el.children).forEach((c) => ro.observe(c as Element));
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [children]);
 
   const scroll = (direction: "left" | "right") => {
     if (!scrollRef.current) return;
@@ -17,21 +42,32 @@ const HorizontalCarousel = ({ children, className }: HorizontalCarouselProps) =>
 
   return (
     <div className={`group/carousel relative ${className || ""}`}>
-      <button
-        onClick={() => scroll("left")}
-        className="absolute -left-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-card shadow-md transition-opacity group-hover/carousel:flex hover:bg-muted"
+      {hasOverflow && (
+        <button
+          onClick={() => scroll("left")}
+          style={arrowTop != null ? { top: arrowTop } : undefined}
+          className="absolute -left-3 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-card shadow-md transition-opacity group-hover/carousel:flex hover:bg-muted"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
+      <div
+        ref={scrollRef}
+        className={`flex items-stretch gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth ${
+          hasOverflow ? "" : "justify-center"
+        }`}
       >
-        <ChevronLeft className="h-4 w-4" />
-      </button>
-      <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
         {children}
       </div>
-      <button
-        onClick={() => scroll("right")}
-        className="absolute -right-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-card shadow-md transition-opacity group-hover/carousel:flex hover:bg-muted"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </button>
+      {hasOverflow && (
+        <button
+          onClick={() => scroll("right")}
+          style={arrowTop != null ? { top: arrowTop } : undefined}
+          className="absolute -right-3 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-card shadow-md transition-opacity group-hover/carousel:flex hover:bg-muted"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 };

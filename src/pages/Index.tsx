@@ -14,9 +14,10 @@ import WhyTapne from "@/components/home/WhyTapne";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import FAQSection from "@/components/home/FAQSection";
 import FinalCTA from "@/components/home/FinalCTA";
+import { Badge } from "@/components/ui/badge";
 import { apiGet } from "@/lib/api";
 import type { HomeResponse, TripData, BlogData, TestimonialData, CommunityProfile } from "@/types/api";
-import { MapPin, ArrowRight, User, Calendar, Loader2 } from "lucide-react";
+import { MapPin, ArrowRight, User, Calendar, Loader2, Compass } from "lucide-react";
 
 const Index = () => {
   const [trips, setTrips] = useState<TripData[]>([]);
@@ -50,23 +51,38 @@ const Index = () => {
   }, [trips, activeFilter]);
 
   const destinations = useMemo(() => {
-    // Mirror Search.tsx destination aggregation so homepage destination cards
-    // produce the exact same destination name (and therefore the exact same
-    // /search?intent=trips&destination=… arrival state) as a destination-result
-    // click-through from the Destinations search flow.
-    const destMap = new Map<string, { name: string; image: string; count: number }>();
+    // Mirror Search.tsx destination aggregation (name, image, count,
+    // nextDeparture, topTypes) so home destination cards match the visual
+    // structure of Search destination cards exactly.
+    const destMap = new Map<
+      string,
+      { name: string; image: string; count: number; nextDeparture?: string; topTypes: string[] }
+    >();
     trips.forEach((t) => {
       const name = (t.destination || "").split(",")[0].trim();
       if (!name) return;
       const key = name.toLowerCase();
-      const existing = destMap.get(key);
-      if (existing) {
-        existing.count++;
-      } else {
-        destMap.set(key, { name, image: t.banner_image_url || "", count: 1 });
+      let entry = destMap.get(key);
+      if (!entry) {
+        entry = {
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          image: t.banner_image_url || "",
+          count: 0,
+          nextDeparture: undefined,
+          topTypes: [],
+        };
+        destMap.set(key, entry);
       }
+      entry.count++;
+      if (!entry.image && t.banner_image_url) entry.image = t.banner_image_url;
+      if (t.starts_at) {
+        if (!entry.nextDeparture || new Date(t.starts_at) < new Date(entry.nextDeparture)) {
+          entry.nextDeparture = t.starts_at;
+        }
+      }
+      if (t.trip_type && !entry.topTypes.includes(t.trip_type)) entry.topTypes.push(t.trip_type);
     });
-    return Array.from(destMap.values());
+    return Array.from(destMap.values()).map((d) => ({ ...d, topTypes: d.topTypes.slice(0, 3) }));
   }, [trips]);
 
   return (
@@ -102,8 +118,10 @@ const Index = () => {
           ) : (
             <HorizontalCarousel>
               {filteredTrips.slice(0, 6).map((trip) => (
-                <div key={trip.id} className="min-w-[300px] max-w-[320px] shrink-0">
-                  <TripCard trip={trip} />
+                <div key={trip.id} className="flex min-w-[300px] max-w-[320px] shrink-0">
+                  <div className="h-full w-full">
+                    <TripCard trip={trip} />
+                  </div>
                 </div>
               ))}
             </HorizontalCarousel>
@@ -140,26 +158,58 @@ const Index = () => {
                     // destination text and the contextual "for {name}" framing renders),
                     // adds destination={name}, and switches intent to trips with default sort.
                     to={`/search?intent=trips&q=${encodeURIComponent(dest.name)}&destination=${encodeURIComponent(dest.name)}`}
-                    className="group w-[220px] shrink-0 sm:w-[260px]"
+                    className="group block w-[240px] shrink-0 sm:w-[260px]"
                   >
-                    <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        {dest.image && (
+                    {/* Mirror Search's portrait DestinationCard */}
+                    <Card className="relative h-full overflow-hidden rounded-2xl border-0 shadow-sm transition-all duration-300 hover:shadow-xl">
+                      <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
+                        {dest.image ? (
                           <img
                             src={dest.image}
                             alt={dest.name}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute inset-x-0 bottom-0 p-4">
-                          <div className="flex items-center gap-1.5 text-white">
-                            <MapPin className="h-4 w-4" />
-                            <span className="text-lg font-semibold">{dest.name}</span>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Compass className="h-10 w-10 text-muted-foreground" />
                           </div>
-                          <p className="mt-0.5 text-xs text-white/80">
-                            {dest.count} trip{dest.count !== 1 ? "s" : ""} available
-                          </p>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                        <div className="absolute right-3 top-3">
+                          <Badge className="bg-background/90 text-foreground backdrop-blur-sm hover:bg-background/90">
+                            {dest.count} trip{dest.count !== 1 ? "s" : ""}
+                          </Badge>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 text-white">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="h-4 w-4 shrink-0" />
+                            <h3 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+                              {dest.name}
+                            </h3>
+                          </div>
+                          {dest.nextDeparture && (
+                            <p className="mt-1 flex items-center gap-1 text-xs text-white/85">
+                              <Calendar className="h-3.5 w-3.5 shrink-0" />
+                              Next departure{" "}
+                              {new Date(dest.nextDeparture).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          )}
+                          {dest.topTypes.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              {dest.topTypes.map((t) => (
+                                <Badge
+                                  key={t}
+                                  variant="secondary"
+                                  className="border-white/20 bg-white/15 text-[10px] font-medium text-white backdrop-blur-sm hover:bg-white/15"
+                                >
+                                  {t}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Card>
@@ -186,7 +236,7 @@ const Index = () => {
 
               <HorizontalCarousel>
                 {hosts.slice(0, 6).map((p) => (
-                  <div key={p.username} className="w-[260px] shrink-0 sm:w-[280px]">
+                  <div key={p.username} className="flex w-[260px] shrink-0 sm:w-[280px]">
                     <TravelerCard profile={p} />
                   </div>
                 ))}
@@ -214,26 +264,29 @@ const Index = () => {
                   <Link
                     key={blog.slug}
                     to={`/stories/${blog.slug}`}
-                    className="block w-[280px] shrink-0 sm:w-[320px]"
+                    // Match Trips card wrapper dimensions for a consistent footprint
+                    className="block min-w-[300px] max-w-[320px] shrink-0"
                   >
-                    <Card className="group overflow-hidden transition-shadow hover:shadow-lg">
-                      {blog.cover_image_url && (
-                        <div className="relative aspect-[16/10] overflow-hidden">
+                    <Card className="group flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg">
+                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                        {blog.cover_image_url ? (
                           <img
                             src={blog.cover_image_url}
                             alt={blog.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="mb-1 line-clamp-2 text-base font-semibold leading-tight text-foreground group-hover:text-primary transition-colors">
+                        ) : null}
+                      </div>
+                      <CardContent className="flex flex-1 flex-col p-4">
+                        {/* Title — reserve 2 lines so footprint matches Trips card */}
+                        <h3 className="mb-1 line-clamp-2 min-h-[2.75rem] text-base font-semibold leading-tight text-foreground transition-colors group-hover:text-primary">
                           {blog.title}
                         </h3>
-                        {blog.excerpt && (
-                          <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">{blog.excerpt}</p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        {/* Excerpt — always reserve 2 lines */}
+                        <p className="mb-2 line-clamp-2 min-h-[2.5rem] text-sm text-muted-foreground">
+                          {blog.excerpt || "\u00A0"}
+                        </p>
+                        <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {blog.author_display_name || blog.author_username}
