@@ -29,6 +29,12 @@ export interface TapneRuntimeConfig {
     dm_start: string;
     account_deactivate: string;
     account_delete: string;
+    // Optional named dashboard locations — present only when backend exposes them.
+    dashboard_trips?: string;
+    dashboard_reviews?: string;
+    dashboard_followers?: string;
+    followers?: string;
+    following?: string;
   };
   csrf: {
     cookie_name: string;
