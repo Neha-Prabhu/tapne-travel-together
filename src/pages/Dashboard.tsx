@@ -12,7 +12,7 @@ const TABS = [
   { to: "/dashboard/trips", label: "Trips", icon: MapPin },
   { to: "/dashboard/stories", label: "Stories", icon: BookOpen },
   { to: "/dashboard/reviews", label: "Reviews", icon: Star },
-  { to: "/dashboard/subscriptions", label: "Subscriptions", icon: Users },
+  { to: "/dashboard/followers", label: "Followers", icon: Users },
 ];
 
 const Dashboard = () => {

@@ -1,28 +1,64 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TripData, MyTripsResponse } from "@/types/api";
-import { Loader2, Plus, MapPin, Calendar, Users } from "lucide-react";
+import { Plus, MapPin, Calendar, Users, Star, Bookmark, Inbox, Info, BarChart3 } from "lucide-react";
 
-const statusBadge = (s?: string) => {
-  if (!s) return null;
-  const map: Record<string, string> = {
-    draft: "bg-muted text-muted-foreground",
-    published: "bg-primary/15 text-primary",
-    completed: "bg-secondary text-secondary-foreground",
-    pending: "bg-yellow-100 text-yellow-800",
-    approved: "bg-green-100 text-green-800",
-    rejected: "bg-red-100 text-red-800",
-  };
-  return <Badge variant="outline" className={map[s] || ""}>{s}</Badge>;
+type Lifecycle = "draft" | "upcoming" | "in_progress" | "completed";
+
+const tripLifecycle = (t: TripData): Lifecycle => {
+  if (t.status === "draft" || t.is_draft) return "draft";
+  if (t.status === "completed") return "completed";
+  const now = Date.now();
+  const starts = t.starts_at ? new Date(t.starts_at).getTime() : null;
+  const ends = t.ends_at ? new Date(t.ends_at).getTime() : null;
+  if (ends && ends < now) return "completed";
+  if (starts && starts <= now && (!ends || ends >= now)) return "in_progress";
+  return "upcoming";
 };
 
-const TripRow = ({ trip, manage }: { trip: TripData; manage?: boolean }) => (
+const statusPill = (label: string, tone: "muted" | "primary" | "warn" | "ok" | "danger" = "muted") => {
+  const map = {
+    muted: "bg-muted text-muted-foreground",
+    primary: "bg-primary/15 text-primary",
+    warn: "bg-yellow-100 text-yellow-800",
+    ok: "bg-green-100 text-green-800",
+    danger: "bg-red-100 text-red-800",
+  } as const;
+  return <Badge variant="outline" className={map[tone]}>{label}</Badge>;
+};
+
+const fmtCurrency = (n: number) =>
+  n >= 1000 ? `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `$${n.toFixed(0)}`;
+
+const estimatedValue = (t: TripData) => {
+  const filled = t.participants_count ?? 0;
+  const price = t.price_per_person ?? 0;
+  return filled * price;
+};
+
+const EstBadge = ({ value }: { value: number }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <span className="inline-flex items-center gap-1 rounded-md bg-accent px-1.5 py-0.5 text-xs font-medium text-accent-foreground">
+        <BarChart3 className="h-3 w-3" />
+        est. {fmtCurrency(value)}
+      </span>
+    </TooltipTrigger>
+    <TooltipContent>
+      Estimated value = filled seats × price per person. Indicative only.
+    </TooltipContent>
+  </Tooltip>
+);
+
+const JoinedRow = ({ trip }: { trip: TripData }) => (
   <Card>
     <CardContent className="flex items-center gap-4 p-4">
       <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -31,25 +67,145 @@ const TripRow = ({ trip, manage }: { trip: TripData; manage?: boolean }) => (
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <Link to={`/trips/${trip.id}`} className="truncate font-medium text-foreground hover:text-primary">{trip.title || "Untitled"}</Link>
-          {statusBadge(trip.status)}
-          {trip.join_request_status && statusBadge(trip.join_request_status)}
+          {trip.join_request_status === "pending" && statusPill("Pending", "warn")}
+          {trip.join_request_status === "approved" && statusPill("Approved", "ok")}
+          {trip.join_request_status === "denied" && statusPill("Denied", "danger")}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           {trip.destination && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{trip.destination}</span>}
           {trip.starts_at && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(trip.starts_at).toLocaleDateString()}</span>}
-          {trip.participants_count !== undefined && <span className="flex items-center gap-1"><Users className="h-3 w-3" />{trip.participants_count}/{trip.total_seats || "?"}</span>}
         </div>
       </div>
-      {manage && (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={trip.status === "draft" ? `/trips/${trip.id}/edit` : `/trips/${trip.id}`}>
-            {trip.status === "draft" ? "Edit" : "Manage"}
-          </Link>
-        </Button>
-      )}
     </CardContent>
   </Card>
 );
+
+const ManagedRow = ({ trip }: { trip: TripData }) => {
+  const lc = tripLifecycle(trip);
+  const filled = trip.participants_count ?? 0;
+  const seats = trip.total_seats ?? 0;
+  const pending = trip.applications_count ?? 0;
+  const reviews = trip.reviews_count ?? 0;
+  const rating = trip.average_rating ?? 0;
+  const est = estimatedValue(trip);
+  // bookmarks not exposed via API; show — if absent
+  const bookmarks = (trip as TripData & { bookmarks_count?: number }).bookmarks_count;
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-4">
+          <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted">
+            {trip.banner_image_url && <img src={trip.banner_image_url} alt="" className="h-full w-full object-cover" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link to={`/trips/${trip.id}`} className="truncate font-medium text-foreground hover:text-primary">{trip.title || "Untitled"}</Link>
+              {lc === "draft" && statusPill("Draft")}
+              {lc === "upcoming" && statusPill("Upcoming", "primary")}
+              {lc === "in_progress" && statusPill("In progress", "ok")}
+              {lc === "completed" && statusPill("Completed")}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              {trip.destination && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{trip.destination}</span>}
+              {trip.starts_at && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(trip.starts_at).toLocaleDateString()}</span>}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-foreground">
+              <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5 text-muted-foreground" />{filled}/{seats || "?"} seats</span>
+              <span className="flex items-center gap-1"><Inbox className="h-3.5 w-3.5 text-muted-foreground" />{pending} pending</span>
+              <EstBadge value={est} />
+              <span className="flex items-center gap-1">
+                <Star className="h-3.5 w-3.5 text-yellow-500" />
+                {rating > 0 ? rating.toFixed(1) : "—"}
+                <span className="text-muted-foreground">({reviews})</span>
+              </span>
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Bookmark className="h-3.5 w-3.5" />{bookmarks ?? "—"}
+              </span>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={lc === "draft" ? `/trips/${trip.id}/edit` : `/trips/${trip.id}`}>
+                {lc === "draft" ? "Edit" : "Manage"}
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const SkeletonList = () => (
+  <div className="space-y-2">
+    {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+  </div>
+);
+
+const Section = ({
+  title, items, render, emptyMsg,
+}: {
+  title: string;
+  items: TripData[];
+  render: (t: TripData) => JSX.Element;
+  emptyMsg: string;
+}) => (
+  <div>
+    <h3 className="mb-2 text-sm font-medium text-muted-foreground">{title} ({items.length})</h3>
+    {items.length === 0 ? (
+      <div className="rounded-lg border border-dashed py-6 text-center text-xs text-muted-foreground">{emptyMsg}</div>
+    ) : (
+      <div className="space-y-2">{items.map(render)}</div>
+    )}
+  </div>
+);
+
+const PortfolioRollup = ({ managed }: { managed: TripData[] }) => {
+  const totals = useMemo(() => {
+    const total = managed.length;
+    const seats = managed.reduce((s, t) => s + (t.participants_count ?? 0), 0);
+    const value = managed.reduce((s, t) => s + estimatedValue(t), 0);
+    const pending = managed.reduce((s, t) => s + (t.applications_count ?? 0), 0);
+    const rated = managed.filter(t => (t.average_rating ?? 0) > 0);
+    const avgRating = rated.length
+      ? rated.reduce((s, t) => s + (t.average_rating ?? 0), 0) / rated.length
+      : 0;
+    return { total, seats, value, pending, avgRating };
+  }, [managed]);
+
+  const items = [
+    { label: "Trips", value: totals.total },
+    { label: "Filled seats", value: totals.seats },
+    { label: "Est. value", value: fmtCurrency(totals.value), hint: "Lifetime filled × price per person" },
+    { label: "Avg rating", value: totals.avgRating > 0 ? totals.avgRating.toFixed(2) : "—" },
+    { label: "Pending", value: totals.pending },
+  ];
+
+  return (
+    <div className="rounded-2xl border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Hosting at a glance</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {items.map(it => (
+          <div key={it.label} className="rounded-lg bg-muted/40 p-3">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              {it.label}
+              {it.hint && (
+                <Tooltip>
+                  <TooltipTrigger asChild><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent>{it.hint}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+            <div className="mt-1 text-lg font-semibold text-foreground">{it.value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const DashboardTrips = () => {
   const { isAuthenticated } = useAuth();
@@ -65,75 +221,84 @@ const DashboardTrips = () => {
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
-
   const joined = trips.filter(t => !t.can_manage);
   const managed = trips.filter(t => t.can_manage);
+  const hasJoined = joined.length > 0;
+  const hasManaged = managed.length > 0;
 
-  const groupBy = (arr: TripData[], key: string) => arr.filter(t => (t.status || (t.is_draft ? "draft" : "published")) === key);
-  const groupByJoin = (arr: TripData[], key: string) => arr.filter(t => t.join_request_status === key || (key === "completed" && t.status === "completed"));
+  const joinedSections = useMemo(() => {
+    const pending = joined.filter(t => t.join_request_status === "pending");
+    const approved = joined.filter(t => t.join_request_status === "approved" && tripLifecycle(t) !== "upcoming" && tripLifecycle(t) !== "in_progress" && tripLifecycle(t) !== "completed");
+    // "Approved" = approved but no lifecycle info yet (e.g. no dates). Upcoming/In-progress/Completed split by dates.
+    const upcoming = joined.filter(t => t.join_request_status === "approved" && tripLifecycle(t) === "upcoming");
+    const inProgress = joined.filter(t => t.join_request_status === "approved" && tripLifecycle(t) === "in_progress");
+    const completed = joined.filter(t => tripLifecycle(t) === "completed");
+    return { pending, approved, upcoming, inProgress, completed };
+  }, [joined]);
 
-  const renderEmpty = (msg: string, cta?: { label: string; to: string }) => (
-    <div className="py-8 text-center text-sm text-muted-foreground">
-      <p>{msg}</p>
-      {cta && <Button asChild variant="link" className="mt-1"><Link to={cta.to}>{cta.label}</Link></Button>}
+  const managedSections = useMemo(() => {
+    const drafts = managed.filter(t => tripLifecycle(t) === "draft");
+    const upcoming = managed.filter(t => tripLifecycle(t) === "upcoming");
+    const inProgress = managed.filter(t => tripLifecycle(t) === "in_progress");
+    const completed = managed.filter(t => tripLifecycle(t) === "completed");
+    return { drafts, upcoming, inProgress, completed };
+  }, [managed]);
+
+  const renderJoined = () => (
+    <div className="mt-6 space-y-6">
+      <Section title="Pending" items={joinedSections.pending} render={t => <JoinedRow key={t.id} trip={t} />} emptyMsg="No pending requests." />
+      {joinedSections.approved.length > 0 && (
+        <Section title="Approved" items={joinedSections.approved} render={t => <JoinedRow key={t.id} trip={t} />} emptyMsg="" />
+      )}
+      <Section title="Upcoming" items={joinedSections.upcoming} render={t => <JoinedRow key={t.id} trip={t} />} emptyMsg="Nothing upcoming." />
+      <Section title="In progress" items={joinedSections.inProgress} render={t => <JoinedRow key={t.id} trip={t} />} emptyMsg="No trips currently in progress." />
+      <Section title="Completed" items={joinedSections.completed} render={t => <JoinedRow key={t.id} trip={t} />} emptyMsg="No completed trips yet." />
+    </div>
+  );
+
+  const renderManaged = () => (
+    <div className="mt-6 space-y-6">
+      {hasManaged && <PortfolioRollup managed={managed} />}
+      <Section title="Drafts" items={managedSections.drafts} render={t => <ManagedRow key={t.id} trip={t} />} emptyMsg="No drafts." />
+      <Section title="Upcoming" items={managedSections.upcoming} render={t => <ManagedRow key={t.id} trip={t} />} emptyMsg="No upcoming trips." />
+      <Section title="In progress" items={managedSections.inProgress} render={t => <ManagedRow key={t.id} trip={t} />} emptyMsg="No trips currently running." />
+      <Section title="Completed" items={managedSections.completed} render={t => <ManagedRow key={t.id} trip={t} />} emptyMsg="No completed trips yet." />
     </div>
   );
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-foreground">Your trips</h2>
         <Button asChild size="sm">
           <Link to="/trips/new"><Plus className="mr-1 h-4 w-4" />New trip</Link>
         </Button>
       </div>
 
-      <Tabs defaultValue="joined">
-        <TabsList>
-          <TabsTrigger value="joined">Joined ({joined.length})</TabsTrigger>
-          <TabsTrigger value="managed">Managed ({managed.length})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="joined" className="mt-6 space-y-6">
-          {[
-            { key: "pending", label: "Pending" },
-            { key: "approved", label: "Approved" },
-            { key: "rejected", label: "Rejected" },
-            { key: "completed", label: "Completed" },
-          ].map(s => {
-            const items = groupByJoin(joined, s.key);
-            return (
-              <div key={s.key}>
-                <h3 className="mb-2 text-sm font-medium text-muted-foreground">{s.label} ({items.length})</h3>
-                {items.length === 0 ? renderEmpty(`No ${s.label.toLowerCase()} trips`) : (
-                  <div className="space-y-2">{items.map(t => <TripRow key={t.id} trip={t} />)}</div>
-                )}
-              </div>
-            );
-          })}
-          {joined.length === 0 && renderEmpty("You haven't joined any trips yet.", { label: "Browse trips", to: "/search" })}
-        </TabsContent>
-
-        <TabsContent value="managed" className="mt-6 space-y-6">
-          {[
-            { key: "draft", label: "Drafts" },
-            { key: "published", label: "Published" },
-            { key: "completed", label: "Completed" },
-          ].map(s => {
-            const items = groupBy(managed, s.key);
-            return (
-              <div key={s.key}>
-                <h3 className="mb-2 text-sm font-medium text-muted-foreground">{s.label} ({items.length})</h3>
-                {items.length === 0 ? renderEmpty(`No ${s.label.toLowerCase()}`) : (
-                  <div className="space-y-2">{items.map(t => <TripRow key={t.id} trip={t} manage />)}</div>
-                )}
-              </div>
-            );
-          })}
-          {managed.length === 0 && renderEmpty("You haven't created any trips yet.", { label: "Create your first trip", to: "/trips/new" })}
-        </TabsContent>
-      </Tabs>
+      {loading ? (
+        <SkeletonList />
+      ) : !hasJoined && !hasManaged ? (
+        <div className="rounded-2xl border border-dashed p-10 text-center">
+          <p className="text-sm text-muted-foreground">You haven't joined or created any trips yet.</p>
+          <div className="mt-4 flex justify-center gap-2">
+            <Button asChild size="sm"><Link to="/trips/new">Create a trip</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link to="/search">Browse trips</Link></Button>
+          </div>
+        </div>
+      ) : hasJoined && hasManaged ? (
+        <Tabs defaultValue="joined">
+          <TabsList>
+            <TabsTrigger value="joined">Joined ({joined.length})</TabsTrigger>
+            <TabsTrigger value="managed">Managed ({managed.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="joined">{renderJoined()}</TabsContent>
+          <TabsContent value="managed">{renderManaged()}</TabsContent>
+        </Tabs>
+      ) : hasJoined ? (
+        renderJoined()
+      ) : (
+        renderManaged()
+      )}
     </div>
   );
 };
