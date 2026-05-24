@@ -270,25 +270,28 @@ const DashboardTrips = () => {
   useEffect(() => {
     if (!isAuthenticated) { setLoading(false); return; }
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    const base = cfg.api.base;
-    // Prefer the dashboard-specific endpoint; fall back to my_trips.
-    apiGet<DashboardTripsResponse>(`${base}/dashboard/trips/`)
-      .then(d => {
-        if (d && Array.isArray(d.trips) && d.trips.length > 0) {
-          setTrips(d.trips);
-          setPortfolio(d.portfolio);
-          return true;
-        }
-        return false;
-      })
-      .catch(() => false)
-      .then((handled) => {
-        if (handled) return;
-        return apiGet<MyTripsResponse>(cfg.api.my_trips)
-          .then(d => setTrips((d.trips || []) as DashboardTrip[]))
-          .catch(() => {});
-      })
-      .finally(() => setLoading(false));
+    // Use the named dashboard location only when the page config exposes it.
+    const dashboardUrl = cfg.api.dashboard_trips;
+    const fallback = () =>
+      apiGet<MyTripsResponse>(cfg.api.my_trips)
+        .then(d => setTrips((d.trips || []) as DashboardTrip[]))
+        .catch(() => {});
+
+    const work = dashboardUrl
+      ? apiGet<DashboardTripsResponse>(dashboardUrl)
+          .then(d => {
+            if (d && Array.isArray(d.trips) && d.trips.length > 0) {
+              setTrips(d.trips);
+              setPortfolio(d.portfolio);
+              return true;
+            }
+            return false;
+          })
+          .catch(() => false)
+          .then(handled => (handled ? undefined : fallback()))
+      : fallback();
+
+    work.finally(() => setLoading(false));
   }, [isAuthenticated]);
 
   const joined = trips.filter(t => !t.can_manage);
