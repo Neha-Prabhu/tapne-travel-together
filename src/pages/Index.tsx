@@ -158,26 +158,58 @@ const Index = () => {
                     // destination text and the contextual "for {name}" framing renders),
                     // adds destination={name}, and switches intent to trips with default sort.
                     to={`/search?intent=trips&q=${encodeURIComponent(dest.name)}&destination=${encodeURIComponent(dest.name)}`}
-                    className="group w-[220px] shrink-0 sm:w-[260px]"
+                    className="group block w-[240px] shrink-0 sm:w-[260px]"
                   >
-                    <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        {dest.image && (
+                    {/* Mirror Search's portrait DestinationCard */}
+                    <Card className="relative h-full overflow-hidden rounded-2xl border-0 shadow-sm transition-all duration-300 hover:shadow-xl">
+                      <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
+                        {dest.image ? (
                           <img
                             src={dest.image}
                             alt={dest.name}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute inset-x-0 bottom-0 p-4">
-                          <div className="flex items-center gap-1.5 text-white">
-                            <MapPin className="h-4 w-4" />
-                            <span className="text-lg font-semibold">{dest.name}</span>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Compass className="h-10 w-10 text-muted-foreground" />
                           </div>
-                          <p className="mt-0.5 text-xs text-white/80">
-                            {dest.count} trip{dest.count !== 1 ? "s" : ""} available
-                          </p>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                        <div className="absolute right-3 top-3">
+                          <Badge className="bg-background/90 text-foreground backdrop-blur-sm hover:bg-background/90">
+                            {dest.count} trip{dest.count !== 1 ? "s" : ""}
+                          </Badge>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 text-white">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="h-4 w-4 shrink-0" />
+                            <h3 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+                              {dest.name}
+                            </h3>
+                          </div>
+                          {dest.nextDeparture && (
+                            <p className="mt-1 flex items-center gap-1 text-xs text-white/85">
+                              <Calendar className="h-3.5 w-3.5 shrink-0" />
+                              Next departure{" "}
+                              {new Date(dest.nextDeparture).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          )}
+                          {dest.topTypes.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                              {dest.topTypes.map((t) => (
+                                <Badge
+                                  key={t}
+                                  variant="secondary"
+                                  className="border-white/20 bg-white/15 text-[10px] font-medium text-white backdrop-blur-sm hover:bg-white/15"
+                                >
+                                  {t}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Card>
