@@ -236,7 +236,7 @@ const Index = () => {
 
               <HorizontalCarousel>
                 {hosts.slice(0, 6).map((p) => (
-                  <div key={p.username} className="w-[260px] shrink-0 sm:w-[280px]">
+                  <div key={p.username} className="flex w-[260px] shrink-0 sm:w-[280px]">
                     <TravelerCard profile={p} />
                   </div>
                 ))}
