@@ -31,7 +31,8 @@ import DashboardOverview from "./pages/dashboard/DashboardOverview";
 import DashboardTrips from "./pages/dashboard/DashboardTrips";
 import DashboardStories from "./pages/dashboard/DashboardStories";
 import DashboardReviews from "./pages/dashboard/DashboardReviews";
-import DashboardSubscriptions from "./pages/dashboard/DashboardSubscriptions";
+import DashboardFollowers from "./pages/dashboard/DashboardFollowers";
+import { Navigate } from "react-router-dom";
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
@@ -78,7 +79,8 @@ const App = () => (
                   <Route path="trips" element={<DashboardTrips />} />
                   <Route path="stories" element={<DashboardStories />} />
                   <Route path="reviews" element={<DashboardReviews />} />
-                  <Route path="subscriptions" element={<DashboardSubscriptions />} />
+                  <Route path="followers" element={<DashboardFollowers />} />
+                  <Route path="subscriptions" element={<Navigate to="/dashboard/followers" replace />} />
                 </Route>
 
                 <Route path="*" element={<NotFound />} />
