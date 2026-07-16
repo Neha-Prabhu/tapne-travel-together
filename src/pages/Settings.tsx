@@ -6,8 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPatch, apiPost } from "@/lib/api";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -15,17 +16,75 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, AlertTriangle, PauseCircle, Trash2, SettingsIcon } from "lucide-react";
 
+type ProfileVisibility = "public" | "members_only";
+type DmPrivacy = "anyone" | "members_only" | "no_one";
+type Theme = "system" | "light" | "dark";
+
+interface SettingsPayload {
+  email_updates: boolean;
+  profile_visibility: ProfileVisibility;
+  dm_privacy: DmPrivacy;
+  theme: Theme;
+  digest_emails: boolean;
+}
+
+const DEFAULTS: SettingsPayload = {
+  email_updates: true,
+  profile_visibility: "public",
+  dm_privacy: "members_only",
+  theme: "system",
+  digest_emails: true,
+};
+
 const Settings = () => {
   const { isAuthenticated, requireAuth, logout } = useAuth();
   const navigate = useNavigate();
-  const [emailNotif, setEmailNotif] = useState(true);
-  const [pushNotif, setPushNotif] = useState(true);
-  const [profilePublic, setProfilePublic] = useState(true);
+
+  const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   useEffect(() => { if (!isAuthenticated) requireAuth(() => {}); }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const cfg = window.TAPNE_RUNTIME_CONFIG;
+        const data = await apiGet<Partial<SettingsPayload>>(cfg.api.settings);
+        if (!cancelled && data && typeof data === "object") {
+          setValues((prev) => ({ ...prev, ...data }));
+        }
+      } catch {
+        // keep defaults
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
+
+  const update = <K extends keyof SettingsPayload>(key: K, val: SettingsPayload[K]) => {
+    setValues((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPatch(cfg.api.settings, values);
+      toast.success("Settings saved.");
+    } catch {
+      toast.error("Could not save settings. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleDeactivate = async () => {
     setPending(true);
@@ -65,50 +124,165 @@ const Settings = () => {
           <SettingsIcon className="h-6 w-6" />Settings
         </h1>
 
-        <div className="space-y-6">
-          <Card>
-            <CardContent className="space-y-4 p-6">
-              <h2 className="text-lg font-semibold">Notifications</h2>
-              <div className="flex items-center justify-between">
-                <Label>Email notifications</Label>
-                <Switch checked={emailNotif} onCheckedChange={setEmailNotif} />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label>Push notifications</Label>
-                <Switch checked={pushNotif} onCheckedChange={setPushNotif} />
-              </div>
-            </CardContent>
-          </Card>
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading settings…
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Emails */}
+            <Card>
+              <CardContent className="space-y-5 p-6">
+                <h2 className="text-lg font-semibold">Emails</h2>
 
-          <Card>
-            <CardContent className="space-y-4 p-6">
-              <h2 className="text-lg font-semibold">Privacy</h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Public profile</Label>
-                  <p className="text-xs text-muted-foreground">Anyone can view your profile and trips.</p>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Email updates</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Trip updates, applications, and messages sent to your inbox.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={values.email_updates}
+                    onCheckedChange={(v) => update("email_updates", v)}
+                  />
                 </div>
-                <Switch checked={profilePublic} onCheckedChange={setProfilePublic} />
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="border-destructive/30">
-            <CardContent className="space-y-4 p-6">
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-destructive">
-                <AlertTriangle className="h-5 w-5" />Danger zone
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setDeactivateOpen(true)}>
-                  <PauseCircle className="mr-1.5 h-4 w-4" />Deactivate account
-                </Button>
-                <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-                  <Trash2 className="mr-1.5 h-4 w-4" />Delete permanently
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Weekly digest</Label>
+                    <p className="text-xs text-muted-foreground">
+                      A weekly summary of new trips and community activity.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={values.digest_emails}
+                    onCheckedChange={(v) => update("digest_emails", v)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Privacy */}
+            <Card>
+              <CardContent className="space-y-6 p-6">
+                <h2 className="text-lg font-semibold">Privacy</h2>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium">Profile visibility</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Choose who can view your profile and hosted trips.
+                    </p>
+                  </div>
+                  <RadioGroup
+                    value={values.profile_visibility}
+                    onValueChange={(v) => update("profile_visibility", v as ProfileVisibility)}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="public" id="pv-public" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="pv-public" className="text-sm font-medium">Public</Label>
+                        <p className="text-xs text-muted-foreground">Anyone on the web can view your profile.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="members_only" id="pv-members" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="pv-members" className="text-sm font-medium">Members only</Label>
+                        <p className="text-xs text-muted-foreground">Only signed-in Tapne members can view your profile.</p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm font-medium">Who can message you</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Controls who can start a direct message with you.
+                    </p>
+                  </div>
+                  <RadioGroup
+                    value={values.dm_privacy}
+                    onValueChange={(v) => update("dm_privacy", v as DmPrivacy)}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="anyone" id="dm-anyone" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="dm-anyone" className="text-sm font-medium">Anyone</Label>
+                        <p className="text-xs text-muted-foreground">Any signed-in member can message you.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="members_only" id="dm-members" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="dm-members" className="text-sm font-medium">Trip members only</Label>
+                        <p className="text-xs text-muted-foreground">Only people on a trip with you can message you.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="no_one" id="dm-none" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="dm-none" className="text-sm font-medium">No one</Label>
+                        <p className="text-xs text-muted-foreground">Turn off new direct messages.</p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Appearance */}
+            <Card>
+              <CardContent className="space-y-3 p-6">
+                <h2 className="text-lg font-semibold">Appearance</h2>
+                <div>
+                  <Label className="text-sm font-medium">Theme</Label>
+                  <p className="text-xs text-muted-foreground">Choose how Tapne looks to you.</p>
+                </div>
+                <RadioGroup
+                  value={values.theme}
+                  onValueChange={(v) => update("theme", v as Theme)}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                >
+                  {(["system", "light", "dark"] as Theme[]).map((t) => (
+                    <div key={t} className="flex items-center gap-2 rounded-md border border-border p-3">
+                      <RadioGroupItem value={t} id={`theme-${t}`} />
+                      <Label htmlFor={`theme-${t}`} className="text-sm capitalize">{t}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </CardContent>
+            </Card>
+
+            {/* Save */}
+            <div className="flex justify-end">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Save changes
+              </Button>
+            </div>
+
+            {/* Danger zone */}
+            <Card className="border-destructive/30">
+              <CardContent className="space-y-4 p-6">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-destructive">
+                  <AlertTriangle className="h-5 w-5" />Danger zone
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => setDeactivateOpen(true)}>
+                    <PauseCircle className="mr-1.5 h-4 w-4" />Deactivate account
+                  </Button>
+                  <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                    <Trash2 className="mr-1.5 h-4 w-4" />Delete permanently
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
       <Footer />
 
