@@ -248,8 +248,29 @@ function getMockApplications(tripId: number): EnrollmentRequestData[] {
   ];
 }
 
+// Persistent in-memory settings for dev mode
+let _devSettings: Record<string, unknown> = {
+  email_updates: true,
+  profile_visibility: "public",
+  dm_privacy: "members_only",
+  theme: "system",
+  digest_emails: true,
+};
+
 export function resolveMockRequest(method: string, url: string, body?: unknown): unknown {
   const path = url.replace("/__devmock__", "").replace(/\?.*$/, "");
+
+  // ── Settings ──
+  if (path === "/settings/") {
+    if (method === "GET") return { ..._devSettings };
+    if (method === "PATCH" || method === "POST") {
+      if (body && typeof body === "object") {
+        _devSettings = { ..._devSettings, ...(body as Record<string, unknown>) };
+      }
+      return { ok: true, ..._devSettings };
+    }
+  }
+
 
   // ── User search ──
   if (method === "GET" && path.startsWith("/users/search/")) {
