@@ -29,6 +29,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [lastAuthError, setLastAuthError] = useState("");
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
+  const [authReady, setAuthReady] = useState<boolean>(() => {
+    // If a persisted user already exists from zustand storage, auth is ready immediately.
+    const cfg = typeof window !== "undefined" ? window.TAPNE_RUNTIME_CONFIG : undefined;
+    // No async session endpoint => nothing to wait for.
+    if (!cfg?.api?.session) return true;
+    return !!useAuthStore.getState().user;
+  });
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -39,15 +46,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    if (!cfg?.api?.session) return;
+    if (!cfg?.api?.session) { setAuthReady(true); return; }
     apiGet<SessionResponse>(cfg.api.session)
       .then((data) => {
         if (data.authenticated && data.user) {
           store.setAuth(sessionUserToAuthUser(data.user), data.csrf_token || "session");
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setAuthReady(true));
   }, []);
+
 
   const login = useCallback(async (identifier: string, password: string): Promise<boolean> => {
     setLastAuthError("");
