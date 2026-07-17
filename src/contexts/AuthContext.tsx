@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { apiGet, apiPost, apiPatch } from "@/lib/api";
 import type { SessionResponse, SessionUser } from "@/types/api";
 import { useAuthStore, sessionUserToAuthUser, type AuthUser } from "@/features/auth/store/useAuthStore";
@@ -29,13 +29,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [lastAuthError, setLastAuthError] = useState("");
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
-  const [authReady, setAuthReady] = useState<boolean>(() => {
-    // If a persisted user already exists from zustand storage, auth is ready immediately.
-    const cfg = typeof window !== "undefined" ? window.TAPNE_RUNTIME_CONFIG : undefined;
-    // No async session endpoint => nothing to wait for.
-    if (!cfg?.api?.session) return true;
-    return !!useAuthStore.getState().user;
-  });
+  const [authReady, setAuthReady] = useState(false);
+  const authMutationVersion = useRef(0);
+
+  // Persisted identity is only a hydration hint. Never expose it to protected
+  // routes or navigation until the current server session has been checked.
+  const user = authReady ? store.user : null;
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -46,14 +45,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
-    if (!cfg?.api?.session) { setAuthReady(true); return; }
+    const checkVersion = authMutationVersion.current;
+
+    if (!cfg?.api?.session) {
+      if (cfg?.session?.authenticated && cfg.session.user) {
+        store.setAuth(sessionUserToAuthUser(cfg.session.user), cfg.csrf?.token || "session");
+      } else {
+        store.logout();
+      }
+      setAuthReady(true);
+      return;
+    }
+
     apiGet<SessionResponse>(cfg.api.session)
       .then((data) => {
+        if (authMutationVersion.current !== checkVersion) return;
         if (data.authenticated && data.user) {
           store.setAuth(sessionUserToAuthUser(data.user), data.csrf_token || "session");
+        } else {
+          store.logout();
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (authMutationVersion.current === checkVersion) store.logout();
+      })
       .finally(() => setAuthReady(true));
   }, []);
 
@@ -64,7 +79,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiPost<{ user: SessionUser }>(cfg.api.login, { username: identifier, password });
       const authUser = sessionUserToAuthUser(data.user);
+      authMutationVersion.current += 1;
       store.setAuth(authUser, "session-token");
+      setAuthReady(true);
       return true;
     } catch (err: any) {
       setLastAuthError(err?.error || "Invalid credentials");
@@ -78,7 +95,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiPost<{ user: SessionUser }>(cfg.api.signup, { first_name: name, email, password });
       const authUser = sessionUserToAuthUser(data.user);
+      authMutationVersion.current += 1;
       store.setAuth(authUser, "session-token");
+      setAuthReady(true);
       return true;
     } catch (err: any) {
       setLastAuthError(err?.error || "Something went wrong");
@@ -87,6 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const logout = useCallback(async () => {
+    authMutationVersion.current += 1;
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       await apiPost(cfg.api.logout, {});
@@ -127,13 +147,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const requireAuth = useCallback((onSuccess?: () => void) => {
-    if (store.user) {
+    if (user) {
       onSuccess?.();
       return;
     }
     setPendingAuthAction(() => onSuccess || null);
     setLoginModalOpen(true);
-  }, [store.user]);
+  }, [user]);
 
   const handleLoginModalChange = useCallback((open: boolean) => {
     setLoginModalOpen(open);
@@ -142,8 +162,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={{
-      user: store.user,
-      isAuthenticated: !!store.user,
+      user,
+      isAuthenticated: !!user,
       authReady,
       login,
       signup,
