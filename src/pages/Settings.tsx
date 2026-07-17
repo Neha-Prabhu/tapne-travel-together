@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2, AlertTriangle, PauseCircle, Trash2, SettingsIcon } from "lucide-react";
 
+type EmailUpdates = "all" | "important" | "none";
 type ProfileVisibility = "public" | "members_only";
-type DmPrivacy = "anyone" | "members_only" | "no_one";
+type DmPrivacy = "everyone" | "followers" | "no_one";
 type Theme = "system" | "light" | "dark";
 
 interface SettingsPayload {
-  email_updates: boolean;
+  email_updates: EmailUpdates;
   profile_visibility: ProfileVisibility;
   dm_privacy: DmPrivacy;
   theme: Theme;
@@ -29,12 +30,38 @@ interface SettingsPayload {
 }
 
 const DEFAULTS: SettingsPayload = {
-  email_updates: true,
+  email_updates: "all",
   profile_visibility: "public",
-  dm_privacy: "members_only",
+  dm_privacy: "followers",
   theme: "system",
   digest_emails: true,
 };
+
+// Migrate any legacy stored values into the current schema so a member who
+// previously saved `email_updates: true` still gets a valid radio selection.
+function normalize(raw: Partial<Record<keyof SettingsPayload, unknown>>): SettingsPayload {
+  const out: SettingsPayload = { ...DEFAULTS };
+
+  const eu = raw.email_updates;
+  if (eu === "all" || eu === "important" || eu === "none") out.email_updates = eu;
+  else if (eu === true) out.email_updates = "all";
+  else if (eu === false) out.email_updates = "none";
+
+  const pv = raw.profile_visibility;
+  if (pv === "public" || pv === "members_only") out.profile_visibility = pv;
+
+  const dm = raw.dm_privacy;
+  if (dm === "everyone" || dm === "followers" || dm === "no_one") out.dm_privacy = dm;
+  else if (dm === "anyone") out.dm_privacy = "everyone";
+  else if (dm === "members_only") out.dm_privacy = "followers";
+
+  const th = raw.theme;
+  if (th === "system" || th === "light" || th === "dark") out.theme = th;
+
+  if (typeof raw.digest_emails === "boolean") out.digest_emails = raw.digest_emails;
+
+  return out;
+}
 
 const Settings = () => {
   const { isAuthenticated, requireAuth, logout } = useAuth();
@@ -56,9 +83,9 @@ const Settings = () => {
       setLoading(true);
       try {
         const cfg = window.TAPNE_RUNTIME_CONFIG;
-        const data = await apiGet<Partial<SettingsPayload>>(cfg.api.settings);
+        const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings);
         if (!cancelled && data && typeof data === "object") {
-          setValues((prev) => ({ ...prev, ...data }));
+          setValues(normalize(data));
         }
       } catch {
         // keep defaults
@@ -77,7 +104,8 @@ const Settings = () => {
     setSaving(true);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPatch(cfg.api.settings, values);
+      const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, values);
+      if (saved && typeof saved === "object") setValues(normalize({ ...values, ...saved }));
       toast.success("Settings saved.");
     } catch {
       toast.error("Could not save settings. Please try again.");
@@ -132,20 +160,43 @@ const Settings = () => {
           <div className="space-y-6">
             {/* Emails */}
             <Card>
-              <CardContent className="space-y-5 p-6">
+              <CardContent className="space-y-6 p-6">
                 <h2 className="text-lg font-semibold">Emails</h2>
 
-                <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3">
                   <div>
                     <Label className="text-sm font-medium">Email updates</Label>
                     <p className="text-xs text-muted-foreground">
-                      Trip updates, applications, and messages sent to your inbox.
+                      Choose how often Tapne emails you about trip activity and messages.
                     </p>
                   </div>
-                  <Switch
-                    checked={values.email_updates}
-                    onCheckedChange={(v) => update("email_updates", v)}
-                  />
+                  <RadioGroup
+                    value={values.email_updates}
+                    onValueChange={(v) => update("email_updates", v as EmailUpdates)}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="all" id="eu-all" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="eu-all" className="text-sm font-medium">All activity</Label>
+                        <p className="text-xs text-muted-foreground">Every trip update, application, and message.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="important" id="eu-important" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="eu-important" className="text-sm font-medium">Only important updates</Label>
+                        <p className="text-xs text-muted-foreground">Bookings, approvals, and direct messages only.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 rounded-md border border-border p-3">
+                      <RadioGroupItem value="none" id="eu-none" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="eu-none" className="text-sm font-medium">No email updates</Label>
+                        <p className="text-xs text-muted-foreground">Turn off all activity emails.</p>
+                      </div>
+                    </div>
+                  </RadioGroup>
                 </div>
 
                 <div className="flex items-start justify-between gap-4">
@@ -210,17 +261,17 @@ const Settings = () => {
                     className="space-y-2"
                   >
                     <div className="flex items-start gap-3 rounded-md border border-border p-3">
-                      <RadioGroupItem value="anyone" id="dm-anyone" className="mt-0.5" />
+                      <RadioGroupItem value="everyone" id="dm-everyone" className="mt-0.5" />
                       <div>
-                        <Label htmlFor="dm-anyone" className="text-sm font-medium">Anyone</Label>
+                        <Label htmlFor="dm-everyone" className="text-sm font-medium">Everyone</Label>
                         <p className="text-xs text-muted-foreground">Any signed-in member can message you.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 rounded-md border border-border p-3">
-                      <RadioGroupItem value="members_only" id="dm-members" className="mt-0.5" />
+                      <RadioGroupItem value="followers" id="dm-followers" className="mt-0.5" />
                       <div>
-                        <Label htmlFor="dm-members" className="text-sm font-medium">Trip members only</Label>
-                        <p className="text-xs text-muted-foreground">Only people on a trip with you can message you.</p>
+                        <Label htmlFor="dm-followers" className="text-sm font-medium">People you follow</Label>
+                        <p className="text-xs text-muted-foreground">Only accounts you follow can message you.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 rounded-md border border-border p-3">

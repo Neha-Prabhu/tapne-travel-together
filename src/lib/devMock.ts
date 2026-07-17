@@ -248,28 +248,47 @@ function getMockApplications(tripId: number): EnrollmentRequestData[] {
   ];
 }
 
-// Persistent in-memory settings for dev mode
-let _devSettings: Record<string, unknown> = {
-  email_updates: true,
+// Persistent settings for dev mode (survives full page refresh via localStorage)
+const _DEV_SETTINGS_KEY = "tapne_dev_settings_v2";
+const _DEV_SETTINGS_DEFAULTS: Record<string, unknown> = {
+  email_updates: "all",
   profile_visibility: "public",
-  dm_privacy: "members_only",
+  dm_privacy: "followers",
   theme: "system",
   digest_emails: true,
 };
+function _loadDevSettings(): Record<string, unknown> {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(_DEV_SETTINGS_KEY) : null;
+    if (raw) return { ..._DEV_SETTINGS_DEFAULTS, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return { ..._DEV_SETTINGS_DEFAULTS };
+}
+function _saveDevSettings(next: Record<string, unknown>) {
+  try {
+    if (typeof localStorage !== "undefined") localStorage.setItem(_DEV_SETTINGS_KEY, JSON.stringify(next));
+  } catch { /* ignore */ }
+}
+let _devSettings: Record<string, unknown> = _loadDevSettings();
 
 export function resolveMockRequest(method: string, url: string, body?: unknown): unknown {
   const path = url.replace("/__devmock__", "").replace(/\?.*$/, "");
 
   // ── Settings ──
   if (path === "/settings/") {
-    if (method === "GET") return { ..._devSettings };
+    if (method === "GET") {
+      _devSettings = _loadDevSettings();
+      return { ..._devSettings };
+    }
     if (method === "PATCH" || method === "POST") {
       if (body && typeof body === "object") {
         _devSettings = { ..._devSettings, ...(body as Record<string, unknown>) };
+        _saveDevSettings(_devSettings);
       }
       return { ok: true, ..._devSettings };
     }
   }
+
 
 
   // ── User search ──
