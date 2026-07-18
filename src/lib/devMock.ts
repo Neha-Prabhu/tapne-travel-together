@@ -563,16 +563,25 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const reviews = _seedReviews(trip.id).map(r => ({ ...r, is_mine: !!username && r.author_username === username }));
     const viewerReview = username ? reviews.find(r => r.is_mine) || null : null;
     const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : (trip.average_rating || 0);
+    // Blocking state: hide social entry points on shared trips whenever the
+    // viewer and the host (or a co-traveler) have blocked each other.
+    const hostBlocked = !!(trip.host_username && _blockedUsers.has(trip.host_username));
+    const participants = getMockParticipants(trip.id);
+    const blockedCoTravelers = participants
+      .map((p: any) => p.username)
+      .filter((u: string) => u && u !== username && _blockedUsers.has(u));
     const resp: TripDetailResponse = {
       trip: {
         ...trip,
         booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open"),
         reviews,
         viewer_review: viewerReview,
-        can_review: !!_devUser && !isHost,
+        can_review: !!_devUser && !isHost && !hostBlocked,
         reviews_count: reviews.length,
         average_rating: avg,
-      },
+        viewer_blocked_with_host: hostBlocked,
+        blocked_co_traveler_usernames: blockedCoTravelers,
+      } as any,
       can_manage_trip: !!isHost,
       mode: isHost ? "manage" : "view",
       similar_trips: MOCK_TRIPS.filter(t => t.id !== trip.id).slice(0, 3),
