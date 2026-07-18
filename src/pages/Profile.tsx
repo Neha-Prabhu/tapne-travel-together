@@ -234,7 +234,21 @@ const Profile = () => {
     setEditOpen(false);
   };
 
-  
+  const handleBlock = async () => {
+    if (!p) return;
+    setBlockPending(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPost(`${cfg.api.blocks}${p.username}/`, {});
+      toast.success(`Blocked ${p.display_name}.`);
+      setBlockOpen(false);
+      navigate("/");
+    } catch (err: any) {
+      toast.error(err?.error || "Could not block. Please try again.");
+    } finally {
+      setBlockPending(false);
+    }
+  };
 
   const handleDeactivate = async () => {
     setAccountActionPending(true);
