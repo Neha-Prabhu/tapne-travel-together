@@ -84,11 +84,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLastAuthError("");
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const data = await apiPost<{ user: SessionUser }>(cfg.api.login, { username: identifier, password });
+      const data = await apiPost<{ user: SessionUser; reactivated?: boolean }>(cfg.api.login, { username: identifier, password });
       const authUser = sessionUserToAuthUser(data.user);
       authMutationVersion.current += 1;
       store.setAuth(authUser, "session-token");
       setAuthReady(true);
+      if (data.reactivated) {
+        // Toast once on reactivation, before navigating to the requested destination.
+        const { toast } = await import("sonner");
+        toast.success("Welcome back — your account has been reactivated.");
+      }
       return true;
     } catch (err: any) {
       setLastAuthError(err?.error || "Invalid credentials");
