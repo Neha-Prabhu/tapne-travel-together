@@ -737,7 +737,7 @@ const TripDetail = () => {
                         </Button>
                       )}
 
-                      {!hasEnded && (() => {
+                      {!hasEnded && !blockedWithHost && (() => {
                         const hostRating = (trip as any).host_average_rating as number | undefined;
                         const hostLocationRating = (trip as any).host_location_average_rating as number | undefined;
                         return (
