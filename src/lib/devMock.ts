@@ -368,18 +368,52 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "POST" && path === "/auth/signup/") {
     const b = body as any;
     const name = b?.first_name || "Dev User";
-    const username = name.toLowerCase().replace(/\s+/g, "_");
+    const email = b?.email || "dev@tapne.com";
+    const code = generateCode();
+    _pendingSignup = { name, email, password: b?.password || "", code, expiresAt: Date.now() + 10 * 60_000, attempts: 0 };
+    _lastResendAt = Date.now();
+    // Dev-only affordance: log the code so testers can complete verification.
+    // eslint-disable-next-line no-console
+    console.info(`[Tapne dev] verification code for ${email}: ${code}`);
+    return { pending_verification: true, email, resend_available_in: 60, dev_code: code };
+  }
+
+  if (method === "POST" && path === "/auth/verify/") {
+    const b = body as any;
+    if (!_pendingSignup) return mockError(400, { error: "No verification in progress." });
+    if (Date.now() > _pendingSignup.expiresAt) {
+      _pendingSignup = null;
+      return mockError(410, { error: "Code expired. Please request a new one.", reason: "expired" });
+    }
+    _pendingSignup.attempts += 1;
+    if (_pendingSignup.attempts > 5) {
+      _pendingSignup = null;
+      return mockError(429, { error: "Too many attempts. Please request a new code.", reason: "too_many_attempts" });
+    }
+    if ((b?.code || "").toString() !== _pendingSignup.code) {
+      return mockError(400, { error: "Invalid code. Please try again.", reason: "invalid" });
+    }
+    const username = _pendingSignup.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") || "dev_user";
     _devUser = {
-      id: 9999, username, email: b?.email ?? "dev@tapne.com",
-      display_name: name, bio: "", location: "", website: "",
+      id: 9999, username, email: _pendingSignup.email,
+      display_name: _pendingSignup.name, bio: "", location: "", website: "",
       profile_url: `/u/${username}`, created_trips: 0, joined_trips: 0,
     };
+    _pendingSignup = null;
     return { user: _devUser };
   }
 
-  if (method === "POST" && path === "/auth/logout/") {
-    _devUser = null;
-    return {};
+  if (method === "POST" && path === "/auth/resend/") {
+    if (!_pendingSignup) return mockError(400, { error: "No verification in progress." });
+    const wait = Math.max(0, 60 - Math.floor((Date.now() - _lastResendAt) / 1000));
+    if (wait > 0) return mockError(429, { error: `Please wait ${wait}s before resending.`, retry_after: wait });
+    _pendingSignup.code = generateCode();
+    _pendingSignup.expiresAt = Date.now() + 10 * 60_000;
+    _pendingSignup.attempts = 0;
+    _lastResendAt = Date.now();
+    // eslint-disable-next-line no-console
+    console.info(`[Tapne dev] new verification code for ${_pendingSignup.email}: ${_pendingSignup.code}`);
+    return { ok: true, resend_available_in: 60, dev_code: _pendingSignup.code };
   }
 
   // ── Home ──
