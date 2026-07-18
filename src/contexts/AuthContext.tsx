@@ -11,7 +11,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   authReady: boolean;
   login: (identifier: string, password: string) => Promise<boolean>;
-  signup: (name: string, email: string, password: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string) => Promise<SignupResult>;
+  verifySignupCode: (code: string) => Promise<{ ok: boolean; reason?: string }>;
+  resendSignupCode: () => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<any>;
   lastAuthError: string;
@@ -21,6 +23,11 @@ interface AuthContextType {
   setLoginModalOpen: (open: boolean) => void;
   pendingAuthAction: (() => void) | null;
 }
+
+export type SignupResult =
+  | { status: "verified" }
+  | { status: "pending"; email: string }
+  | { status: "error"; error: string };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
