@@ -208,6 +208,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       authReady,
       login,
       signup,
+      verifySignupCode,
+      resendSignupCode,
       logout,
       updateProfile,
       lastAuthError,
