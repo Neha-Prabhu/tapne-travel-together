@@ -472,7 +472,7 @@ const Settings = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!unblockTarget} onOpenChange={(v) => { if (!v) setUnblockTarget(null); }}>
+      <AlertDialog open={!!unblockTarget} onOpenChange={(v) => { if (!v) { setUnblockTarget(null); setUnblockError(null); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Unblock {unblockTarget?.display_name}?</AlertDialogTitle>
@@ -480,10 +480,13 @@ const Settings = () => {
               They'll be able to view your profile and message you again.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {unblockError && (
+            <p className="text-sm text-destructive">{unblockError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={unblocking}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); handleUnblock(); }} disabled={unblocking}>
-              {unblocking && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Unblock
+              {unblocking && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}{unblockError ? "Retry" : "Unblock"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
