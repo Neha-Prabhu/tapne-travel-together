@@ -892,22 +892,56 @@ const Profile = () => {
       </Dialog>
 
       {/* ── Deactivate Confirmation ── */}
-      <Dialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <DialogContent className="sm:max-w-sm">
+      <Dialog open={deactivateOpen} onOpenChange={(v) => { setDeactivateOpen(v); if (!v) setDeactivateBlockers(null); }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <PauseCircle className="h-5 w-5 text-muted-foreground" /> Deactivate Account
+              <PauseCircle className="h-5 w-5 text-muted-foreground" />
+              {deactivateBlockers ? "Resolve trip commitments first" : "Deactivate Account"}
             </DialogTitle>
             <DialogDescription>
-              Your profile will be hidden and you won't receive notifications. Signing back in reactivates your account.
+              {deactivateBlockers
+                ? "You have active trip commitments. Resolve each one before deactivating."
+                : "Your profile, hosted trips, stories, and messages will be hidden. Signing back in reactivates your account."}
             </DialogDescription>
           </DialogHeader>
+          {deactivateBlockers && deactivateBlockers.length > 0 && (
+            <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+              {deactivateBlockers.map((b) => (
+                <li key={b.trip_id} className="rounded-md border border-border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{b.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.role === "host" ? "You're hosting" : "You're a traveler"}
+                        {b.role === "host" && (b.pending_count != null || b.approved_count != null) && (
+                          <> · {b.pending_count ?? 0} pending · {b.approved_count ?? 0} approved</>
+                        )}
+                        {b.role === "traveler" && b.status && <> · {b.status}</>}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setDeactivateOpen(false); setDeactivateBlockers(null); navigate(b.role === "host" ? `/dashboard/trips?trip=${b.trip_id}` : `/trips/${b.trip_id}`); }}
+                    >
+                      Manage
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeactivateOpen(false)}>Cancel</Button>
-            <Button variant="secondary" onClick={handleDeactivate} disabled={accountActionPending}>
-              {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Deactivate
+            <Button variant="outline" onClick={() => { setDeactivateOpen(false); setDeactivateBlockers(null); }}>
+              {deactivateBlockers ? "Close" : "Cancel"}
             </Button>
+            {!deactivateBlockers && (
+              <Button variant="secondary" onClick={handleDeactivate} disabled={accountActionPending}>
+                {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Deactivate
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
