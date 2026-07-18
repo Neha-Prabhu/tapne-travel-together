@@ -84,8 +84,14 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
     if (!body) return;
     setBroadcastPending(true);
     try {
-      await apiPost(`${cfg.api.base}/trips/${tripId}/broadcast/`, { message: body });
-      toast.success(`Message sent to ${participants.length} participant${participants.length !== 1 ? "s" : ""}.`);
+      await apiPost(`${cfg.api.base}/trips/${tripId}/broadcast/`, {
+        message: body,
+        exclude_usernames: participants.filter(p => p.is_blocked_by_me).map(p => p.username),
+      });
+      const sent = reachableParticipants.length;
+      const skipped = blockedParticipantCount;
+      const skippedNote = skipped > 0 ? ` Skipped ${skipped} blocked member${skipped !== 1 ? "s" : ""}.` : "";
+      toast.success(`Message sent to ${sent} participant${sent !== 1 ? "s" : ""}.${skippedNote}`);
       setBroadcastOpen(false);
       setBroadcastBody("");
     } catch (err: any) {
@@ -95,8 +101,11 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
     }
   };
 
+
   const pending = requests.filter(a => a.status === "pending");
   const approved = requests.filter(a => a.status === "approved");
+  const reachableParticipants = participants.filter(p => !p.is_blocked_by_me);
+  const blockedParticipantCount = participants.length - reachableParticipants.length;
 
   if (loading) {
     return (
@@ -185,17 +194,26 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
                     {req.status === "denied" && <XCircle className="mr-0.5 h-3 w-3" />}
                     {req.status}
                   </Badge>
+                  {req.is_blocked_by_me && (
+                    <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">Applied {new Date(req.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
               </div>
               <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingReq(req)}>
-                  <Eye className="h-4 w-4" />
-                </Button>
-                {req.status === "pending" && (
+                {req.is_blocked_by_me ? (
+                  <span className="text-xs text-muted-foreground pr-1">Unavailable</span>
+                ) : (
                   <>
-                    <Button size="sm" className="h-8 text-xs" onClick={() => handleDecision(req.id, "approve")}>Approve</Button>
-                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleDecision(req.id, "deny")}>Reject</Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingReq(req)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {req.status === "pending" && (
+                      <>
+                        <Button size="sm" className="h-8 text-xs" onClick={() => handleDecision(req.id, "approve")}>Approve</Button>
+                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleDecision(req.id, "deny")}>Reject</Button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -210,13 +228,24 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
               </div>
               <div className="space-y-2">
                 {participants.map(p => (
-                  <div key={p.id} className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div key={p.id} className={cn(
+                    "flex items-center gap-3 rounded-lg border p-3",
+                    p.is_blocked_by_me ? "border-muted-foreground/20 bg-muted/30" : "border-primary/20 bg-primary/5"
+                  )}>
                     <Avatar className="h-9 w-9">
                       <AvatarFallback>{(p.display_name || p.username || "?")[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
-                      <p className="text-xs text-muted-foreground">Joined {new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
+                        {p.is_blocked_by_me && (
+                          <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {p.is_blocked_by_me ? "Confirmed traveler — messaging disabled" :
+                          `Joined ${new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                      </p>
                     </div>
                     <Button
                       size="sm"
@@ -302,7 +331,8 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
           </DialogHeader>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              This will be sent to {participants.length} confirmed participant{participants.length !== 1 ? "s" : ""}.
+              This will be sent to {reachableParticipants.length} confirmed participant{reachableParticipants.length !== 1 ? "s" : ""}.
+              {blockedParticipantCount > 0 && ` ${blockedParticipantCount} blocked member${blockedParticipantCount !== 1 ? "s" : ""} will be skipped.`}
             </p>
             <Textarea
               value={broadcastBody}

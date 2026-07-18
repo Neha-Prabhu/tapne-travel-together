@@ -664,16 +664,24 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const id = parseInt(manageTripMatch[1]);
     const trip = MOCK_TRIPS.find(t => t.id === id) || Array.from(_devDrafts.values()).find(t => t.id === id);
     if (!trip) return { error: "Trip not found" };
+    const rawParticipants = getMockParticipants(id).map(p => ({
+      ...p,
+      is_blocked_by_me: _blockedUsers.has(p.username),
+    }));
+    const rawApplications = getMockApplications(id).map(a => ({
+      ...a,
+      is_blocked_by_me: _blockedUsers.has(a.requester_username),
+    }));
     const resp: ManageTripResponse = {
       trip: {
         ...trip,
         can_manage: true,
         booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open"),
-        participants_count: getMockParticipants(id).length,
-        applications_count: getMockApplications(id).filter(a => a.status === "pending").length,
+        participants_count: rawParticipants.length,
+        applications_count: rawApplications.filter(a => a.status === "pending").length,
       },
-      participants: getMockParticipants(id),
-      applications: getMockApplications(id),
+      participants: rawParticipants,
+      applications: rawApplications,
     };
     return resp;
   }
