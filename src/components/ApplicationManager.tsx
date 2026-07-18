@@ -84,8 +84,14 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
     if (!body) return;
     setBroadcastPending(true);
     try {
-      await apiPost(`${cfg.api.base}/trips/${tripId}/broadcast/`, { message: body });
-      toast.success(`Message sent to ${participants.length} participant${participants.length !== 1 ? "s" : ""}.`);
+      await apiPost(`${cfg.api.base}/trips/${tripId}/broadcast/`, {
+        message: body,
+        exclude_usernames: participants.filter(p => p.is_blocked_by_me).map(p => p.username),
+      });
+      const sent = reachableParticipants.length;
+      const skipped = blockedParticipantCount;
+      const skippedNote = skipped > 0 ? ` Skipped ${skipped} blocked member${skipped !== 1 ? "s" : ""}.` : "";
+      toast.success(`Message sent to ${sent} participant${sent !== 1 ? "s" : ""}.${skippedNote}`);
       setBroadcastOpen(false);
       setBroadcastBody("");
     } catch (err: any) {
@@ -94,6 +100,7 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
       setBroadcastPending(false);
     }
   };
+
 
   const pending = requests.filter(a => a.status === "pending");
   const approved = requests.filter(a => a.status === "approved");
