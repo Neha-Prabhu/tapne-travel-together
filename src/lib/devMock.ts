@@ -905,6 +905,10 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── Join request ──
   const joinMatch = path.match(/^\/trips\/(\d+)\/join-request\/$/);
   if (method === "POST" && joinMatch) {
+    const id = parseInt(joinMatch[1]);
+    _tripParticipation.set(id, "pending");
+    const trip = MOCK_TRIPS.find(t => t.id === id);
+    if (trip) trip.join_request_status = "pending";
     return { ok: true, status: "pending" };
   }
 
@@ -916,7 +920,17 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── DM Inbox ──
   if (method === "GET" && path === "/dm/inbox/") {
-    const threads = getMockThreads();
+    const me = getDevUsername();
+    const threads = getMockThreads().map(t => {
+      const other = t.participants.find(p => p.username !== me);
+      let readonly: boolean | undefined;
+      let readonly_reason: any;
+      if (t.type === "dm" && other) {
+        if (_blockedUsers.has(other.username)) { readonly = true; readonly_reason = "blocked_by_you"; }
+        else if (_deactivatedUsers.has(other.username)) { readonly = true; readonly_reason = "deactivated"; }
+      }
+      return { ...t, readonly, readonly_reason };
+    });
     const resp: InboxResponse = { threads };
     return resp;
   }
