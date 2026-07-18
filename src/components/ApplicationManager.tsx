@@ -194,17 +194,26 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
                     {req.status === "denied" && <XCircle className="mr-0.5 h-3 w-3" />}
                     {req.status}
                   </Badge>
+                  {req.is_blocked_by_me && (
+                    <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">Applied {new Date(req.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
               </div>
               <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingReq(req)}>
-                  <Eye className="h-4 w-4" />
-                </Button>
-                {req.status === "pending" && (
+                {req.is_blocked_by_me ? (
+                  <span className="text-xs text-muted-foreground pr-1">Unavailable</span>
+                ) : (
                   <>
-                    <Button size="sm" className="h-8 text-xs" onClick={() => handleDecision(req.id, "approve")}>Approve</Button>
-                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleDecision(req.id, "deny")}>Reject</Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingReq(req)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {req.status === "pending" && (
+                      <>
+                        <Button size="sm" className="h-8 text-xs" onClick={() => handleDecision(req.id, "approve")}>Approve</Button>
+                        <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleDecision(req.id, "deny")}>Reject</Button>
+                      </>
+                    )}
                   </>
                 )}
               </div>
