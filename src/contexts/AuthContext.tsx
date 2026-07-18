@@ -96,19 +96,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const signup = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
+  const signup = useCallback(async (name: string, email: string, password: string): Promise<SignupResult> => {
     setLastAuthError("");
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const data = await apiPost<{ user: SessionUser }>(cfg.api.signup, { first_name: name, email, password });
+      const data = await apiPost<{ user?: SessionUser; pending_verification?: boolean; email?: string }>(
+        cfg.api.signup, { first_name: name, email, password }
+      );
+      if (data?.pending_verification) return { status: "pending", email: data.email || email };
+      if (data?.user) {
+        const authUser = sessionUserToAuthUser(data.user);
+        authMutationVersion.current += 1;
+        store.setAuth(authUser, "session-token");
+        setAuthReady(true);
+        return { status: "verified" };
+      }
+      return { status: "error", error: "Unexpected signup response" };
+    } catch (err: any) {
+      const msg = err?.error || err?.message || "Something went wrong";
+      setLastAuthError(msg);
+      return { status: "error", error: msg };
+    }
+  }, []);
+
+  const verifySignupCode = useCallback(async (code: string): Promise<{ ok: boolean; reason?: string }> => {
+    setLastAuthError("");
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      const data = await apiPost<{ user: SessionUser }>(cfg.api.signup_verify, { code });
       const authUser = sessionUserToAuthUser(data.user);
       authMutationVersion.current += 1;
       store.setAuth(authUser, "session-token");
       setAuthReady(true);
-      return true;
+      return { ok: true };
     } catch (err: any) {
-      setLastAuthError(err?.error || "Something went wrong");
-      return false;
+      const msg = err?.error || "Invalid code";
+      setLastAuthError(msg);
+      return { ok: false, reason: err?.reason || "invalid" };
+    }
+  }, []);
+
+  const resendSignupCode = useCallback(async () => {
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPost(cfg.api.signup_resend, {});
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, retry_after: err?.retry_after, error: err?.error || "Could not resend code" };
     }
   }, []);
 
