@@ -179,6 +179,7 @@ export interface ParticipantData {
   avatar_url?: string;
   status: "confirmed";
   joined_at: string;
+  is_blocked_by_me?: boolean;
 }
 
 export interface ManageTripResponse {
