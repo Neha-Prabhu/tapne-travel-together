@@ -135,7 +135,16 @@ const TripDetail = () => {
   // hide every social entry point (profile navigation, Ask a Question,
   // Follow / Message, review write, invitations). Lifted once the trip ends
   // or the viewer is no longer participating.
-  const blockedWithHost = !!(trip as any).viewer_blocked_with_host && !hasEnded && !isHost;
+  const bothBlocked = !!(trip as any).viewer_blocked_with_host;
+  const hasCommitment = isHost || joinStatus === "approved" || joinStatus === "pending";
+  const commitmentEnded = hasEnded || trip.status === "cancelled" || !hasCommitment;
+  const blockedWithHost = bothBlocked && hasCommitment && !commitmentEnded && !isHost;
+  useEffect(() => {
+    if (bothBlocked && commitmentEnded && !isHost) {
+      toast("This trip is no longer available.");
+      navigate("/", { replace: true });
+    }
+  }, [bothBlocked, commitmentEnded, isHost, navigate]);
 
   // Build visible sections dynamically based on trip data
   const visibleSections = [
