@@ -228,13 +228,24 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
               </div>
               <div className="space-y-2">
                 {participants.map(p => (
-                  <div key={p.id} className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <div key={p.id} className={cn(
+                    "flex items-center gap-3 rounded-lg border p-3",
+                    p.is_blocked_by_me ? "border-muted-foreground/20 bg-muted/30" : "border-primary/20 bg-primary/5"
+                  )}>
                     <Avatar className="h-9 w-9">
                       <AvatarFallback>{(p.display_name || p.username || "?")[0]}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
-                      <p className="text-xs text-muted-foreground">Joined {new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
+                        {p.is_blocked_by_me && (
+                          <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {p.is_blocked_by_me ? "Confirmed traveler — messaging disabled" :
+                          `Joined ${new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                      </p>
                     </div>
                     <Button
                       size="sm"
