@@ -214,6 +214,16 @@ const TripDetail = () => {
             <span>{isCompleted && !isHost ? "Trip completed" : ctaLabel}</span>
           </Button>
 
+          {!isHost && !hasEnded && (joinStatus === "pending" || joinStatus === "approved") && (
+            <Button
+              variant="outline"
+              className="mt-2 w-full border-destructive/30 text-destructive hover:bg-destructive/5"
+              onClick={() => setWithdrawOpen(true)}
+            >
+              {joinStatus === "pending" ? "Cancel request" : "Withdraw from trip"}
+            </Button>
+          )}
+
           {hasEnded && trip.can_review && (
             <Button
               variant="outline"
