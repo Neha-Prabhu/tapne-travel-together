@@ -232,7 +232,7 @@ const TripDetail = () => {
             </Button>
           )}
 
-          {hasEnded && trip.can_review && (
+          {hasEnded && trip.can_review && !blockedWithHost && (
             <Button
               variant="outline"
               className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
