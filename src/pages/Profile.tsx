@@ -439,6 +439,9 @@ const Profile = () => {
                   <Button size="sm" variant="outline" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } navigate(`/messages?dm=${p.username}`); }}>
                     <MessageCircle className="mr-1 h-4 w-4" /> Message
                   </Button>
+                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } setBlockOpen(true); }}>
+                    <Shield className="mr-1 h-4 w-4" /> Block
+                  </Button>
                 </>
               )}
             </div>
