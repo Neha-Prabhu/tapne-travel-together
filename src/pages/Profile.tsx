@@ -901,6 +901,26 @@ const Profile = () => {
         </DialogContent>
       </Dialog>
 
+      {/* ── Block Confirmation ── */}
+      <Dialog open={blockOpen} onOpenChange={setBlockOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-destructive" /> Block {p?.display_name}?
+            </DialogTitle>
+            <DialogDescription>
+              They won't be able to message you or start new conversations. Existing shared trips remain visible in read-only mode until they end. You can unblock anytime from Settings.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setBlockOpen(false)} disabled={blockPending}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBlock} disabled={blockPending}>
+              {blockPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Block
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );
