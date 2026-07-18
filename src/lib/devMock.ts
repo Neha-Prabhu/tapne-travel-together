@@ -140,6 +140,17 @@ let _devDraftCounter = 5000;
 const _bookmarkedTripIds = new Set<number>();
 const _followedUsers = new Set<string>();
 const _followerCounts = new Map<string, number>();
+const _blockedUsers = new Set<string>();
+const _deactivatedUsers = new Set<string>(["ananya_desai"]);
+const _tripParticipation = new Map<number, "pending" | "approved">();
+
+// Pending signup verification (dev-only in-memory).
+interface PendingSignup { name: string; email: string; password: string; code: string; expiresAt: number; attempts: number; }
+let _pendingSignup: PendingSignup | null = null;
+let _lastResendAt = 0;
+
+function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+function mockError(status: number, body: Record<string, unknown>) { return { __mock_error: true, error: { status, ...body } }; }
 
 // ── Messaging state ──
 function getDevUsername() { return _devUser?.username || MOCK_SESSION_USERS[0]?.username || "arjun_mehta"; }
