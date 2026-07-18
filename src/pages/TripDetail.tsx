@@ -90,6 +90,25 @@ const TripDetail = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Derived flags — computed before early returns so hook order stays stable
+  // across loading → loaded transitions. All values guard for a missing trip.
+  const isHost = canManage;
+  const joinStatus = trip?.join_request_status;
+  const isCompleted = trip?.status === "completed";
+  const hasEnded = trip?.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
+  const bothBlocked = !!(trip && (trip as any).viewer_blocked_with_host);
+  const hasCommitment = !!trip && (isHost || joinStatus === "approved" || joinStatus === "pending");
+  const commitmentEnded = !!trip && (hasEnded || trip.status === "cancelled" || !hasCommitment);
+  const blockedWithHost = !!trip && bothBlocked && hasCommitment && !commitmentEnded && !isHost;
+
+  useEffect(() => {
+    if (!trip) return;
+    if (bothBlocked && commitmentEnded && !isHost) {
+      toast("This trip is no longer available.");
+      navigate("/", { replace: true });
+    }
+  }, [trip, bothBlocked, commitmentEnded, isHost, navigate]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -118,33 +137,14 @@ const TripDetail = () => {
 
   const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
   const isFull = spotsLeft <= 0;
-  const isHost = canManage;
   const accessType = trip.trip_type === "invite" ? "invite" : "open"; // simplified
   const duration = trip.duration_days || (trip.starts_at && trip.ends_at
     ? Math.max(0, Math.ceil((new Date(trip.ends_at).getTime() - new Date(trip.starts_at).getTime()) / 86400000))
     : 0);
   const price = trip.price_per_person || trip.total_trip_price || 0;
-
-  const joinStatus = trip.join_request_status;
   const isJoined = joinStatus === "approved";
-  const isCompleted = trip.status === "completed";
-  const hasEnded = trip.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
   const canReview = isAuthenticated && isJoined && hasEnded;
-  // Safety state: when the viewer and host have blocked each other, keep the
-  // trip itinerary, dates, participation, and essential controls visible but
-  // hide every social entry point (profile navigation, Ask a Question,
-  // Follow / Message, review write, invitations). Lifted once the trip ends
-  // or the viewer is no longer participating.
-  const bothBlocked = !!(trip as any).viewer_blocked_with_host;
-  const hasCommitment = isHost || joinStatus === "approved" || joinStatus === "pending";
-  const commitmentEnded = hasEnded || trip.status === "cancelled" || !hasCommitment;
-  const blockedWithHost = bothBlocked && hasCommitment && !commitmentEnded && !isHost;
-  useEffect(() => {
-    if (bothBlocked && commitmentEnded && !isHost) {
-      toast("This trip is no longer available.");
-      navigate("/", { replace: true });
-    }
-  }, [bothBlocked, commitmentEnded, isHost, navigate]);
+
 
   // Build visible sections dynamically based on trip data
   const visibleSections = [
