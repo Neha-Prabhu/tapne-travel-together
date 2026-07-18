@@ -104,19 +104,24 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     const joined = code.join("");
     if (joined.length !== 6) { setVerifyError("Enter all 6 digits."); return; }
     setLoading(true); setVerifyError("");
-    const r = await verifySignupCode(joined);
+    // Pass the currently displayed name/email/password so verification creates
+    // the account with those values (not stale pending data on the server).
+    const r = await verifySignupCode(joined, { name, email: identifier, password });
     setLoading(false);
     if (r.ok) { onOpenChange(false); onSuccess?.(); reset(); return; }
     if (r.reason === "expired") setVerifyError("Code expired. Request a new one.");
     else if (r.reason === "too_many_attempts") setVerifyError("Too many attempts. Request a new code.");
+    else if (r.reason === "delivery_failed") setVerifyError("We couldn't deliver the code. Check your email and try Resend.");
     else setVerifyError("Invalid code. Please try again.");
   };
 
   const handleResend = async () => {
     if (resendIn > 0) return;
     setVerifyError("");
-    const r = await resendSignupCode();
-    if (r.ok) { setResendIn(60); setCode(["", "", "", "", "", ""]); inputRefs.current[0]?.focus(); }
+    // Resend targets the currently displayed email; server keeps the 10-minute
+    // challenge lifetime and 60-second cooldown.
+    const r = await resendSignupCode({ name, email: identifier, password });
+    if (r.ok) { setResendIn(60); setCode(["", "", "", "", "", ""]); setPendingEmail(identifier); inputRefs.current[0]?.focus(); }
     else setVerifyError(r.error || "Could not resend code. Please try again.");
   };
 
