@@ -52,6 +52,8 @@ const TripDetail = () => {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelPending, setCancelPending] = useState(false);
   const [appliedBanner, setAppliedBanner] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawPending, setWithdrawPending] = useState(false);
   const bannerKey = user?.id ? `tapne_apply_banner_${user.id}` : null;
   const missingProfileFields = (() => {
     if (!user) return [] as string[];
