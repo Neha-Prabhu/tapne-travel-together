@@ -121,6 +121,7 @@ const Profile = () => {
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [deactivateBlockers, setDeactivateBlockers] = useState<Array<{ trip_id: number; title: string; role: "host" | "traveler"; status?: string; pending_count?: number; approved_count?: number }> | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
   const [blockPending, setBlockPending] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
