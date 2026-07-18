@@ -252,22 +252,6 @@ const Profile = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    setAccountActionPending(true);
-    try {
-      const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPost(cfg.api.account_delete, {});
-      toast.success("Account deletion scheduled. This cannot be undone.");
-      setDeleteOpen(false);
-      setSettingsOpen(false);
-      logout();
-      navigate("/");
-    } catch {
-      toast.error("Could not delete account. Please try again.");
-    } finally {
-      setAccountActionPending(false);
-    }
-  };
 
   if (loading) {
     return (
