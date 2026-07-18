@@ -958,20 +958,29 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const threadId = parseInt(threadMsgMatch[1]);
     const threads = getMockThreads();
     const thread = threads.find(t => t.id === threadId);
-    if (thread) {
-      const b = body as any;
-      const newMsg: MessageData = {
-        id: ++_mockMsgIdCounter,
-        thread_id: threadId,
-        sender_username: getDevUsername(),
-        sender_display_name: getDevDisplayName(),
-        body: b?.body || "",
-        sent_at: new Date().toISOString(),
-      };
-      thread.messages.push(newMsg);
-      thread.last_message = newMsg.body;
-      thread.last_sent_at = newMsg.sent_at;
+    if (!thread) return mockError(404, { error: "Thread not found." });
+    // If the other party is unavailable, refuse the send so the client can
+    // remove the optimistic message and swap in the correct read-only banner.
+    const me = getDevUsername();
+    const other = thread.type === "dm" ? thread.participants.find(p => p.username !== me) : null;
+    if (other && _blockedUsers.has(other.username)) {
+      return mockError(403, { error: "You've blocked this member.", readonly_reason: "blocked_by_you" });
     }
+    if (other && _deactivatedUsers.has(other.username)) {
+      return mockError(403, { error: "This account has been deactivated.", readonly_reason: "deactivated" });
+    }
+    const b = body as any;
+    const newMsg: MessageData = {
+      id: ++_mockMsgIdCounter,
+      thread_id: threadId,
+      sender_username: me,
+      sender_display_name: getDevDisplayName(),
+      body: b?.body || "",
+      sent_at: new Date().toISOString(),
+    };
+    thread.messages.push(newMsg);
+    thread.last_message = newMsg.body;
+    thread.last_sent_at = newMsg.sent_at;
     return { ok: true };
   }
 
