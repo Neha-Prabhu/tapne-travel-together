@@ -424,7 +424,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── Blocks ──
   if (method === "GET" && path === "/blocks/") {
     return {
-      blocked: Array.from(_blockedUsers).map(username => {
+      users: Array.from(_blockedUsers).map(username => {
         const su = MOCK_SESSION_USERS.find(u => u.username === username);
         return {
           username,
