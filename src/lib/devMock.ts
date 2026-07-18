@@ -361,8 +361,17 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── Auth ──
   if (method === "POST" && path === "/auth/login/") {
-    _devUser = MOCK_SESSION_USERS[0];
-    return { user: _devUser };
+    const b = body as any;
+    const identifier = (b?.username || "").toString().toLowerCase();
+    // Detect reactivation: if the account was previously deactivated, clear that
+    // flag and signal the client so it can show the one-shot welcome-back toast.
+    let reactivated = false;
+    if (identifier && _deactivatedUsers.has(identifier)) {
+      _deactivatedUsers.delete(identifier);
+      reactivated = true;
+    }
+    _devUser = MOCK_SESSION_USERS.find(u => u.username === identifier) || MOCK_SESSION_USERS[0];
+    return { user: _devUser, reactivated };
   }
 
   if (method === "POST" && path === "/auth/signup/") {
@@ -372,7 +381,6 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const code = generateCode();
     _pendingSignup = { name, email, password: b?.password || "", code, expiresAt: Date.now() + 10 * 60_000, attempts: 0 };
     _lastResendAt = Date.now();
-    // Dev-only affordance: log the code so testers can complete verification.
     // eslint-disable-next-line no-console
     console.info(`[Tapne dev] verification code for ${email}: ${code}`);
     return { pending_verification: true, email, resend_available_in: 60, dev_code: code };
@@ -381,6 +389,11 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "POST" && path === "/auth/verify/") {
     const b = body as any;
     if (!_pendingSignup) return mockError(400, { error: "No verification in progress." });
+    // Refresh pending details from the currently displayed form values so the
+    // final account is created with what the user is looking at right now.
+    if (b?.first_name) _pendingSignup.name = b.first_name;
+    if (b?.email) _pendingSignup.email = b.email;
+    if (b?.password) _pendingSignup.password = b.password;
     if (Date.now() > _pendingSignup.expiresAt) {
       _pendingSignup = null;
       return mockError(410, { error: "Code expired. Please request a new one.", reason: "expired" });
@@ -404,7 +417,13 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   }
 
   if (method === "POST" && path === "/auth/resend/") {
+    const b = body as any;
     if (!_pendingSignup) return mockError(400, { error: "No verification in progress." });
+    // Update target details before issuing a new code so resend follows the
+    // currently displayed email, not the original.
+    if (b?.first_name) _pendingSignup.name = b.first_name;
+    if (b?.email) _pendingSignup.email = b.email;
+    if (b?.password) _pendingSignup.password = b.password;
     const wait = Math.max(0, 60 - Math.floor((Date.now() - _lastResendAt) / 1000));
     if (wait > 0) return mockError(429, { error: `Please wait ${wait}s before resending.`, retry_after: wait });
     _pendingSignup.code = generateCode();
@@ -939,20 +958,29 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const threadId = parseInt(threadMsgMatch[1]);
     const threads = getMockThreads();
     const thread = threads.find(t => t.id === threadId);
-    if (thread) {
-      const b = body as any;
-      const newMsg: MessageData = {
-        id: ++_mockMsgIdCounter,
-        thread_id: threadId,
-        sender_username: getDevUsername(),
-        sender_display_name: getDevDisplayName(),
-        body: b?.body || "",
-        sent_at: new Date().toISOString(),
-      };
-      thread.messages.push(newMsg);
-      thread.last_message = newMsg.body;
-      thread.last_sent_at = newMsg.sent_at;
+    if (!thread) return mockError(404, { error: "Thread not found." });
+    // If the other party is unavailable, refuse the send so the client can
+    // remove the optimistic message and swap in the correct read-only banner.
+    const me = getDevUsername();
+    const other = thread.type === "dm" ? thread.participants.find(p => p.username !== me) : null;
+    if (other && _blockedUsers.has(other.username)) {
+      return mockError(403, { error: "You've blocked this member.", readonly_reason: "blocked_by_you" });
     }
+    if (other && _deactivatedUsers.has(other.username)) {
+      return mockError(403, { error: "This account has been deactivated.", readonly_reason: "deactivated" });
+    }
+    const b = body as any;
+    const newMsg: MessageData = {
+      id: ++_mockMsgIdCounter,
+      thread_id: threadId,
+      sender_username: me,
+      sender_display_name: getDevDisplayName(),
+      body: b?.body || "",
+      sent_at: new Date().toISOString(),
+    };
+    thread.messages.push(newMsg);
+    thread.last_message = newMsg.body;
+    thread.last_sent_at = newMsg.sent_at;
     return { ok: true };
   }
 

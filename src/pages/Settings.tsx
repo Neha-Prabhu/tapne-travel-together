@@ -92,8 +92,10 @@ const Settings = () => {
 
   const [blocked, setBlocked] = useState<BlockedUser[]>([]);
   const [blockedLoading, setBlockedLoading] = useState(true);
+  const [blockedError, setBlockedError] = useState(false);
   const [unblockTarget, setUnblockTarget] = useState<BlockedUser | null>(null);
   const [unblocking, setUnblocking] = useState(false);
+  const [unblockError, setUnblockError] = useState<string | null>(null);
 
   useEffect(() => { if (!isAuthenticated) requireAuth(() => {}); }, [isAuthenticated]);
 
@@ -114,12 +116,13 @@ const Settings = () => {
 
   const loadBlocked = useCallback(async () => {
     setBlockedLoading(true);
+    setBlockedError(false);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiGet<{ users: BlockedUser[] }>(cfg.api.blocks);
       setBlocked(data?.users || []);
     } catch {
-      setBlocked([]);
+      setBlockedError(true);
     } finally {
       setBlockedLoading(false);
     }
@@ -148,14 +151,15 @@ const Settings = () => {
   const handleUnblock = async () => {
     if (!unblockTarget) return;
     setUnblocking(true);
+    setUnblockError(null);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       await apiDelete(`${cfg.api.blocks}${unblockTarget.username}/`);
       toast.success(`Unblocked ${unblockTarget.display_name}.`);
       setUnblockTarget(null);
       loadBlocked();
-    } catch {
-      toast.error("Could not unblock. Please try again.");
+    } catch (err: any) {
+      setUnblockError(err?.error || "Could not unblock. Please try again.");
     } finally {
       setUnblocking(false);
     }
@@ -370,6 +374,11 @@ const Settings = () => {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />Loading…
                   </div>
+                ) : blockedError ? (
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                    <span className="text-destructive">Couldn't load your blocked accounts.</span>
+                    <Button size="sm" variant="outline" onClick={loadBlocked}>Retry</Button>
+                  </div>
                 ) : blocked.length === 0 ? (
                   <p className="text-sm text-muted-foreground">You haven't blocked anyone.</p>
                 ) : (
@@ -386,7 +395,7 @@ const Settings = () => {
                             <p className="truncate text-xs text-muted-foreground">@{u.username}</p>
                           </div>
                         </div>
-                        <Button size="sm" variant="outline" onClick={() => setUnblockTarget(u)}>Unblock</Button>
+                        <Button size="sm" variant="outline" onClick={() => { setUnblockError(null); setUnblockTarget(u); }}>Unblock</Button>
                       </li>
                     ))}
                   </ul>
@@ -463,7 +472,7 @@ const Settings = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!unblockTarget} onOpenChange={(v) => { if (!v) setUnblockTarget(null); }}>
+      <AlertDialog open={!!unblockTarget} onOpenChange={(v) => { if (!v) { setUnblockTarget(null); setUnblockError(null); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Unblock {unblockTarget?.display_name}?</AlertDialogTitle>
@@ -471,10 +480,13 @@ const Settings = () => {
               They'll be able to view your profile and message you again.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {unblockError && (
+            <p className="text-sm text-destructive">{unblockError}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={unblocking}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); handleUnblock(); }} disabled={unblocking}>
-              {unblocking && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Unblock
+              {unblocking && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}{unblockError ? "Retry" : "Unblock"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

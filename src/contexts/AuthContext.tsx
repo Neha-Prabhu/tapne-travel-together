@@ -12,8 +12,8 @@ interface AuthContextType {
   authReady: boolean;
   login: (identifier: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<SignupResult>;
-  verifySignupCode: (code: string) => Promise<{ ok: boolean; reason?: string }>;
-  resendSignupCode: () => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
+  verifySignupCode: (code: string, details?: { name: string; email: string; password: string }) => Promise<{ ok: boolean; reason?: string }>;
+  resendSignupCode: (details?: { name?: string; email?: string; password?: string }) => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<any>;
   lastAuthError: string;
@@ -84,11 +84,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLastAuthError("");
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const data = await apiPost<{ user: SessionUser }>(cfg.api.login, { username: identifier, password });
+      const data = await apiPost<{ user: SessionUser; reactivated?: boolean }>(cfg.api.login, { username: identifier, password });
       const authUser = sessionUserToAuthUser(data.user);
       authMutationVersion.current += 1;
       store.setAuth(authUser, "session-token");
       setAuthReady(true);
+      if (data.reactivated) {
+        // Toast once on reactivation, before navigating to the requested destination.
+        const { toast } = await import("sonner");
+        toast.success("Welcome back — your account has been reactivated.");
+      }
       return true;
     } catch (err: any) {
       setLastAuthError(err?.error || "Invalid credentials");
@@ -119,11 +124,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const verifySignupCode = useCallback(async (code: string): Promise<{ ok: boolean; reason?: string }> => {
+  const verifySignupCode = useCallback(async (code: string, details?: { name: string; email: string; password: string }): Promise<{ ok: boolean; reason?: string }> => {
     setLastAuthError("");
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const data = await apiPost<{ user: SessionUser }>(cfg.api.signup_verify, { code });
+      // Always send the currently displayed identity so the account is created
+      // from the values the user is looking at, not stale server-side pending data.
+      const payload: Record<string, unknown> = { code };
+      if (details) {
+        payload.first_name = details.name;
+        payload.email = details.email;
+        payload.password = details.password;
+      }
+      const data = await apiPost<{ user: SessionUser }>(cfg.api.signup_verify, payload);
       const authUser = sessionUserToAuthUser(data.user);
       authMutationVersion.current += 1;
       store.setAuth(authUser, "session-token");
@@ -136,10 +149,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const resendSignupCode = useCallback(async () => {
+  const resendSignupCode = useCallback(async (details?: { name?: string; email?: string; password?: string }) => {
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPost(cfg.api.signup_resend, {});
+      const payload: Record<string, unknown> = {};
+      if (details?.name) payload.first_name = details.name;
+      if (details?.email) payload.email = details.email;
+      if (details?.password) payload.password = details.password;
+      await apiPost(cfg.api.signup_resend, payload);
       return { ok: true };
     } catch (err: any) {
       return { ok: false, retry_after: err?.retry_after, error: err?.error || "Could not resend code" };

@@ -845,14 +845,26 @@ const TripDetail = () => {
               <span className="text-lg font-bold text-foreground">₹{price.toLocaleString()}</span>
               <span className="text-xs text-muted-foreground ml-1">/ person</span>
             </div>
-            <Button
-              size="lg"
-              disabled={ctaDisabled || (isCompleted && !isHost)}
-              onClick={isHost ? undefined : handleAction}
-              className="transition-transform hover:scale-[1.02]"
-            >
-              {isCompleted && !isHost ? "Trip completed" : ctaLabel}
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isHost && !hasEnded && (joinStatus === "pending" || joinStatus === "approved") && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-destructive/30 text-destructive hover:bg-destructive/5"
+                  onClick={() => setWithdrawOpen(true)}
+                >
+                  {joinStatus === "pending" ? "Cancel request" : "Withdraw"}
+                </Button>
+              )}
+              <Button
+                size="lg"
+                disabled={ctaDisabled || (isCompleted && !isHost)}
+                onClick={isHost ? undefined : handleAction}
+                className="transition-transform hover:scale-[1.02]"
+              >
+                {isCompleted && !isHost ? "Trip completed" : ctaLabel}
+              </Button>
+            </div>
           </div>
         </div>
         <div className="h-20 lg:hidden" />

@@ -101,6 +101,7 @@ const Inbox = () => {
       body: messageInput.trim(),
       sent_at: new Date().toISOString(),
     };
+    const sentBody = newMsg.body;
 
     // Optimistic update
     setThreads((prev) =>
@@ -121,8 +122,27 @@ const Inbox = () => {
       await apiPost(`${cfg.api.dm_inbox}${activeThread.id}/messages/`, {
         body: newMsg.body,
       });
-    } catch {
-      // Message already shown optimistically
+    } catch (err: any) {
+      // Sending is now forbidden (block or deactivation happened while the
+      // conversation was open). Roll back the optimistic message and swap the
+      // composer for the correct read-only banner.
+      const reason = err?.readonly_reason as ThreadData["readonly_reason"] | undefined;
+      setThreads((prev) =>
+        prev.map((t) => {
+          if (t.id !== activeThread.id) return t;
+          const messages = t.messages.filter((m) => m.id !== newMsg.id);
+          const last = messages[messages.length - 1];
+          return {
+            ...t,
+            messages,
+            last_message: last?.body,
+            last_sent_at: last?.sent_at,
+            readonly: reason ? true : t.readonly,
+            readonly_reason: reason ?? t.readonly_reason,
+          };
+        })
+      );
+      if (!reason) setMessageInput(sentBody);
     } finally {
       setSending(false);
     }

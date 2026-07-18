@@ -71,6 +71,9 @@ interface ProfileResponse {
     trips_joined?: number;
     followers_count?: number;
     is_following?: boolean;
+    is_blocked_by_me?: boolean;
+    is_blocked_by_them?: boolean;
+    is_deactivated?: boolean;
   };
   trips_hosted: TripData[];
   trips_joined: TripData[];
@@ -118,6 +121,7 @@ const Profile = () => {
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
+  const [deactivateBlockers, setDeactivateBlockers] = useState<Array<{ trip_id: number; title: string; role: "host" | "traveler"; status?: string; pending_count?: number; approved_count?: number }> | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
   const [blockPending, setBlockPending] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -252,6 +256,7 @@ const Profile = () => {
 
   const handleDeactivate = async () => {
     setAccountActionPending(true);
+    setDeactivateBlockers(null);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       await apiPost(cfg.api.account_deactivate, {});
@@ -260,8 +265,14 @@ const Profile = () => {
       setSettingsOpen(false);
       logout();
       navigate("/");
-    } catch {
-      toast.error("Could not deactivate account. Please try again.");
+    } catch (err: any) {
+      // Commitment blockers keep the member signed in and the dialog open;
+      // never toast success or navigate away after a refusal.
+      if (err?.status === 409 && Array.isArray(err?.blockers)) {
+        setDeactivateBlockers(err.blockers);
+      } else {
+        toast.error(err?.error || "Could not deactivate account. Please try again.");
+      }
     } finally {
       setAccountActionPending(false);
     }
@@ -286,6 +297,36 @@ const Profile = () => {
         <Navbar />
         <main className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground">Profile not found.</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // When the viewer or the profile owner has blocked the other, replace the
+  // regular profile with a neutral unavailable state that hides every social
+  // action (Follow, Message, Block, tabs, etc.).
+  const isUnavailable = !isOwner && (p.is_blocked_by_me || p.is_blocked_by_them || p.is_deactivated);
+  if (isUnavailable) {
+    const reason = p.is_deactivated
+      ? "This account isn't available right now."
+      : p.is_blocked_by_me
+        ? "You've blocked this member. Unblock them from Settings to see their profile again."
+        : "This profile isn't available.";
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex flex-1 items-center justify-center px-6">
+          <div className="max-w-md text-center">
+            <h1 className="text-xl font-semibold">Profile unavailable</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{reason}</p>
+            <div className="mt-6 flex justify-center gap-2">
+              <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+              {p.is_blocked_by_me && (
+                <Button onClick={() => navigate("/settings")}>Manage blocked accounts</Button>
+              )}
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
@@ -881,22 +922,56 @@ const Profile = () => {
       </Dialog>
 
       {/* ── Deactivate Confirmation ── */}
-      <Dialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <DialogContent className="sm:max-w-sm">
+      <Dialog open={deactivateOpen} onOpenChange={(v) => { setDeactivateOpen(v); if (!v) setDeactivateBlockers(null); }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <PauseCircle className="h-5 w-5 text-muted-foreground" /> Deactivate Account
+              <PauseCircle className="h-5 w-5 text-muted-foreground" />
+              {deactivateBlockers ? "Resolve trip commitments first" : "Deactivate Account"}
             </DialogTitle>
             <DialogDescription>
-              Your profile will be hidden and you won't receive notifications. Signing back in reactivates your account.
+              {deactivateBlockers
+                ? "You have active trip commitments. Resolve each one before deactivating."
+                : "Your profile, hosted trips, stories, and messages will be hidden. Signing back in reactivates your account."}
             </DialogDescription>
           </DialogHeader>
+          {deactivateBlockers && deactivateBlockers.length > 0 && (
+            <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+              {deactivateBlockers.map((b) => (
+                <li key={b.trip_id} className="rounded-md border border-border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{b.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.role === "host" ? "You're hosting" : "You're a traveler"}
+                        {b.role === "host" && (b.pending_count != null || b.approved_count != null) && (
+                          <> · {b.pending_count ?? 0} pending · {b.approved_count ?? 0} approved</>
+                        )}
+                        {b.role === "traveler" && b.status && <> · {b.status}</>}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setDeactivateOpen(false); setDeactivateBlockers(null); navigate(b.role === "host" ? `/dashboard/trips?trip=${b.trip_id}` : `/trips/${b.trip_id}`); }}
+                    >
+                      Manage
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeactivateOpen(false)}>Cancel</Button>
-            <Button variant="secondary" onClick={handleDeactivate} disabled={accountActionPending}>
-              {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Deactivate
+            <Button variant="outline" onClick={() => { setDeactivateOpen(false); setDeactivateBlockers(null); }}>
+              {deactivateBlockers ? "Close" : "Cancel"}
             </Button>
+            {!deactivateBlockers && (
+              <Button variant="secondary" onClick={handleDeactivate} disabled={accountActionPending}>
+                {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Deactivate
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
