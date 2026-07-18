@@ -71,6 +71,9 @@ interface ProfileResponse {
     trips_joined?: number;
     followers_count?: number;
     is_following?: boolean;
+    is_blocked_by_me?: boolean;
+    is_blocked_by_them?: boolean;
+    is_deactivated?: boolean;
   };
   trips_hosted: TripData[];
   trips_joined: TripData[];
