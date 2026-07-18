@@ -800,6 +800,25 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
     if (!su) return { profile: null, trips_hosted: [], trips_joined: [], reviews: [], gallery: [] };
 
+    // If the viewer and target have blocked each other, or the target is
+    // deactivated, respond with a minimal profile envelope only. Never send
+    // bio, trips, stories, reviews, gallery, or follower counts — the client
+    // shouldn't be able to reveal hidden content even briefly.
+    const targetBlockedByMe = _blockedUsers.has(su.username);
+    const targetDeactivated = _deactivatedUsers.has(su.username);
+    if (targetBlockedByMe || targetDeactivated) {
+      return {
+        profile: {
+          username: su.username,
+          display_name: su.display_name,
+          unavailable: true,
+          is_blocked_by_me: targetBlockedByMe,
+          is_deactivated: targetDeactivated,
+        },
+        trips_hosted: [], trips_joined: [], reviews: [], gallery: [], stories: [],
+      };
+    }
+
     const hostedTrips = MOCK_TRIPS.filter(t => t.host_username === su.username);
     const joinedTrips = MOCK_TRIPS.filter(t => t.host_username !== su.username).slice(0, 2);
 
