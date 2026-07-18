@@ -87,8 +87,13 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [blockers, setBlockers] = useState<DeactivationBlocker[] | null>(null);
+
+  const [blocked, setBlocked] = useState<BlockedUser[]>([]);
+  const [blockedLoading, setBlockedLoading] = useState(true);
+  const [unblockTarget, setUnblockTarget] = useState<BlockedUser | null>(null);
+  const [unblocking, setUnblocking] = useState(false);
 
   useEffect(() => { if (!isAuthenticated) requireAuth(() => {}); }, [isAuthenticated]);
 
@@ -100,17 +105,27 @@ const Settings = () => {
       try {
         const cfg = window.TAPNE_RUNTIME_CONFIG;
         const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings);
-        if (!cancelled && data && typeof data === "object") {
-          setValues(normalize(data));
-        }
-      } catch {
-        // keep defaults
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+        if (!cancelled && data && typeof data === "object") setValues(normalize(data));
+      } catch { /* keep defaults */ }
+      finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, [isAuthenticated]);
+
+  const loadBlocked = useCallback(async () => {
+    setBlockedLoading(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      const data = await apiGet<{ users: BlockedUser[] }>(cfg.api.blocks);
+      setBlocked(data?.users || []);
+    } catch {
+      setBlocked([]);
+    } finally {
+      setBlockedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (isAuthenticated) loadBlocked(); }, [isAuthenticated, loadBlocked]);
 
   const update = <K extends keyof SettingsPayload>(key: K, val: SettingsPayload[K]) => {
     setValues((prev) => ({ ...prev, [key]: val }));
@@ -130,31 +145,38 @@ const Settings = () => {
     }
   };
 
-  const handleDeactivate = async () => {
-    setPending(true);
+  const handleUnblock = async () => {
+    if (!unblockTarget) return;
+    setUnblocking(true);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPost(cfg.api.account_deactivate, {});
-      toast.success("Account deactivated.");
-      logout();
-      navigate("/");
+      await apiDelete(`${cfg.api.blocks}${unblockTarget.username}/`);
+      toast.success(`Unblocked ${unblockTarget.display_name}.`);
+      setUnblockTarget(null);
+      loadBlocked();
     } catch {
-      toast.error("Could not deactivate account. Please try again.");
+      toast.error("Could not unblock. Please try again.");
     } finally {
-      setPending(false);
+      setUnblocking(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeactivate = async () => {
     setPending(true);
+    setBlockers(null);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPost(cfg.api.account_delete, {});
-      toast.success("Account deleted.");
+      await apiPost(cfg.api.account_deactivate, {});
+      toast.success("Account deactivated. You've been signed out.");
+      setDeactivateOpen(false);
       logout();
       navigate("/");
-    } catch {
-      toast.error("Could not delete account. Please try again.");
+    } catch (err: any) {
+      if (err?.status === 409 && Array.isArray(err?.blockers)) {
+        setBlockers(err.blockers);
+      } else {
+        toast.error(err?.error || "Could not deactivate account. Please try again.");
+      }
     } finally {
       setPending(false);
     }
