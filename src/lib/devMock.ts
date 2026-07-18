@@ -853,6 +853,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         trips_joined: joinedTrips.length + 3,
         followers_count: baseFollowers + (isFollowed ? 1 : 0),
         is_following: isFollowed,
+        is_blocked_by_me: _blockedUsers.has(su.username),
+        is_deactivated: _deactivatedUsers.has(su.username),
       },
       trips_hosted: hostedTrips,
       trips_joined: joinedTrips,
