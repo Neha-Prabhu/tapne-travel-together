@@ -374,6 +374,11 @@ const Settings = () => {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />Loading…
                   </div>
+                ) : blockedError ? (
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                    <span className="text-destructive">Couldn't load your blocked accounts.</span>
+                    <Button size="sm" variant="outline" onClick={loadBlocked}>Retry</Button>
+                  </div>
                 ) : blocked.length === 0 ? (
                   <p className="text-sm text-muted-foreground">You haven't blocked anyone.</p>
                 ) : (
@@ -390,7 +395,7 @@ const Settings = () => {
                             <p className="truncate text-xs text-muted-foreground">@{u.username}</p>
                           </div>
                         </div>
-                        <Button size="sm" variant="outline" onClick={() => setUnblockTarget(u)}>Unblock</Button>
+                        <Button size="sm" variant="outline" onClick={() => { setUnblockError(null); setUnblockTarget(u); }}>Unblock</Button>
                       </li>
                     ))}
                   </ul>
