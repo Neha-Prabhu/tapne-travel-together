@@ -885,7 +885,7 @@ const TripDetail = () => {
                   const cfg = window.TAPNE_RUNTIME_CONFIG;
                   const url = (cfg.api.trip_withdraw || "/trips/:id/withdraw/").replace(":id", String(trip.id));
                   const res = await apiPost<{ join_request_status: string | null; spots_left?: number }>(url, {});
-                  setTrip({ ...trip, join_request_status: res?.join_request_status ?? null, spots_left: res?.spots_left ?? trip.spots_left });
+                  setTrip({ ...trip, join_request_status: (res?.join_request_status as any) ?? null, spots_left: res?.spots_left ?? trip.spots_left });
                   toast.success(joinStatus === "pending" ? "Request cancelled." : "You've withdrawn from the trip.");
                   setWithdrawOpen(false);
                 } catch (err: any) {
