@@ -467,8 +467,9 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── Deactivate ──
   if (method === "POST" && path === "/account/deactivate/") {
     const b = body as any;
-    // Compute blockers: any hosted trip with pending or approved participants,
-    // or any joined trip the user is still enrolled in.
+    // Every blocker carries its own management destination so Settings and
+    // Profile dialogs both open the affected trip directly rather than a
+    // generic dashboard list.
     const username = _devUser?.username;
     const blockers: any[] = [];
     if (username) {
@@ -480,6 +481,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
             blockers.push({
               trip_id: t.id, title: t.title, role: "host",
               pending_count: pending, approved_count: approved,
+              manage_url: `/trips/${t.id}/edit`,
             });
           }
         }
@@ -489,6 +491,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         if (t) blockers.push({
           trip_id: tripId, title: t.title, role: "traveler",
           status,
+          manage_url: `/trips/${tripId}`,
         });
       }
     }
