@@ -118,7 +118,8 @@ const Profile = () => {
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
+  const [blockPending, setBlockPending] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [accountActionPending, setAccountActionPending] = useState(false);
