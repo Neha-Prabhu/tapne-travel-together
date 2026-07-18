@@ -303,6 +303,36 @@ const Profile = () => {
     );
   }
 
+  // When the viewer or the profile owner has blocked the other, replace the
+  // regular profile with a neutral unavailable state that hides every social
+  // action (Follow, Message, Block, tabs, etc.).
+  const isUnavailable = !isOwner && (p.is_blocked_by_me || p.is_blocked_by_them || p.is_deactivated);
+  if (isUnavailable) {
+    const reason = p.is_deactivated
+      ? "This account isn't available right now."
+      : p.is_blocked_by_me
+        ? "You've blocked this member. Unblock them from Settings to see their profile again."
+        : "This profile isn't available.";
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex flex-1 items-center justify-center px-6">
+          <div className="max-w-md text-center">
+            <h1 className="text-xl font-semibold">Profile unavailable</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{reason}</p>
+            <div className="mt-6 flex justify-center gap-2">
+              <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+              {p.is_blocked_by_me && (
+                <Button onClick={() => navigate("/settings")}>Manage blocked accounts</Button>
+              )}
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const reviews = profileData?.reviews ?? [];
   const gallery = profileData?.gallery ?? [];
   const tripsHosted = profileData?.trips_hosted ?? [];
