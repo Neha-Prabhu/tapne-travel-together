@@ -409,7 +409,7 @@ const Inbox = () => {
             <div className="rounded-md bg-muted px-3 py-2 text-center text-sm text-muted-foreground">
               {activeThread.readonly_reason === "blocked_by_you"
                 ? "You've blocked this member. You can unblock them from Settings."
-                : activeThread.readonly_reason === "blocked_by_them"
+                : activeThread.readonly_reason === "blocked_you"
                 ? "This member is no longer available."
                 : activeThread.readonly_reason === "deactivated"
                 ? "This account has been deactivated. You can't send new messages."
