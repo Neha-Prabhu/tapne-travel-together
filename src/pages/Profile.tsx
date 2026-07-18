@@ -858,14 +858,6 @@ const Profile = () => {
               <PauseCircle className="h-4 w-4 text-muted-foreground" />
               Deactivate Account
             </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive"
-              onClick={() => { setSettingsOpen(false); setDeleteOpen(true); }}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Account
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -878,7 +870,7 @@ const Profile = () => {
               <PauseCircle className="h-5 w-5 text-muted-foreground" /> Deactivate Account
             </DialogTitle>
             <DialogDescription>
-              Your profile will be hidden and you won't receive notifications. You can reactivate anytime by logging back in.
+              Your profile will be hidden and you won't receive notifications. Signing back in reactivates your account.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -886,27 +878,6 @@ const Profile = () => {
             <Button variant="secondary" onClick={handleDeactivate} disabled={accountActionPending}>
               {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Deactivate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Delete Confirmation ── */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" /> Delete Account
-            </DialogTitle>
-            <DialogDescription>
-              This action cannot be undone. All your data, trips, and reviews will be permanently deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteAccount} disabled={accountActionPending}>
-              {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>
