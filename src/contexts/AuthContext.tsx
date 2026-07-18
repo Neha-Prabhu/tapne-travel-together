@@ -12,8 +12,8 @@ interface AuthContextType {
   authReady: boolean;
   login: (identifier: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<SignupResult>;
-  verifySignupCode: (code: string) => Promise<{ ok: boolean; reason?: string }>;
-  resendSignupCode: () => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
+  verifySignupCode: (code: string, details?: { name: string; email: string; password: string }) => Promise<{ ok: boolean; reason?: string }>;
+  resendSignupCode: (details?: { name?: string; email?: string; password?: string }) => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<any>;
   lastAuthError: string;
