@@ -1,70 +1,52 @@
+## Overview
 
+Add email verification, member blocking, guarded deactivation, application/place withdrawal, and read-only conversations. Remove permanent deletion. Everything remains inside existing pages, modals, and dashboard tabs — no new top-level routes.
 
-# Tapne — Travel Social Platform MVP
+## Backend surface (dev mock + config)
 
-A clean, adventurous travel social platform where users discover trips, join communities, and create their own travel experiences.
+Extend `window.TAPNE_RUNTIME_CONFIG.api` and `src/lib/devMock.ts` with:
 
----
+- `signup_start`, `signup_verify`, `signup_resend` — password signup now returns `pending_verification` with a 6-digit code (dev mode: code visible in console + toast; 10 min TTL; max 5 attempts; 60 s resend cooldown).
+- `block`, `unblock`, `blocked_list` — user blocking.
+- `account_deactivate` — returns `409 { blockers: [{ trip_id, title, role, pending, approved, enrolled_status, manage_url }] }` when active commitments exist.
+- `trip_withdraw` — cancels a pending application or leaves an approved place; returns updated participant status + seat count.
+- Conversation payloads gain `readonly: boolean` and `readonly_reason: 'blocked_by_you' | 'blocked_you' | 'deactivated'`; blocked pairs sharing a trip keep the thread but readonly.
+- Remove `account_delete` from config and mock. 
 
-## Design System
+## Frontend changes (scoped, no new pages)
 
-- **Primary color**: Soft teal palette
-- **Style**: Card-based, spacious, medium rounded corners, soft shadows
-- **Typography**: Clean sans-serif
-- **Mode**: Light only
-- **Feel**: Adventurous yet trustworthy, backpacker-friendly but premium
+**Auth**
+- `LoginModal.tsx`: after `signup()` returns `pending_verification`, swap the form for a Verify step — 6 code slots (auto-advance, paste support), destination email, 10-min expiry hint, inline errors (invalid / expired / too many attempts / delivery failed), loading state, 60 s resend countdown, "Edit details" to return to the signup form. On success, sign in, close modal, run `pendingAuthAction`.
+- `AuthContext.tsx`: extend `signup()` to return a discriminated result; add `verifySignupCode`, `resendSignupCode`. Login and Google OAuth paths untouched. On login of a deactivated account, surface reactivation toast "Welcome back — your account has been reactivated".
 
----
+**Blocking**
+- `Profile.tsx`: add Block button in the profile actions (own-profile hidden). Confirmation dialog → on success toast + navigate away (`/`). When the viewed profile is blocked-by-you or has-blocked-you, render an "Unavailable" state instead of the profile content; hide Follow / Message / social actions.
+- `Settings.tsx`: add a "Blocked accounts" card listing avatar, display name, username, Unblock button with confirm + loading + empty + error states. Does not restore follow. Keep the existing 5 preference groups and their save behavior untouched.
 
-## Pages & Features
+**Delete removal**
+- `Settings.tsx`: remove Delete permanently button, dialog, and handler. Keep Deactivate.
+- `Profile.tsx` / `ProfileEdit.tsx`: remove any Delete account entry if present.
 
-### 1. Landing Page
-- Hero with headline: *"Find your kind of people. Then travel."*
-- Two CTAs: "Explore Trips" (primary) and "Create a Trip" (secondary)
-- Grid of 4–6 featured trip cards below
-- "View All Trips" link
-- Simple, inspiring — no long marketing sections
+**Deactivation guard**
+- `Settings.tsx`: on 409, keep dialog open, keep session, render a list of blocking trips (title, role, pending/approved counts or enrolled status, Manage trip link → `/trips/:id`). Success path (204) unchanged: toast + logout + Home.
 
-### 2. Browse Trips Page
-- Search bar for destination text search
-- Filter dropdown by trip type (Backpacking, Trek, Social, etc.)
-- Sort by newest (default)
-- Responsive grid of trip cards showing: cover image, title, destination, dates, budget, spots left, host name
-- Loading skeletons, empty state, and pagination
+**Withdraw**
+- `TripDetail.tsx`: for a non-host traveler with `pending` or `approved` participation, show a Withdraw button in both the desktop sidebar CTA area and the mobile sticky bar. Confirmation copy distinguishes "Cancel request" vs "Leave trip". After success, refresh the trip + participant status + seat count in place. Add `apiPost(cfg.api.trip_withdraw, { trip_id })` in `devMock.ts`.
 
-### 3. Trip Detail Page
-- Large cover image with title, destination, dates, budget, trip type badge
-- Description section and host info
-- Spots left indicator
-- "Join Trip" button with smart states (enabled, full, already joined, login prompt)
-- Participants list with avatars
+**Read-only conversations**
+- `Messages.tsx`: read `thread.readonly` + `readonly_reason`. Render prior messages normally; replace composer with a muted explanation banner ("You blocked this member" / "This member is unavailable" / "This member's account is deactivated"). Applies on desktop and mobile.
+- For blocked pairs still sharing an approved trip, the mock keeps the thread visible and readonly; social actions on the peer profile stay hidden.
 
-### 4. Create Trip Page
-- Clean single-page form: title, destination, dates, budget, trip type, description, max group size
-- Inline validation (required fields, date logic, numeric budget)
-- Loading state on submit, success message, redirect to trip detail
+## Files touched
 
-### 5. Authentication Screens
-- Sign Up and Login pages with minimal design
-- Clear input fields and error messages
-- Mock auth state management with redirect to intended action
+- `src/lib/devMock.ts`, `src/lib/mode.ts` (config keys), `src/types/api.ts`
+- `src/contexts/AuthContext.tsx`
+- `src/components/LoginModal.tsx`
+- `src/pages/Profile.tsx`, `src/pages/ProfileEdit.tsx`
+- `src/pages/Settings.tsx`
+- `src/pages/TripDetail.tsx`
+- `src/pages/Messages.tsx`
 
-### 6. Profile Page
-- Profile image, name, bio, location
-- Tabs for trips created and trips joined (simplified card format)
-- "Edit Profile" button with modal for own profile
+## Out of scope
 
----
-
-## Shared Components & UX
-
-- **Navbar**: Logo, Explore Trips, Create Trip, Profile/Login — with logged-in (avatar + dropdown) and logged-out states
-- **Footer**: Simple with links
-- **Reusable components**: TripCard, UserCard, Button, Input, Badge, Modal, Dropdown
-- **States everywhere**: Loading skeletons, empty states with motivational messages, error states, success feedback
-- **Fully responsive**: Mobile-first stacked layouts, easy tap targets
-
-## Mock Data
-- Realistic trips: Goa backpacking, Himachal trek, Bali social trip, Rajasthan desert camp
-- Realistic user profiles with placeholder avatars
-
+Existing login, Google sign-in, profile editing, host trip management, host trip cancellation, general visual language, unrelated pages, search modes, dashboard tabs, and navigation stay as-is. The five Settings preferences and their save behavior are not modified. No new routes or nav entries are added.
