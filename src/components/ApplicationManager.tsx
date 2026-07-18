@@ -97,6 +97,8 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
 
   const pending = requests.filter(a => a.status === "pending");
   const approved = requests.filter(a => a.status === "approved");
+  const reachableParticipants = participants.filter(p => !p.is_blocked_by_me);
+  const blockedParticipantCount = participants.length - reachableParticipants.length;
 
   if (loading) {
     return (
