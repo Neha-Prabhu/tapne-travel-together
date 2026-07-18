@@ -416,6 +416,84 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { ok: true, resend_available_in: 60, dev_code: _pendingSignup.code };
   }
 
+  if (method === "POST" && path === "/auth/logout/") {
+    _devUser = null;
+    return {};
+  }
+
+  // ── Blocks ──
+  if (method === "GET" && path === "/blocks/") {
+    return {
+      blocked: Array.from(_blockedUsers).map(username => {
+        const su = MOCK_SESSION_USERS.find(u => u.username === username);
+        return {
+          username,
+          display_name: su?.display_name || username,
+          avatar_url: (su as any)?.avatar_url || `https://i.pravatar.cc/150?u=${username}`,
+        };
+      }),
+    };
+  }
+  const blockMatch = path.match(/^\/blocks\/([^/]+)\/$/);
+  if (method === "POST" && blockMatch) {
+    _blockedUsers.add(blockMatch[1]);
+    _followedUsers.delete(blockMatch[1]);
+    return { ok: true };
+  }
+  if (method === "DELETE" && blockMatch) {
+    _blockedUsers.delete(blockMatch[1]);
+    return { ok: true };
+  }
+
+  // ── Deactivate ──
+  if (method === "POST" && path === "/account/deactivate/") {
+    const b = body as any;
+    // Compute blockers: any hosted trip with pending or approved participants,
+    // or any joined trip the user is still enrolled in.
+    const username = _devUser?.username;
+    const blockers: any[] = [];
+    if (username) {
+      for (const t of MOCK_TRIPS) {
+        if (t.host_username === username) {
+          const pending = getMockApplications(t.id).filter(a => a.status === "pending").length;
+          const approved = getMockParticipants(t.id).length;
+          if (pending > 0 || approved > 0) {
+            blockers.push({
+              trip_id: t.id, title: t.title, role: "host",
+              pending, approved, enrolled_status: null,
+              manage_url: `/trips/${t.id}`,
+            });
+          }
+        }
+      }
+      for (const [tripId, status] of _tripParticipation.entries()) {
+        const t = MOCK_TRIPS.find(x => x.id === tripId);
+        if (t) blockers.push({
+          trip_id: tripId, title: t.title, role: "traveler",
+          pending: 0, approved: 0, enrolled_status: status,
+          manage_url: `/trips/${tripId}`,
+        });
+      }
+    }
+    if (blockers.length > 0 && !b?.acknowledge_blockers) {
+      return mockError(409, { error: "You have active trip commitments.", blockers });
+    }
+    _devUser = null;
+    return { ok: true };
+  }
+
+  // ── Trip withdraw ──
+  const withdrawMatch = path.match(/^\/trips\/(\d+)\/withdraw\/$/);
+  if (method === "POST" && withdrawMatch) {
+    const id = parseInt(withdrawMatch[1]);
+    const prev = _tripParticipation.get(id);
+    _tripParticipation.delete(id);
+    const trip = MOCK_TRIPS.find(t => t.id === id);
+    if (trip && prev === "approved") trip.spots_left = (trip.spots_left ?? 0) + 1;
+    if (trip) trip.join_request_status = null;
+    return { ok: true, join_request_status: null, spots_left: trip?.spots_left };
+  }
+
   // ── Home ──
   if (method === "GET" && path === "/home/") {
     const resp: HomeResponse = {
