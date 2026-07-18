@@ -130,6 +130,12 @@ const TripDetail = () => {
   const isCompleted = trip.status === "completed";
   const hasEnded = trip.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
   const canReview = isAuthenticated && isJoined && hasEnded;
+  // Safety state: when the viewer and host have blocked each other, keep the
+  // trip itinerary, dates, participation, and essential controls visible but
+  // hide every social entry point (profile navigation, Ask a Question,
+  // Follow / Message, review write, invitations). Lifted once the trip ends
+  // or the viewer is no longer participating.
+  const blockedWithHost = !!(trip as any).viewer_blocked_with_host && !hasEnded && !isHost;
 
   // Build visible sections dynamically based on trip data
   const visibleSections = [
@@ -226,7 +232,7 @@ const TripDetail = () => {
             </Button>
           )}
 
-          {hasEnded && trip.can_review && (
+          {hasEnded && trip.can_review && !blockedWithHost && (
             <Button
               variant="outline"
               className="mt-2 w-full border-primary/30 text-primary hover:bg-primary/5"
@@ -256,28 +262,35 @@ const TripDetail = () => {
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Hosted by</p>
             {(() => {
               const hostRating = (trip as any).host_average_rating as number | undefined;
-              return (
-                <button
-                  onClick={() => navigate(`/users/${trip.host_username}`)}
-                  className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
-                >
+              const HostBody = (
+                <>
                   <Avatar className="h-11 w-11 border-2 border-primary/20">
                     <AvatarFallback>{(trip.host_display_name || "H")[0]}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-foreground">{trip.host_display_name}</p>
-                    {typeof hostRating === "number" && hostRating > 0 && (
+                    {typeof hostRating === "number" && hostRating > 0 && !blockedWithHost && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                         <span className="text-xs font-medium text-foreground">{hostRating.toFixed(1)}</span>
                       </div>
                     )}
-                    {trip.host_bio && <p className="text-xs text-muted-foreground line-clamp-1">{trip.host_bio}</p>}
+                    {trip.host_bio && !blockedWithHost && <p className="text-xs text-muted-foreground line-clamp-1">{trip.host_bio}</p>}
                   </div>
+                </>
+              );
+              return blockedWithHost ? (
+                <div className="flex items-center gap-3 w-full text-left">{HostBody}</div>
+              ) : (
+                <button
+                  onClick={() => navigate(`/users/${trip.host_username}`)}
+                  className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
+                >
+                  {HostBody}
                 </button>
               );
             })()}
-            {(trip as any).co_hosts_profiles?.map((ch: any) => (
+            {!blockedWithHost && (trip as any).co_hosts_profiles?.map((ch: any) => (
               <button
                 key={ch.username}
                 onClick={() => navigate(`/users/${ch.username}`)}
@@ -292,7 +305,7 @@ const TripDetail = () => {
                 </div>
               </button>
             ))}
-            {!isHost && (
+            {!isHost && !blockedWithHost && (
               <Button
                 variant="outline"
                 className="w-full border-primary/30 text-primary hover:bg-primary/5"
@@ -322,6 +335,11 @@ const TripDetail = () => {
                 {askingQuestion ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-1.5 h-4 w-4" />}
                 Ask a Question
               </Button>
+            )}
+            {blockedWithHost && (
+              <p className="text-xs text-muted-foreground">
+                You've blocked this host or been blocked. Trip details remain visible; social actions are unavailable until the trip ends or you withdraw.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -719,7 +737,7 @@ const TripDetail = () => {
                         </Button>
                       )}
 
-                      {!hasEnded && (() => {
+                      {!hasEnded && !blockedWithHost && (() => {
                         const hostRating = (trip as any).host_average_rating as number | undefined;
                         const hostLocationRating = (trip as any).host_location_average_rating as number | undefined;
                         return (

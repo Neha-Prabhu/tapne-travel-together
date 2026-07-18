@@ -467,8 +467,9 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── Deactivate ──
   if (method === "POST" && path === "/account/deactivate/") {
     const b = body as any;
-    // Compute blockers: any hosted trip with pending or approved participants,
-    // or any joined trip the user is still enrolled in.
+    // Every blocker carries its own management destination so Settings and
+    // Profile dialogs both open the affected trip directly rather than a
+    // generic dashboard list.
     const username = _devUser?.username;
     const blockers: any[] = [];
     if (username) {
@@ -480,6 +481,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
             blockers.push({
               trip_id: t.id, title: t.title, role: "host",
               pending_count: pending, approved_count: approved,
+              manage_url: `/trips/${t.id}/edit`,
             });
           }
         }
@@ -489,6 +491,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         if (t) blockers.push({
           trip_id: tripId, title: t.title, role: "traveler",
           status,
+          manage_url: `/trips/${tripId}`,
         });
       }
     }
@@ -560,16 +563,25 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const reviews = _seedReviews(trip.id).map(r => ({ ...r, is_mine: !!username && r.author_username === username }));
     const viewerReview = username ? reviews.find(r => r.is_mine) || null : null;
     const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : (trip.average_rating || 0);
+    // Blocking state: hide social entry points on shared trips whenever the
+    // viewer and the host (or a co-traveler) have blocked each other.
+    const hostBlocked = !!(trip.host_username && _blockedUsers.has(trip.host_username));
+    const participants = getMockParticipants(trip.id);
+    const blockedCoTravelers = participants
+      .map((p: any) => p.username)
+      .filter((u: string) => u && u !== username && _blockedUsers.has(u));
     const resp: TripDetailResponse = {
       trip: {
         ...trip,
         booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open"),
         reviews,
         viewer_review: viewerReview,
-        can_review: !!_devUser && !isHost,
+        can_review: !!_devUser && !isHost && !hostBlocked,
         reviews_count: reviews.length,
         average_rating: avg,
-      },
+        viewer_blocked_with_host: hostBlocked,
+        blocked_co_traveler_usernames: blockedCoTravelers,
+      } as any,
       can_manage_trip: !!isHost,
       mode: isHost ? "manage" : "view",
       similar_trips: MOCK_TRIPS.filter(t => t.id !== trip.id).slice(0, 3),
@@ -787,6 +799,25 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const mu = idx >= 0 ? mockUsers[idx] : null;
 
     if (!su) return { profile: null, trips_hosted: [], trips_joined: [], reviews: [], gallery: [] };
+
+    // If the viewer and target have blocked each other, or the target is
+    // deactivated, respond with a minimal profile envelope only. Never send
+    // bio, trips, stories, reviews, gallery, or follower counts — the client
+    // shouldn't be able to reveal hidden content even briefly.
+    const targetBlockedByMe = _blockedUsers.has(su.username);
+    const targetDeactivated = _deactivatedUsers.has(su.username);
+    if (targetBlockedByMe || targetDeactivated) {
+      return {
+        profile: {
+          username: su.username,
+          display_name: su.display_name,
+          unavailable: true,
+          is_blocked_by_me: targetBlockedByMe,
+          is_deactivated: targetDeactivated,
+        },
+        trips_hosted: [], trips_joined: [], reviews: [], gallery: [], stories: [],
+      };
+    }
 
     const hostedTrips = MOCK_TRIPS.filter(t => t.host_username === su.username);
     const joinedTrips = MOCK_TRIPS.filter(t => t.host_username !== su.username).slice(0, 2);

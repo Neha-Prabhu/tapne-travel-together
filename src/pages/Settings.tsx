@@ -451,7 +451,7 @@ const Settings = () => {
                       </p>
                     </div>
                     <Button asChild size="sm" variant="outline">
-                      <Link to={b.role === "host" ? `/dashboard/trips?trip=${b.trip_id}` : `/trips/${b.trip_id}`}>
+                      <Link to={(b as any).manage_url || (b.role === "host" ? `/trips/${b.trip_id}/edit` : `/trips/${b.trip_id}`)}>
                         Manage <ExternalLink className="ml-1 h-3 w-3" />
                       </Link>
                     </Button>

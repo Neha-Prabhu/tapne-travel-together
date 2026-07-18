@@ -953,7 +953,11 @@ const Profile = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => { setDeactivateOpen(false); setDeactivateBlockers(null); navigate(b.role === "host" ? `/dashboard/trips?trip=${b.trip_id}` : `/trips/${b.trip_id}`); }}
+                      onClick={() => {
+                        const dest = (b as any).manage_url
+                          || (b.role === "host" ? `/trips/${b.trip_id}/edit` : `/trips/${b.trip_id}`);
+                        setDeactivateOpen(false); setDeactivateBlockers(null); navigate(dest);
+                      }}
                     >
                       Manage
                     </Button>
