@@ -219,6 +219,7 @@ export interface EnrollmentRequestData {
   status: "pending" | "approved" | "denied";
   created_at: string;
   reviewed_at?: string;
+  is_blocked_by_me?: boolean;
 }
 
 export interface HostingInboxResponse {
