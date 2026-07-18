@@ -92,8 +92,10 @@ const Settings = () => {
 
   const [blocked, setBlocked] = useState<BlockedUser[]>([]);
   const [blockedLoading, setBlockedLoading] = useState(true);
+  const [blockedError, setBlockedError] = useState(false);
   const [unblockTarget, setUnblockTarget] = useState<BlockedUser | null>(null);
   const [unblocking, setUnblocking] = useState(false);
+  const [unblockError, setUnblockError] = useState<string | null>(null);
 
   useEffect(() => { if (!isAuthenticated) requireAuth(() => {}); }, [isAuthenticated]);
 
@@ -114,12 +116,13 @@ const Settings = () => {
 
   const loadBlocked = useCallback(async () => {
     setBlockedLoading(true);
+    setBlockedError(false);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       const data = await apiGet<{ users: BlockedUser[] }>(cfg.api.blocks);
       setBlocked(data?.users || []);
     } catch {
-      setBlocked([]);
+      setBlockedError(true);
     } finally {
       setBlockedLoading(false);
     }
