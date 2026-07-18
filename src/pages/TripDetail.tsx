@@ -861,6 +861,46 @@ const TripDetail = () => {
 
       {/* Booking Modal */}
       <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />
+
+      <AlertDialog open={withdrawOpen} onOpenChange={(o) => { if (!withdrawPending) setWithdrawOpen(o); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {joinStatus === "pending" ? "Cancel your request?" : "Withdraw from this trip?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {joinStatus === "pending"
+                ? "Your application will be removed. You can apply again later if seats are still available."
+                : "You'll leave this trip and your seat will be released to other travelers."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={withdrawPending}>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={withdrawPending}
+              onClick={async (e) => {
+                e.preventDefault();
+                setWithdrawPending(true);
+                try {
+                  const cfg = window.TAPNE_RUNTIME_CONFIG;
+                  const url = (cfg.api.trip_withdraw || "/trips/:id/withdraw/").replace(":id", String(trip.id));
+                  const res = await apiPost<{ join_request_status: string | null; spots_left?: number }>(url, {});
+                  setTrip({ ...trip, join_request_status: res?.join_request_status ?? null, spots_left: res?.spots_left ?? trip.spots_left });
+                  toast.success(joinStatus === "pending" ? "Request cancelled." : "You've withdrawn from the trip.");
+                  setWithdrawOpen(false);
+                } catch (err: any) {
+                  toast.error(err?.error || "Could not withdraw. Please try again.");
+                } finally {
+                  setWithdrawPending(false);
+                }
+              }}
+            >
+              {withdrawPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {joinStatus === "pending" ? "Cancel request" : "Withdraw"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* Application Modal */}
       <ApplicationModal
         open={applyModalOpen}
