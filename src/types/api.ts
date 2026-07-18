@@ -8,6 +8,8 @@ export interface TapneRuntimeConfig {
     session: string;
     login: string;
     signup: string;
+    signup_verify: string;
+    signup_resend: string;
     logout: string;
     home: string;
     trips: string;
@@ -28,7 +30,8 @@ export interface TapneRuntimeConfig {
     trip_reviews: string;
     dm_start: string;
     account_deactivate: string;
-    account_delete: string;
+    blocks: string;
+    trip_withdraw: string;
     // Optional named dashboard locations — present only when backend exposes them.
     dashboard_trips?: string;
     dashboard_reviews?: string;
