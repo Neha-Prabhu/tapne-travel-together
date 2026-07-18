@@ -256,6 +256,7 @@ const Profile = () => {
 
   const handleDeactivate = async () => {
     setAccountActionPending(true);
+    setDeactivateBlockers(null);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       await apiPost(cfg.api.account_deactivate, {});
@@ -264,8 +265,14 @@ const Profile = () => {
       setSettingsOpen(false);
       logout();
       navigate("/");
-    } catch {
-      toast.error("Could not deactivate account. Please try again.");
+    } catch (err: any) {
+      // Commitment blockers keep the member signed in and the dialog open;
+      // never toast success or navigate away after a refusal.
+      if (err?.status === 409 && Array.isArray(err?.blockers)) {
+        setDeactivateBlockers(err.blockers);
+      } else {
+        toast.error(err?.error || "Could not deactivate account. Please try again.");
+      }
     } finally {
       setAccountActionPending(false);
     }
