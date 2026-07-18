@@ -151,14 +151,15 @@ const Settings = () => {
   const handleUnblock = async () => {
     if (!unblockTarget) return;
     setUnblocking(true);
+    setUnblockError(null);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
       await apiDelete(`${cfg.api.blocks}${unblockTarget.username}/`);
       toast.success(`Unblocked ${unblockTarget.display_name}.`);
       setUnblockTarget(null);
       loadBlocked();
-    } catch {
-      toast.error("Could not unblock. Please try again.");
+    } catch (err: any) {
+      setUnblockError(err?.error || "Could not unblock. Please try again.");
     } finally {
       setUnblocking(false);
     }
