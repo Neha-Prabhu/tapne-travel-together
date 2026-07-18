@@ -460,8 +460,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
           if (pending > 0 || approved > 0) {
             blockers.push({
               trip_id: t.id, title: t.title, role: "host",
-              pending, approved, enrolled_status: null,
-              manage_url: `/trips/${t.id}`,
+              pending_count: pending, approved_count: approved,
             });
           }
         }
@@ -470,8 +469,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         const t = MOCK_TRIPS.find(x => x.id === tripId);
         if (t) blockers.push({
           trip_id: tripId, title: t.title, role: "traveler",
-          pending: 0, approved: 0, enrolled_status: status,
-          manage_url: `/trips/${tripId}`,
+          status,
         });
       }
     }
