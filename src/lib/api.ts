@@ -18,43 +18,64 @@ function csrfHeaders(): Record<string, string> {
   };
 }
 
+function unwrapMock<T>(v: unknown): T {
+  if (v && typeof v === "object" && (v as any).__mock_error) {
+    const e: any = new Error((v as any).error?.error || "Request failed");
+    Object.assign(e, (v as any).error);
+    throw e;
+  }
+  return v as T;
+}
+
+async function unwrapReal(res: Response) {
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const e: any = new Error(body?.error || res.statusText);
+    Object.assign(e, body, { status: res.status });
+    throw e;
+  }
+  return body;
+}
+
 export async function apiGet<T>(url: string): Promise<T> {
-  if (IS_DEV_MODE) return resolveMockRequest("GET", url) as T;
+  if (IS_DEV_MODE) return unwrapMock<T>(resolveMockRequest("GET", url));
   const res = await fetch(url, { credentials: "include" });
-  if (!res.ok) throw await res.json().catch(() => ({ error: res.statusText }));
-  return res.json();
+  return unwrapReal(res);
 }
 
 export async function apiPost<T>(url: string, body?: unknown): Promise<T> {
-  if (IS_DEV_MODE) return resolveMockRequest("POST", url, body) as T;
+  if (IS_DEV_MODE) return unwrapMock<T>(resolveMockRequest("POST", url, body));
   const res = await fetch(url, {
     method: "POST",
     credentials: "include",
     headers: csrfHeaders(),
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw await res.json().catch(() => ({ error: res.statusText }));
-  return res.json();
+  return unwrapReal(res);
 }
 
 export async function apiPatch<T>(url: string, body: unknown): Promise<T> {
-  if (IS_DEV_MODE) return resolveMockRequest("PATCH", url, body) as T;
+  if (IS_DEV_MODE) return unwrapMock<T>(resolveMockRequest("PATCH", url, body));
   const res = await fetch(url, {
     method: "PATCH",
     credentials: "include",
     headers: csrfHeaders(),
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw await res.json().catch(() => ({ error: res.statusText }));
-  return res.json();
+  return unwrapReal(res);
 }
 
 export async function apiDelete(url: string): Promise<void> {
-  if (IS_DEV_MODE) { resolveMockRequest("DELETE", url); return; }
+  if (IS_DEV_MODE) { unwrapMock(resolveMockRequest("DELETE", url)); return; }
   const res = await fetch(url, {
     method: "DELETE",
     credentials: "include",
     headers: csrfHeaders(),
   });
-  if (!res.ok) throw await res.json().catch(() => ({ error: res.statusText }));
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const e: any = new Error(body?.error || res.statusText);
+    Object.assign(e, body, { status: res.status });
+    throw e;
+  }
 }

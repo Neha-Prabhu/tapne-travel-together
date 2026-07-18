@@ -20,7 +20,7 @@ import HorizontalCarousel from "@/components/home/HorizontalCarousel";
 import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
-  AlertTriangle, Trash2, PauseCircle, UserPlus, UserCheck, CheckCircle2,
+  AlertTriangle, PauseCircle, UserPlus, UserCheck, CheckCircle2, Shield,
   Calendar, Sparkles, Heart, Clock, Globe, Instagram,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -118,7 +118,8 @@ const Profile = () => {
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
+  const [blockPending, setBlockPending] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [accountActionPending, setAccountActionPending] = useState(false);
@@ -233,7 +234,21 @@ const Profile = () => {
     setEditOpen(false);
   };
 
-  
+  const handleBlock = async () => {
+    if (!p) return;
+    setBlockPending(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      await apiPost(`${cfg.api.blocks}${p.username}/`, {});
+      toast.success(`Blocked ${p.display_name}.`);
+      setBlockOpen(false);
+      navigate("/");
+    } catch (err: any) {
+      toast.error(err?.error || "Could not block. Please try again.");
+    } finally {
+      setBlockPending(false);
+    }
+  };
 
   const handleDeactivate = async () => {
     setAccountActionPending(true);
@@ -252,22 +267,6 @@ const Profile = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    setAccountActionPending(true);
-    try {
-      const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPost(cfg.api.account_delete, {});
-      toast.success("Account deletion scheduled. This cannot be undone.");
-      setDeleteOpen(false);
-      setSettingsOpen(false);
-      logout();
-      navigate("/");
-    } catch {
-      toast.error("Could not delete account. Please try again.");
-    } finally {
-      setAccountActionPending(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -453,6 +452,9 @@ const Profile = () => {
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } navigate(`/messages?dm=${p.username}`); }}>
                     <MessageCircle className="mr-1 h-4 w-4" /> Message
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } setBlockOpen(true); }}>
+                    <Shield className="mr-1 h-4 w-4" /> Block
                   </Button>
                 </>
               )}
@@ -874,14 +876,6 @@ const Profile = () => {
               <PauseCircle className="h-4 w-4 text-muted-foreground" />
               Deactivate Account
             </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive"
-              onClick={() => { setSettingsOpen(false); setDeleteOpen(true); }}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Account
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -894,7 +888,7 @@ const Profile = () => {
               <PauseCircle className="h-5 w-5 text-muted-foreground" /> Deactivate Account
             </DialogTitle>
             <DialogDescription>
-              Your profile will be hidden and you won't receive notifications. You can reactivate anytime by logging back in.
+              Your profile will be hidden and you won't receive notifications. Signing back in reactivates your account.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -907,22 +901,21 @@ const Profile = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── Delete Confirmation ── */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      {/* ── Block Confirmation ── */}
+      <Dialog open={blockOpen} onOpenChange={setBlockOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" /> Delete Account
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-destructive" /> Block {p?.display_name}?
             </DialogTitle>
             <DialogDescription>
-              This action cannot be undone. All your data, trips, and reviews will be permanently deleted.
+              They won't be able to message you or start new conversations. Existing shared trips remain visible in read-only mode until they end. You can unblock anytime from Settings.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteAccount} disabled={accountActionPending}>
-              {accountActionPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Permanently
+            <Button variant="outline" onClick={() => setBlockOpen(false)} disabled={blockPending}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBlock} disabled={blockPending}>
+              {blockPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Block
             </Button>
           </DialogFooter>
         </DialogContent>

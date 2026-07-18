@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,14 +7,30 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, AlertTriangle, PauseCircle, Trash2, SettingsIcon } from "lucide-react";
+import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink } from "lucide-react";
+
+interface BlockedUser {
+  username: string;
+  display_name: string;
+  avatar_url?: string | null;
+}
+
+interface DeactivationBlocker {
+  trip_id: number;
+  title: string;
+  role: "host" | "traveler";
+  status?: string;
+  pending_count?: number;
+  approved_count?: number;
+}
 
 type EmailUpdates = "all" | "important" | "none";
 type ProfileVisibility = "public" | "members_only";
@@ -71,8 +87,13 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [blockers, setBlockers] = useState<DeactivationBlocker[] | null>(null);
+
+  const [blocked, setBlocked] = useState<BlockedUser[]>([]);
+  const [blockedLoading, setBlockedLoading] = useState(true);
+  const [unblockTarget, setUnblockTarget] = useState<BlockedUser | null>(null);
+  const [unblocking, setUnblocking] = useState(false);
 
   useEffect(() => { if (!isAuthenticated) requireAuth(() => {}); }, [isAuthenticated]);
 
@@ -84,17 +105,27 @@ const Settings = () => {
       try {
         const cfg = window.TAPNE_RUNTIME_CONFIG;
         const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings);
-        if (!cancelled && data && typeof data === "object") {
-          setValues(normalize(data));
-        }
-      } catch {
-        // keep defaults
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+        if (!cancelled && data && typeof data === "object") setValues(normalize(data));
+      } catch { /* keep defaults */ }
+      finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, [isAuthenticated]);
+
+  const loadBlocked = useCallback(async () => {
+    setBlockedLoading(true);
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      const data = await apiGet<{ users: BlockedUser[] }>(cfg.api.blocks);
+      setBlocked(data?.users || []);
+    } catch {
+      setBlocked([]);
+    } finally {
+      setBlockedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (isAuthenticated) loadBlocked(); }, [isAuthenticated, loadBlocked]);
 
   const update = <K extends keyof SettingsPayload>(key: K, val: SettingsPayload[K]) => {
     setValues((prev) => ({ ...prev, [key]: val }));
@@ -114,31 +145,38 @@ const Settings = () => {
     }
   };
 
-  const handleDeactivate = async () => {
-    setPending(true);
+  const handleUnblock = async () => {
+    if (!unblockTarget) return;
+    setUnblocking(true);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPost(cfg.api.account_deactivate, {});
-      toast.success("Account deactivated.");
-      logout();
-      navigate("/");
+      await apiDelete(`${cfg.api.blocks}${unblockTarget.username}/`);
+      toast.success(`Unblocked ${unblockTarget.display_name}.`);
+      setUnblockTarget(null);
+      loadBlocked();
     } catch {
-      toast.error("Could not deactivate account. Please try again.");
+      toast.error("Could not unblock. Please try again.");
     } finally {
-      setPending(false);
+      setUnblocking(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeactivate = async () => {
     setPending(true);
+    setBlockers(null);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPost(cfg.api.account_delete, {});
-      toast.success("Account deleted.");
+      await apiPost(cfg.api.account_deactivate, {});
+      toast.success("Account deactivated. You've been signed out.");
+      setDeactivateOpen(false);
       logout();
       navigate("/");
-    } catch {
-      toast.error("Could not delete account. Please try again.");
+    } catch (err: any) {
+      if (err?.status === 409 && Array.isArray(err?.blockers)) {
+        setBlockers(err.blockers);
+      } else {
+        toast.error(err?.error || "Could not deactivate account. Please try again.");
+      }
     } finally {
       setPending(false);
     }
@@ -316,18 +354,58 @@ const Settings = () => {
               </Button>
             </div>
 
+            {/* Blocked accounts */}
+            <Card>
+              <CardContent className="space-y-4 p-6">
+                <div>
+                  <h2 className="flex items-center gap-2 text-lg font-semibold">
+                    <ShieldOff className="h-5 w-5" />Blocked accounts
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Blocked members can't message you or start new conversations. Existing shared trips remain visible in read-only mode until they end.
+                  </p>
+                </div>
+
+                {blockedLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />Loading…
+                  </div>
+                ) : blocked.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">You haven't blocked anyone.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {blocked.map((u) => (
+                      <li key={u.username} className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={u.avatar_url || undefined} alt={u.display_name} />
+                            <AvatarFallback>{u.display_name.slice(0, 1)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{u.display_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">@{u.username}</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => setUnblockTarget(u)}>Unblock</Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Danger zone */}
             <Card className="border-destructive/30">
               <CardContent className="space-y-4 p-6">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-destructive">
                   <AlertTriangle className="h-5 w-5" />Danger zone
                 </h2>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => setDeactivateOpen(true)}>
+                <p className="text-sm text-muted-foreground">
+                  Deactivating hides your profile, trips, stories, and messages. Your account reactivates the next time you sign in successfully.
+                </p>
+                <div>
+                  <Button variant="outline" onClick={() => { setBlockers(null); setDeactivateOpen(true); }}>
                     <PauseCircle className="mr-1.5 h-4 w-4" />Deactivate account
-                  </Button>
-                  <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-                    <Trash2 className="mr-1.5 h-4 w-4" />Delete permanently
                   </Button>
                 </div>
               </CardContent>
@@ -337,31 +415,66 @@ const Settings = () => {
       </main>
       <Footer />
 
-      <AlertDialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
+      <AlertDialog open={deactivateOpen} onOpenChange={(v) => { setDeactivateOpen(v); if (!v) setBlockers(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate account?</AlertDialogTitle>
-            <AlertDialogDescription>Your profile will be hidden. You can reactivate by logging back in.</AlertDialogDescription>
+            <AlertDialogTitle>{blockers ? "Resolve trip commitments first" : "Deactivate account?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {blockers
+                ? "You have active trip commitments. Please resolve each one before deactivating."
+                : "Your profile, hosted trips, stories, and messages will be hidden. Signing back in reactivates your account."}
+            </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {blockers && blockers.length > 0 && (
+            <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+              {blockers.map((b) => (
+                <li key={b.trip_id} className="rounded-md border border-border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{b.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.role === "host" ? "You're hosting" : "You're a traveler"}
+                        {b.role === "host" && (b.pending_count != null || b.approved_count != null) && (
+                          <> · {b.pending_count ?? 0} pending · {b.approved_count ?? 0} approved</>
+                        )}
+                        {b.role === "traveler" && b.status && <> · {b.status}</>}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={b.role === "host" ? `/dashboard/trips?trip=${b.trip_id}` : `/trips/${b.trip_id}`}>
+                        Manage <ExternalLink className="ml-1 h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeactivate} disabled={pending}>
-              {pending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Deactivate
-            </AlertDialogAction>
+            <AlertDialogCancel disabled={pending}>{blockers ? "Close" : "Cancel"}</AlertDialogCancel>
+            {!blockers && (
+              <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeactivate(); }} disabled={pending}>
+                {pending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Deactivate
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog open={!!unblockTarget} onOpenChange={(v) => { if (!v) setUnblockTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete account permanently?</AlertDialogTitle>
-            <AlertDialogDescription>This cannot be undone. All your trips, stories, and messages will be removed.</AlertDialogDescription>
+            <AlertDialogTitle>Unblock {unblockTarget?.display_name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              They'll be able to view your profile and message you again.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={pending} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {pending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Delete permanently
+            <AlertDialogCancel disabled={unblocking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleUnblock(); }} disabled={unblocking}>
+              {unblocking && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Unblock
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

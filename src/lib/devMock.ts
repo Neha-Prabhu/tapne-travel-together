@@ -140,6 +140,17 @@ let _devDraftCounter = 5000;
 const _bookmarkedTripIds = new Set<number>();
 const _followedUsers = new Set<string>();
 const _followerCounts = new Map<string, number>();
+const _blockedUsers = new Set<string>();
+const _deactivatedUsers = new Set<string>(["ananya_desai"]);
+const _tripParticipation = new Map<number, "pending" | "approved">();
+
+// Pending signup verification (dev-only in-memory).
+interface PendingSignup { name: string; email: string; password: string; code: string; expiresAt: number; attempts: number; }
+let _pendingSignup: PendingSignup | null = null;
+let _lastResendAt = 0;
+
+function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+function mockError(status: number, body: Record<string, unknown>) { return { __mock_error: true, error: { status, ...body } }; }
 
 // ── Messaging state ──
 function getDevUsername() { return _devUser?.username || MOCK_SESSION_USERS[0]?.username || "arjun_mehta"; }
@@ -357,18 +368,128 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "POST" && path === "/auth/signup/") {
     const b = body as any;
     const name = b?.first_name || "Dev User";
-    const username = name.toLowerCase().replace(/\s+/g, "_");
+    const email = b?.email || "dev@tapne.com";
+    const code = generateCode();
+    _pendingSignup = { name, email, password: b?.password || "", code, expiresAt: Date.now() + 10 * 60_000, attempts: 0 };
+    _lastResendAt = Date.now();
+    // Dev-only affordance: log the code so testers can complete verification.
+    // eslint-disable-next-line no-console
+    console.info(`[Tapne dev] verification code for ${email}: ${code}`);
+    return { pending_verification: true, email, resend_available_in: 60, dev_code: code };
+  }
+
+  if (method === "POST" && path === "/auth/verify/") {
+    const b = body as any;
+    if (!_pendingSignup) return mockError(400, { error: "No verification in progress." });
+    if (Date.now() > _pendingSignup.expiresAt) {
+      _pendingSignup = null;
+      return mockError(410, { error: "Code expired. Please request a new one.", reason: "expired" });
+    }
+    _pendingSignup.attempts += 1;
+    if (_pendingSignup.attempts > 5) {
+      _pendingSignup = null;
+      return mockError(429, { error: "Too many attempts. Please request a new code.", reason: "too_many_attempts" });
+    }
+    if ((b?.code || "").toString() !== _pendingSignup.code) {
+      return mockError(400, { error: "Invalid code. Please try again.", reason: "invalid" });
+    }
+    const username = _pendingSignup.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") || "dev_user";
     _devUser = {
-      id: 9999, username, email: b?.email ?? "dev@tapne.com",
-      display_name: name, bio: "", location: "", website: "",
+      id: 9999, username, email: _pendingSignup.email,
+      display_name: _pendingSignup.name, bio: "", location: "", website: "",
       profile_url: `/u/${username}`, created_trips: 0, joined_trips: 0,
     };
+    _pendingSignup = null;
     return { user: _devUser };
+  }
+
+  if (method === "POST" && path === "/auth/resend/") {
+    if (!_pendingSignup) return mockError(400, { error: "No verification in progress." });
+    const wait = Math.max(0, 60 - Math.floor((Date.now() - _lastResendAt) / 1000));
+    if (wait > 0) return mockError(429, { error: `Please wait ${wait}s before resending.`, retry_after: wait });
+    _pendingSignup.code = generateCode();
+    _pendingSignup.expiresAt = Date.now() + 10 * 60_000;
+    _pendingSignup.attempts = 0;
+    _lastResendAt = Date.now();
+    // eslint-disable-next-line no-console
+    console.info(`[Tapne dev] new verification code for ${_pendingSignup.email}: ${_pendingSignup.code}`);
+    return { ok: true, resend_available_in: 60, dev_code: _pendingSignup.code };
   }
 
   if (method === "POST" && path === "/auth/logout/") {
     _devUser = null;
     return {};
+  }
+
+  // ── Blocks ──
+  if (method === "GET" && path === "/blocks/") {
+    return {
+      users: Array.from(_blockedUsers).map(username => {
+        const su = MOCK_SESSION_USERS.find(u => u.username === username);
+        return {
+          username,
+          display_name: su?.display_name || username,
+          avatar_url: (su as any)?.avatar_url || `https://i.pravatar.cc/150?u=${username}`,
+        };
+      }),
+    };
+  }
+  const blockMatch = path.match(/^\/blocks\/([^/]+)\/$/);
+  if (method === "POST" && blockMatch) {
+    _blockedUsers.add(blockMatch[1]);
+    _followedUsers.delete(blockMatch[1]);
+    return { ok: true };
+  }
+  if (method === "DELETE" && blockMatch) {
+    _blockedUsers.delete(blockMatch[1]);
+    return { ok: true };
+  }
+
+  // ── Deactivate ──
+  if (method === "POST" && path === "/account/deactivate/") {
+    const b = body as any;
+    // Compute blockers: any hosted trip with pending or approved participants,
+    // or any joined trip the user is still enrolled in.
+    const username = _devUser?.username;
+    const blockers: any[] = [];
+    if (username) {
+      for (const t of MOCK_TRIPS) {
+        if (t.host_username === username) {
+          const pending = getMockApplications(t.id).filter(a => a.status === "pending").length;
+          const approved = getMockParticipants(t.id).length;
+          if (pending > 0 || approved > 0) {
+            blockers.push({
+              trip_id: t.id, title: t.title, role: "host",
+              pending_count: pending, approved_count: approved,
+            });
+          }
+        }
+      }
+      for (const [tripId, status] of _tripParticipation.entries()) {
+        const t = MOCK_TRIPS.find(x => x.id === tripId);
+        if (t) blockers.push({
+          trip_id: tripId, title: t.title, role: "traveler",
+          status,
+        });
+      }
+    }
+    if (blockers.length > 0 && !b?.acknowledge_blockers) {
+      return mockError(409, { error: "You have active trip commitments.", blockers });
+    }
+    _devUser = null;
+    return { ok: true };
+  }
+
+  // ── Trip withdraw ──
+  const withdrawMatch = path.match(/^\/trips\/(\d+)\/withdraw\/$/);
+  if (method === "POST" && withdrawMatch) {
+    const id = parseInt(withdrawMatch[1]);
+    const prev = _tripParticipation.get(id);
+    _tripParticipation.delete(id);
+    const trip = MOCK_TRIPS.find(t => t.id === id);
+    if (trip && prev === "approved") trip.spots_left = (trip.spots_left ?? 0) + 1;
+    if (trip) trip.join_request_status = null;
+    return { ok: true, join_request_status: null, spots_left: trip?.spots_left };
   }
 
   // ── Home ──
@@ -730,6 +851,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         trips_joined: joinedTrips.length + 3,
         followers_count: baseFollowers + (isFollowed ? 1 : 0),
         is_following: isFollowed,
+        is_blocked_by_me: _blockedUsers.has(su.username),
+        is_deactivated: _deactivatedUsers.has(su.username),
       },
       trips_hosted: hostedTrips,
       trips_joined: joinedTrips,
@@ -780,6 +903,10 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   // ── Join request ──
   const joinMatch = path.match(/^\/trips\/(\d+)\/join-request\/$/);
   if (method === "POST" && joinMatch) {
+    const id = parseInt(joinMatch[1]);
+    _tripParticipation.set(id, "pending");
+    const trip = MOCK_TRIPS.find(t => t.id === id);
+    if (trip) trip.join_request_status = "pending";
     return { ok: true, status: "pending" };
   }
 
@@ -791,7 +918,17 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── DM Inbox ──
   if (method === "GET" && path === "/dm/inbox/") {
-    const threads = getMockThreads();
+    const me = getDevUsername();
+    const threads = getMockThreads().map(t => {
+      const other = t.participants.find(p => p.username !== me);
+      let readonly: boolean | undefined;
+      let readonly_reason: any;
+      if (t.type === "dm" && other) {
+        if (_blockedUsers.has(other.username)) { readonly = true; readonly_reason = "blocked_by_you"; }
+        else if (_deactivatedUsers.has(other.username)) { readonly = true; readonly_reason = "deactivated"; }
+      }
+      return { ...t, readonly, readonly_reason };
+    });
     const resp: InboxResponse = { threads };
     return resp;
   }

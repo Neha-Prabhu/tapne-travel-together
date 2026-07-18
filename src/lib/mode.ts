@@ -12,6 +12,8 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     session: "/__devmock__/session/",
     login: "/__devmock__/auth/login/",
     signup: "/__devmock__/auth/signup/",
+    signup_verify: "/__devmock__/auth/verify/",
+    signup_resend: "/__devmock__/auth/resend/",
     logout: "/__devmock__/auth/logout/",
     home: "/__devmock__/home/",
     trips: "/__devmock__/trips/",
@@ -32,7 +34,8 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     trip_reviews: "/__devmock__/trips/",
     dm_start: "/__devmock__/dm/start/",
     account_deactivate: "/__devmock__/account/deactivate/",
-    account_delete: "/__devmock__/account/delete/",
+    blocks: "/__devmock__/blocks/",
+    trip_withdraw: "/__devmock__/trips/withdraw/",
   },
   csrf: {
     cookie_name: "csrftoken",

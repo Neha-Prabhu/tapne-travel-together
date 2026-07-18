@@ -405,29 +405,33 @@ const Inbox = () => {
 
         {/* Input */}
         <div className="border-t px-4 py-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex items-center gap-2"
-          >
-            <Input
-              placeholder="Type a message..."
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              className="flex-1"
-              autoFocus
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!messageInput.trim() || sending}
-              className="shrink-0"
+          {activeThread.readonly ? (
+            <div className="rounded-md bg-muted px-3 py-2 text-center text-sm text-muted-foreground">
+              {activeThread.readonly_reason === "blocked_by_you"
+                ? "You've blocked this member. You can unblock them from Settings."
+                : activeThread.readonly_reason === "blocked_you"
+                ? "This member is no longer available."
+                : activeThread.readonly_reason === "deactivated"
+                ? "This account has been deactivated. You can't send new messages."
+                : "This conversation is read-only."}
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+              className="flex items-center gap-2"
             >
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
+              <Input
+                placeholder="Type a message..."
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                className="flex-1"
+                autoFocus
+              />
+              <Button type="submit" size="icon" disabled={!messageInput.trim() || sending} className="shrink-0">
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     );
