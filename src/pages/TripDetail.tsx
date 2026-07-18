@@ -130,6 +130,12 @@ const TripDetail = () => {
   const isCompleted = trip.status === "completed";
   const hasEnded = trip.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
   const canReview = isAuthenticated && isJoined && hasEnded;
+  // Safety state: when the viewer and host have blocked each other, keep the
+  // trip itinerary, dates, participation, and essential controls visible but
+  // hide every social entry point (profile navigation, Ask a Question,
+  // Follow / Message, review write, invitations). Lifted once the trip ends
+  // or the viewer is no longer participating.
+  const blockedWithHost = !!(trip as any).viewer_blocked_with_host && !hasEnded && !isHost;
 
   // Build visible sections dynamically based on trip data
   const visibleSections = [
