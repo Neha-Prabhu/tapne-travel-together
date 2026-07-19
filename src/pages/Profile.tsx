@@ -159,7 +159,7 @@ const Profile = () => {
     }
   }, [userId, isAuthenticated, requireAuth]);
 
-  useEffect(() => {
+  const loadProfile = () => {
     window.scrollTo(0, 0);
     setLoading(true);
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -173,9 +173,15 @@ const Profile = () => {
         setIsFollowing(data.profile?.is_following ?? false);
         setFollowersCount(data.profile?.followers_count ?? 0);
       })
-      .catch(() => {})
+      .catch(() => { setProfileData(null); })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, user]);
+
 
   const p = profileData?.profile;
   const isHost = p?.is_host ?? ((p?.trips_hosted ?? 0) > 0);
