@@ -503,9 +503,10 @@ const Profile = () => {
                   )}
                   {p.instagram_url && (
                     <a href={p.instagram_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                      <Instagram className="h-3.5 w-3.5" /> Instagram
+                      <Instagram className="h-3.5 w-3.5" /> {parseInstagramHandle(p.instagram_url) ?? "Instagram"}
                     </a>
                   )}
+
                 </div>
               )}
               {memberSinceLabel && (
