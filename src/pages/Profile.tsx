@@ -317,16 +317,45 @@ const Profile = () => {
   }
 
   if (!p) {
+    // Signed-out visitors get a generic sign-in gate that reveals nothing about
+    // whether the account exists. Signed-in visitors keep the neutral unavailable copy.
+    if (!isAuthenticated) {
+      return (
+        <div className="flex min-h-screen flex-col">
+          <Navbar />
+          <main className="flex flex-1 items-center justify-center px-6">
+            <div className="max-w-md text-center">
+              <h1 className="text-xl font-semibold">Sign in to view this profile</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This profile may be private or unavailable. Sign in to see profiles shared with Tapne members.
+              </p>
+              <div className="mt-6 flex justify-center gap-2">
+                <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+                <Button onClick={() => requireAuth(() => loadProfile())}>Sign in</Button>
+              </div>
+            </div>
+          </main>
+          <Footer />
+        </div>
+      );
+    }
     return (
       <div className="flex min-h-screen flex-col">
         <Navbar />
-        <main className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground">Profile not found.</p>
+        <main className="flex flex-1 items-center justify-center px-6">
+          <div className="max-w-md text-center">
+            <h1 className="text-xl font-semibold">Profile unavailable</h1>
+            <p className="mt-2 text-sm text-muted-foreground">This profile isn't available.</p>
+            <div className="mt-6 flex justify-center">
+              <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
     );
   }
+
 
   // When the viewer or the profile owner has blocked the other, replace the
   // regular profile with a neutral unavailable state that hides every social
