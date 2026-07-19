@@ -16,7 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink } from "lucide-react";
+import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink, Check } from "lucide-react";
 
 interface BlockedUser {
   username: string;
