@@ -387,12 +387,27 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-            {/* Save */}
-            <div className="flex justify-end">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Save changes
-              </Button>
+            {/* Auto-save status */}
+            <div className="flex min-h-[1.5rem] justify-end text-xs" aria-live="polite">
+              {saveState === "saving" && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />Saving…
+                </span>
+              )}
+              {saveState === "saved" && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Check className="h-3.5 w-3.5 text-primary" />Saved
+                </span>
+              )}
+              {saveState === "error" && (
+                <span className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Couldn't save. Your last change was reverted.
+                  <Button size="sm" variant="outline" className="h-6 px-2 py-0 text-xs" onClick={retrySave}>Retry</Button>
+                </span>
+              )}
             </div>
+
 
             {/* Blocked accounts */}
             <Card>
