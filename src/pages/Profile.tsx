@@ -98,6 +98,25 @@ const TRAVEL_TAG_OPTIONS = [
   "Adventure", "Road Trip", "Solo", "Luxury", "Budget",
 ];
 
+/** Extract a safe Instagram username from a profile URL. */
+function parseInstagramHandle(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    const trimmed = url.trim();
+    const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const u = new URL(withScheme);
+    const host = u.hostname.replace(/^www\./i, "").toLowerCase();
+    if (host !== "instagram.com") return null;
+    const seg = u.pathname.split("/").filter(Boolean)[0];
+    if (!seg) return null;
+    const handle = decodeURIComponent(seg).replace(/^@/, "");
+    return /^[A-Za-z0-9._]{1,30}$/.test(handle) ? handle : null;
+  } catch {
+    return null;
+  }
+}
+
+
 /* ─── Component ─────────────────────────────────────────────────── */
 
 const Profile = () => {
