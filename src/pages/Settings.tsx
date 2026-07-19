@@ -211,7 +211,11 @@ const Settings = () => {
       const next = { ...prev, [key]: val };
       // Latest intent replaces any previously failed intent.
       pendingIntentRef.current = next;
-      if (!equal(next, lastSavedRef.current)) {
+      // Mark dirty whenever a save is in flight — even if the new selection
+      // matches the last confirmed value — so the in-flight completion cannot
+      // overwrite the member's newer choice. The follow-up pass re-sends the
+      // latest intent so the server ends on it too.
+      if (!equal(next, lastSavedRef.current) || savingRef.current) {
         dirtyRef.current = true;
         // Clear a lingering error immediately — the member has moved on.
         setSaveState((s) => (s === "error" ? "idle" : s));
