@@ -86,7 +86,12 @@ const Settings = () => {
 
   const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const lastSavedRef = useRef<SettingsPayload>(DEFAULTS);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveSeqRef = useRef(0);
+
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [blockers, setBlockers] = useState<DeactivationBlocker[] | null>(null);
@@ -108,12 +113,49 @@ const Settings = () => {
       try {
         const cfg = window.TAPNE_RUNTIME_CONFIG;
         const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings);
-        if (!cancelled && data && typeof data === "object") setValues(normalize(data));
+        if (!cancelled && data && typeof data === "object") {
+          const normalized = normalize(data);
+          setValues(normalized);
+          lastSavedRef.current = normalized;
+        }
       } catch { /* keep defaults */ }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, [isAuthenticated]);
+
+  const performSave = useCallback(async (payload: SettingsPayload) => {
+    const seq = ++saveSeqRef.current;
+    setSaveState("saving");
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, payload);
+      if (seq !== saveSeqRef.current) return; // superseded
+      const confirmed = saved && typeof saved === "object" ? normalize({ ...payload, ...saved }) : payload;
+      lastSavedRef.current = confirmed;
+      setValues(confirmed);
+      setSaveState("saved");
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => {
+        setSaveState((s) => (s === "saved" ? "idle" : s));
+      }, 1600);
+    } catch {
+      if (seq !== saveSeqRef.current) return;
+      setValues(lastSavedRef.current);
+      setSaveState("error");
+    }
+  }, []);
+
+  const scheduleSave = useCallback((next: SettingsPayload) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => performSave(next), 450);
+  }, [performSave]);
+
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+  }, []);
+
 
   const loadBlocked = useCallback(async () => {
     setBlockedLoading(true);
