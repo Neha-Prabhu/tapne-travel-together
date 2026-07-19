@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
@@ -15,7 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink } from "lucide-react";
+import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink, Check } from "lucide-react";
 
 interface BlockedUser {
   username: string;
@@ -85,7 +86,12 @@ const Settings = () => {
 
   const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const lastSavedRef = useRef<SettingsPayload>(DEFAULTS);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveSeqRef = useRef(0);
+
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [blockers, setBlockers] = useState<DeactivationBlocker[] | null>(null);
@@ -107,12 +113,49 @@ const Settings = () => {
       try {
         const cfg = window.TAPNE_RUNTIME_CONFIG;
         const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings);
-        if (!cancelled && data && typeof data === "object") setValues(normalize(data));
+        if (!cancelled && data && typeof data === "object") {
+          const normalized = normalize(data);
+          setValues(normalized);
+          lastSavedRef.current = normalized;
+        }
       } catch { /* keep defaults */ }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
   }, [isAuthenticated]);
+
+  const performSave = useCallback(async (payload: SettingsPayload) => {
+    const seq = ++saveSeqRef.current;
+    setSaveState("saving");
+    try {
+      const cfg = window.TAPNE_RUNTIME_CONFIG;
+      const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, payload);
+      if (seq !== saveSeqRef.current) return; // superseded
+      const confirmed = saved && typeof saved === "object" ? normalize({ ...payload, ...saved }) : payload;
+      lastSavedRef.current = confirmed;
+      setValues(confirmed);
+      setSaveState("saved");
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => {
+        setSaveState((s) => (s === "saved" ? "idle" : s));
+      }, 1600);
+    } catch {
+      if (seq !== saveSeqRef.current) return;
+      setValues(lastSavedRef.current);
+      setSaveState("error");
+    }
+  }, []);
+
+  const scheduleSave = useCallback((next: SettingsPayload) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => performSave(next), 450);
+  }, [performSave]);
+
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+  }, []);
+
 
   const loadBlocked = useCallback(async () => {
     setBlockedLoading(true);
@@ -131,22 +174,15 @@ const Settings = () => {
   useEffect(() => { if (isAuthenticated) loadBlocked(); }, [isAuthenticated, loadBlocked]);
 
   const update = <K extends keyof SettingsPayload>(key: K, val: SettingsPayload[K]) => {
-    setValues((prev) => ({ ...prev, [key]: val }));
+    setValues((prev) => {
+      const next = { ...prev, [key]: val };
+      scheduleSave(next);
+      return next;
+    });
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, values);
-      if (saved && typeof saved === "object") setValues(normalize({ ...values, ...saved }));
-      toast.success("Settings saved.");
-    } catch {
-      toast.error("Could not save settings. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  const retrySave = () => performSave(values);
+
 
   const handleUnblock = async () => {
     if (!unblockTarget) return;
@@ -351,12 +387,27 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-            {/* Save */}
-            <div className="flex justify-end">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Save changes
-              </Button>
+            {/* Auto-save status */}
+            <div className="flex min-h-[1.5rem] justify-end text-xs" aria-live="polite">
+              {saveState === "saving" && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />Saving…
+                </span>
+              )}
+              {saveState === "saved" && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Check className="h-3.5 w-3.5 text-primary" />Saved
+                </span>
+              )}
+              {saveState === "error" && (
+                <span className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Couldn't save. Your last change was reverted.
+                  <Button size="sm" variant="outline" className="h-6 px-2 py-0 text-xs" onClick={retrySave}>Retry</Button>
+                </span>
+              )}
             </div>
+
 
             {/* Blocked accounts */}
             <Card>
