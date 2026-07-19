@@ -88,9 +88,14 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const lastSavedRef = useRef<SettingsPayload>(DEFAULTS);
+  // The member's most recent desired settings — always the latest intent,
+  // even when the last save failed. Retry and follow-up saves use this.
+  const pendingIntentRef = useRef<SettingsPayload>(DEFAULTS);
+  // Whether the last save attempt failed and pendingIntent still needs to land.
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const saveSeqRef = useRef(0);
 
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -117,6 +122,7 @@ const Settings = () => {
           const normalized = normalize(data);
           setValues(normalized);
           lastSavedRef.current = normalized;
+          pendingIntentRef.current = normalized;
         }
       } catch { /* keep defaults */ }
       finally { if (!cancelled) setLoading(false); }
@@ -124,32 +130,59 @@ const Settings = () => {
     return () => { cancelled = true; };
   }, [isAuthenticated]);
 
-  const performSave = useCallback(async (payload: SettingsPayload) => {
-    const seq = ++saveSeqRef.current;
-    setSaveState("saving");
+  const equal = (a: SettingsPayload, b: SettingsPayload) =>
+    a.email_updates === b.email_updates &&
+    a.profile_visibility === b.profile_visibility &&
+    a.dm_privacy === b.dm_privacy &&
+    a.theme === b.theme &&
+    a.digest_emails === b.digest_emails;
+
+  // Serial save loop: always sends the *latest* pendingIntent; if new changes
+  // arrive mid-flight, another pass fires as soon as the current one settles.
+  // This guarantees the final stored value matches the member's last selection.
+  const runSaveLoop = useCallback(async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     try {
-      const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, payload);
-      if (seq !== saveSeqRef.current) return; // superseded
-      const confirmed = saved && typeof saved === "object" ? normalize({ ...payload, ...saved }) : payload;
-      lastSavedRef.current = confirmed;
-      setValues(confirmed);
-      setSaveState("saved");
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = setTimeout(() => {
-        setSaveState((s) => (s === "saved" ? "idle" : s));
-      }, 1600);
-    } catch {
-      if (seq !== saveSeqRef.current) return;
-      setValues(lastSavedRef.current);
-      setSaveState("error");
+      while (dirtyRef.current) {
+        const attempt = pendingIntentRef.current;
+        dirtyRef.current = false;
+        setSaveState("saving");
+        try {
+          const cfg = window.TAPNE_RUNTIME_CONFIG;
+          const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, attempt);
+          const confirmed = saved && typeof saved === "object" ? normalize({ ...attempt, ...saved }) : attempt;
+          lastSavedRef.current = confirmed;
+          // Only overwrite optimistic values if no newer selection is queued.
+          if (!dirtyRef.current) {
+            setValues(confirmed);
+            pendingIntentRef.current = confirmed;
+            setSaveState("saved");
+            if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+            savedTimerRef.current = setTimeout(() => {
+              setSaveState((s) => (s === "saved" ? "idle" : s));
+            }, 1600);
+          }
+        } catch {
+          // Failed intent stays in pendingIntentRef so Retry re-applies it.
+          // If a newer selection arrived during the failed save, prefer it
+          // (dirtyRef is true) and continue the loop without surfacing error.
+          if (!dirtyRef.current) {
+            setValues(lastSavedRef.current);
+            setSaveState("error");
+            break;
+          }
+        }
+      }
+    } finally {
+      savingRef.current = false;
     }
   }, []);
 
-  const scheduleSave = useCallback((next: SettingsPayload) => {
+  const scheduleSave = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => performSave(next), 450);
-  }, [performSave]);
+    debounceRef.current = setTimeout(() => { runSaveLoop(); }, 450);
+  }, [runSaveLoop]);
 
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -176,12 +209,27 @@ const Settings = () => {
   const update = <K extends keyof SettingsPayload>(key: K, val: SettingsPayload[K]) => {
     setValues((prev) => {
       const next = { ...prev, [key]: val };
-      scheduleSave(next);
+      // Latest intent replaces any previously failed intent.
+      pendingIntentRef.current = next;
+      if (!equal(next, lastSavedRef.current)) {
+        dirtyRef.current = true;
+        // Clear a lingering error immediately — the member has moved on.
+        setSaveState((s) => (s === "error" ? "idle" : s));
+        scheduleSave();
+      }
       return next;
     });
   };
 
-  const retrySave = () => performSave(values);
+  const retrySave = () => {
+    // Reapply the last failed intent optimistically, then re-run the loop.
+    const intent = pendingIntentRef.current;
+    setValues(intent);
+    dirtyRef.current = true;
+    setSaveState("idle");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    runSaveLoop();
+  };
 
 
   const handleUnblock = async () => {
