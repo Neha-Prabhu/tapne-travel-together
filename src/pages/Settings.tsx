@@ -174,22 +174,15 @@ const Settings = () => {
   useEffect(() => { if (isAuthenticated) loadBlocked(); }, [isAuthenticated, loadBlocked]);
 
   const update = <K extends keyof SettingsPayload>(key: K, val: SettingsPayload[K]) => {
-    setValues((prev) => ({ ...prev, [key]: val }));
+    setValues((prev) => {
+      const next = { ...prev, [key]: val };
+      scheduleSave(next);
+      return next;
+    });
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, values);
-      if (saved && typeof saved === "object") setValues(normalize({ ...values, ...saved }));
-      toast.success("Settings saved.");
-    } catch {
-      toast.error("Could not save settings. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  const retrySave = () => performSave(values);
+
 
   const handleUnblock = async () => {
     if (!unblockTarget) return;
