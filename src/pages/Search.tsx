@@ -162,7 +162,7 @@ const DEFAULT_PEOPLE_FILTERS: PeopleFiltersState = { location: "", travelTag: ""
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { query: ctxQuery, setQuery: setCtxQuery } = useSearch();
-  const { isAuthenticated } = useAuth();
+  useAuth(); // ensure provider present; People search uses the public endpoint
 
   const urlIntent = (searchParams.get("intent") || "trips") as Intent;
   const initialIntent: Intent = (VALID_INTENTS as readonly string[]).includes(urlIntent)
@@ -248,7 +248,7 @@ const SearchPage = () => {
       ).catch(() => setStories([])),
       peoplePromise,
     ]).finally(() => setLoading(false));
-  }, [submitted, destination, hostFilter, isAuthenticated]);
+  }, [submitted, destination, hostFilter]);
 
   // Reset page on any control change
   useEffect(() => {
