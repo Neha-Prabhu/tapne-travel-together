@@ -123,7 +123,7 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [drafts, setDrafts] = useState<TripDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  
   const isAuthenticatedRef = useRef(isAuthenticated);
 
   // Keep the ref in sync during render (not in an effect) so children whose
