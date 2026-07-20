@@ -162,7 +162,7 @@ const DEFAULT_PEOPLE_FILTERS: PeopleFiltersState = { location: "", travelTag: ""
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { query: ctxQuery, setQuery: setCtxQuery } = useSearch();
-  const { isAuthenticated } = useAuth();
+  useAuth(); // ensure provider present; People search uses the public endpoint
 
   const urlIntent = (searchParams.get("intent") || "trips") as Intent;
   const initialIntent: Intent = (VALID_INTENTS as readonly string[]).includes(urlIntent)
@@ -233,11 +233,11 @@ const SearchPage = () => {
     const host = encodeURIComponent(hostFilter.trim());
     const tripsUrl = `${cfg.api.trips}?q=${q}${dest ? `&destination=${dest}` : ""}${host ? `&host=${host}` : ""}`;
 
-    // People discovery uses the global search endpoint. Signed-out visitors
-    // receive publicly visible profiles; signed-in members receive everyone
-    // permitted by their visibility and blocking relationship. A failure
-    // (e.g. 401 from a legacy backend) silently yields an empty list.
-    const peoplePromise = apiGet<{ users: PersonData[] }>(`${cfg.api.users_search}?q=${q}&scope=public`)
+    // People discovery uses the public global-search endpoint (never the
+    // signed-in invite/member chooser). Guests see publicly visible active
+    // profiles; signed-in members additionally see profiles permitted by
+    // visibility and blocking rules. Email is never searched.
+    const peoplePromise = apiGet<{ users: PersonData[] }>(`${cfg.api.users_search_public}?q=${q}`)
       .then((d) => setPeople(d.users || []))
       .catch(() => setPeople([]));
 
@@ -248,7 +248,7 @@ const SearchPage = () => {
       ).catch(() => setStories([])),
       peoplePromise,
     ]).finally(() => setLoading(false));
-  }, [submitted, destination, hostFilter, isAuthenticated]);
+  }, [submitted, destination, hostFilter]);
 
   // Reset page on any control change
   useEffect(() => {

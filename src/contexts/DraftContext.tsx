@@ -127,6 +127,11 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const navigate = useNavigate();
   const isAuthenticatedRef = useRef(isAuthenticated);
 
+  // Keep the ref in sync during render (not in an effect) so children whose
+  // effects fire before ours — e.g. CreateTrip triggering createDraft on the
+  // same render session-restore turns authenticated — see the current value.
+  isAuthenticatedRef.current = isAuthenticated;
+
   useEffect(() => {
     isAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated]);

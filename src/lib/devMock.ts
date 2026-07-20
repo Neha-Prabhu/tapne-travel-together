@@ -303,11 +303,17 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
 
   // ── User search ──
-  // Matches partial username or display name only. Email is never searched
-  // and never returned. Works for guests and signed-in members alike.
-  if (method === "GET" && path.startsWith("/users/search/")) {
+  // /users/search/       — signed-in invite/member chooser (auth required)
+  // /users/public-search/ — public global-search People results (guests OK)
+  // Matches partial username or display name only. Email is never searched.
+  // Deactivated accounts are excluded from both. The public endpoint would
+  // additionally hide private profiles for guests on a real backend.
+  if (method === "GET" && (path.startsWith("/users/search/") || path.startsWith("/users/public-search/"))) {
+    const isPublic = path.startsWith("/users/public-search/");
+    if (!isPublic && !_devUser) return mockError(401, { error: "Authentication required." });
     const q = (new URL("http://x" + url.replace("/__devmock__", "")).searchParams.get("q") || "").trim().toLowerCase();
     const matches = MOCK_SESSION_USERS.filter((u) => {
+      if (_deactivatedUsers.has(u.username)) return false;
       if (!q) return true;
       return (
         (u.username || "").toLowerCase().includes(q) ||
