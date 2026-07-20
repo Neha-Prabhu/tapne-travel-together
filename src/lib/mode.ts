@@ -30,6 +30,7 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     messages: "/__devmock__/messages/",
     trip_chat: "/__devmock__/trip-chat/",
     users_search: "/__devmock__/users/search/",
+    users_search_public: "/__devmock__/users/public-search/",
     notifications: "/__devmock__/notifications/",
     trip_reviews: "/__devmock__/trips/",
     dm_start: "/__devmock__/dm/start/",

@@ -26,6 +26,7 @@ export interface TapneRuntimeConfig {
     messages: string;
     trip_chat: string;
     users_search: string;
+    users_search_public: string;
     notifications: string;
     trip_reviews: string;
     dm_start: string;
