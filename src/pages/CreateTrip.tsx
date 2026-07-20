@@ -148,7 +148,7 @@ const DragListItem = ({ value, onChange, onRemove, onEnterKey, placeholder, onDr
 );
 
 const CreateTrip = () => {
-  const { isAuthenticated, user, requireAuth } = useAuth();
+  const { isAuthenticated, authReady, user, requireAuth } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { tripId: tripIdParam } = useParams<{ tripId: string }>();
@@ -156,36 +156,48 @@ const CreateTrip = () => {
   const isPreviewMode = searchParams.get("mode") === "preview";
   const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
 
-  // Auth gate
+  // Auth gate — only after the session check has resolved to avoid a false
+  // "signed out" flash on hard refresh.
   useEffect(() => {
-    if (!isAuthenticated) {
-      requireAuth();
-    }
-  }, [isAuthenticated]);
+    if (authReady && !isAuthenticated) requireAuth();
+  }, [authReady, isAuthenticated]);
 
   // If no draft param, create one and redirect
   const [draftId, setDraftId] = useState<number | null>(() => {
     if (draftIdParam) return Number(draftIdParam);
     return null;
   });
+  const [prepError, setPrepError] = useState<string | null>(null);
+  const [prepAttempt, setPrepAttempt] = useState(0);
 
   const creatingDraftRef = useRef(false);
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!authReady || !isAuthenticated) return;
     if (draftId != null || draftIdParam) return;
     if (creatingDraftRef.current) return;
     creatingDraftRef.current = true;
+    setPrepError(null);
     createDraft()
       .then((id) => {
         if (id) {
           setDraftId(id);
           window.history.replaceState({}, "", `/trips/${id}/edit`);
+        } else {
+          setPrepError("Could not prepare a new draft.");
         }
+      })
+      .catch((err: any) => {
+        setPrepError(err?.error || err?.message || "Could not prepare a new draft.");
       })
       .finally(() => {
         creatingDraftRef.current = false;
       });
-  }, [isAuthenticated, draftId, draftIdParam, createDraft]);
+  }, [authReady, isAuthenticated, draftId, draftIdParam, createDraft, prepAttempt]);
+
+  const retryPrepare = useCallback(() => {
+    setPrepError(null);
+    setPrepAttempt((n) => n + 1);
+  }, []);
 
   const draftReady = (draftId ?? (draftIdParam ? Number(draftIdParam) : null)) != null;
 
