@@ -233,16 +233,22 @@ const SearchPage = () => {
     const host = encodeURIComponent(hostFilter.trim());
     const tripsUrl = `${cfg.api.trips}?q=${q}${dest ? `&destination=${dest}` : ""}${host ? `&host=${host}` : ""}`;
 
+    // People search requires an authenticated session on the server. Guests
+    // stay on Search with an empty People list rather than triggering a 401.
+    const peoplePromise = isAuthenticated
+      ? apiGet<{ users: PersonData[] }>(`${cfg.api.users_search}?q=${q}`)
+          .then((d) => setPeople(d.users || []))
+          .catch(() => setPeople([]))
+      : Promise.resolve(setPeople([]));
+
     Promise.allSettled([
-      apiGet<{ trips: TripData[] }>(tripsUrl).then((d) => setTrips(d.trips || [])),
+      apiGet<{ trips: TripData[] }>(tripsUrl).then((d) => setTrips(d.trips || [])).catch(() => setTrips([])),
       apiGet<{ blogs: BlogData[] }>(`${cfg.api.blogs}?q=${q}`).then((d) =>
         setStories(d.blogs || []),
-      ),
-      apiGet<{ users: PersonData[] }>(`${cfg.api.users_search}?q=${q}`).then((d) =>
-        setPeople(d.users || []),
-      ),
+      ).catch(() => setStories([])),
+      peoplePromise,
     ]).finally(() => setLoading(false));
-  }, [submitted, destination, hostFilter]);
+  }, [submitted, destination, hostFilter, isAuthenticated]);
 
   // Reset page on any control change
   useEffect(() => {
