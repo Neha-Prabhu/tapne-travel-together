@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/pagination";
 import { apiGet } from "@/lib/api";
 import { useSearch } from "@/contexts/SearchContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { TripData, BlogData } from "@/types/api";
 import {
   Search as SearchIcon,
@@ -161,6 +162,7 @@ const DEFAULT_PEOPLE_FILTERS: PeopleFiltersState = { location: "", travelTag: ""
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { query: ctxQuery, setQuery: setCtxQuery } = useSearch();
+  const { isAuthenticated } = useAuth();
 
   const urlIntent = (searchParams.get("intent") || "trips") as Intent;
   const initialIntent: Intent = (VALID_INTENTS as readonly string[]).includes(urlIntent)
