@@ -303,12 +303,25 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
 
   // ── User search ──
+  // Matches partial username or display name only. Email is never searched
+  // and never returned. Works for guests and signed-in members alike.
   if (method === "GET" && path.startsWith("/users/search/")) {
-    const q = new URL("http://x" + url.replace("/__devmock__", "")).searchParams.get("q") || "";
-    return { ok: true, users: q ? [
-      { username: q.toLowerCase(), display_name: q },
-      { username: q.toLowerCase() + "_travel", display_name: q + " (traveler)" },
-    ] : [] };
+    const q = (new URL("http://x" + url.replace("/__devmock__", "")).searchParams.get("q") || "").trim().toLowerCase();
+    const matches = MOCK_SESSION_USERS.filter((u) => {
+      if (!q) return true;
+      return (
+        (u.username || "").toLowerCase().includes(q) ||
+        (u.display_name || "").toLowerCase().includes(q)
+      );
+    }).map((u) => ({
+      username: u.username,
+      display_name: u.display_name,
+      location: u.location,
+      is_host: (u.created_trips ?? 0) > 0,
+      hosted_trips_count: u.created_trips ?? 0,
+      followers_count: 0,
+    }));
+    return { ok: true, users: matches };
   }
 
   // ── Notifications ──
