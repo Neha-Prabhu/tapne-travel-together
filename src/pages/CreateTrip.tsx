@@ -169,17 +169,25 @@ const CreateTrip = () => {
     return null;
   });
 
+  const creatingDraftRef = useRef(false);
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (draftId == null && !draftIdParam) {
-      createDraft().then((id) => {
+    if (draftId != null || draftIdParam) return;
+    if (creatingDraftRef.current) return;
+    creatingDraftRef.current = true;
+    createDraft()
+      .then((id) => {
         if (id) {
           setDraftId(id);
           window.history.replaceState({}, "", `/trips/${id}/edit`);
         }
+      })
+      .finally(() => {
+        creatingDraftRef.current = false;
       });
-    }
   }, [isAuthenticated, draftId, draftIdParam, createDraft]);
+
+  const draftReady = (draftId ?? (draftIdParam ? Number(draftIdParam) : null)) != null;
 
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
@@ -663,13 +671,14 @@ const CreateTrip = () => {
                 <span className="text-sm text-muted-foreground">{progressPercent}%</span>
               </div>
               <div className="hidden items-center gap-2 sm:flex">
-                <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={savedDraft}>
-                  <Save className="mr-1.5 h-3.5 w-3.5" />{savedDraft ? "Saved!" : "Save Draft"}
+                <Button variant="outline" size="sm" onClick={handleSaveDraft} disabled={savedDraft || !draftReady}>
+                  {!draftReady ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                  {!draftReady ? "Preparing…" : savedDraft ? "Saved!" : "Save Draft"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={togglePreview}>
+                <Button variant="outline" size="sm" onClick={togglePreview} disabled={!draftReady}>
                   <Eye className="mr-1.5 h-3.5 w-3.5" />Preview
                 </Button>
-                <Button size="sm" onClick={handleSubmit} disabled={loading}>
+                <Button size="sm" onClick={handleSubmit} disabled={loading || !draftReady}>
                   {loading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}Publish
                 </Button>
               </div>
@@ -1446,9 +1455,12 @@ const CreateTrip = () => {
               <div className="flex flex-col gap-3 rounded-xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-muted-foreground">{completedSections.length} of {visibleSections.length} sections • {progressPercent}%</div>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft}><Save className="mr-1.5 h-4 w-4" />{savedDraft ? "Saved!" : "Save Draft"}</Button>
-                  <Button variant="outline" onClick={togglePreview}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
-                  <Button onClick={handleSubmit} disabled={loading} className="transition-transform hover:scale-[1.02]">
+                  <Button variant="outline" onClick={handleSaveDraft} disabled={savedDraft || !draftReady}>
+                    {!draftReady ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                    {!draftReady ? "Preparing…" : savedDraft ? "Saved!" : "Save Draft"}
+                  </Button>
+                  <Button variant="outline" onClick={togglePreview} disabled={!draftReady}><Eye className="mr-1.5 h-4 w-4" />Preview</Button>
+                  <Button onClick={handleSubmit} disabled={loading || !draftReady} className="transition-transform hover:scale-[1.02]">
                     {loading ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Publishing...</> : <><Send className="mr-1.5 h-4 w-4" /> Publish Trip</>}
                   </Button>
                 </div>

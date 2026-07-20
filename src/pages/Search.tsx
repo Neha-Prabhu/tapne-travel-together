@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/pagination";
 import { apiGet } from "@/lib/api";
 import { useSearch } from "@/contexts/SearchContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { TripData, BlogData } from "@/types/api";
 import {
   Search as SearchIcon,
@@ -161,6 +162,7 @@ const DEFAULT_PEOPLE_FILTERS: PeopleFiltersState = { location: "", travelTag: ""
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { query: ctxQuery, setQuery: setCtxQuery } = useSearch();
+  const { isAuthenticated } = useAuth();
 
   const urlIntent = (searchParams.get("intent") || "trips") as Intent;
   const initialIntent: Intent = (VALID_INTENTS as readonly string[]).includes(urlIntent)
@@ -231,16 +233,22 @@ const SearchPage = () => {
     const host = encodeURIComponent(hostFilter.trim());
     const tripsUrl = `${cfg.api.trips}?q=${q}${dest ? `&destination=${dest}` : ""}${host ? `&host=${host}` : ""}`;
 
+    // People search requires an authenticated session on the server. Guests
+    // stay on Search with an empty People list rather than triggering a 401.
+    const peoplePromise = isAuthenticated
+      ? apiGet<{ users: PersonData[] }>(`${cfg.api.users_search}?q=${q}`)
+          .then((d) => setPeople(d.users || []))
+          .catch(() => setPeople([]))
+      : Promise.resolve(setPeople([]));
+
     Promise.allSettled([
-      apiGet<{ trips: TripData[] }>(tripsUrl).then((d) => setTrips(d.trips || [])),
+      apiGet<{ trips: TripData[] }>(tripsUrl).then((d) => setTrips(d.trips || [])).catch(() => setTrips([])),
       apiGet<{ blogs: BlogData[] }>(`${cfg.api.blogs}?q=${q}`).then((d) =>
         setStories(d.blogs || []),
-      ),
-      apiGet<{ users: PersonData[] }>(`${cfg.api.users_search}?q=${q}`).then((d) =>
-        setPeople(d.users || []),
-      ),
+      ).catch(() => setStories([])),
+      peoplePromise,
     ]).finally(() => setLoading(false));
-  }, [submitted, destination, hostFilter]);
+  }, [submitted, destination, hostFilter, isAuthenticated]);
 
   // Reset page on any control change
   useEffect(() => {
