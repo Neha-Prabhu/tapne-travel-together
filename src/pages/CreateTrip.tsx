@@ -696,8 +696,15 @@ const CreateTrip = () => {
               </div>
             </div>
             <Progress value={progressPercent} className="mt-2 h-1.5" />
+            {prepError && (
+              <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                <span>{prepError}</span>
+                <Button size="sm" variant="outline" className="h-7" onClick={retryPrepare}>Retry</Button>
+              </div>
+            )}
           </div>
         </div>
+
 
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex gap-8">
