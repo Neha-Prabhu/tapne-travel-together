@@ -199,14 +199,18 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
                     {req.status === "denied" && <XCircle className="mr-0.5 h-3 w-3" />}
                     {req.status}
                   </Badge>
-                  {req.is_blocked_by_me && (
+                  {req.is_suspended ? (
+                    <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Account unavailable</Badge>
+                  ) : req.is_blocked_by_me && (
                     <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">Applied {new Date(req.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
               </div>
               <div className="flex items-center gap-1.5">
-                {req.is_blocked_by_me ? (
+                {req.is_suspended ? (
+                  <span className="text-xs text-muted-foreground pr-1">Unavailable</span>
+                ) : req.is_blocked_by_me ? (
                   <span className="text-xs text-muted-foreground pr-1">Unavailable</span>
                 ) : (
                   <>
@@ -224,6 +228,8 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
               </div>
             </div>
           ))}
+
+
 
           {participants.length > 0 && (
             <div className="pt-3 mt-3 border-t">
