@@ -17,12 +17,14 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<any>;
   lastAuthError: string;
+  clearAuthError: () => void;
   /** Open login modal with optional callback after success */
   requireAuth: (onSuccess?: () => void) => void;
   loginModalOpen: boolean;
   setLoginModalOpen: (open: boolean) => void;
   pendingAuthAction: (() => void) | null;
 }
+
 
 export type SignupResult =
   | { status: "verified" }
