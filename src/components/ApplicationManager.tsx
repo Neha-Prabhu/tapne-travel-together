@@ -84,16 +84,27 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
     if (!body) return;
     setBroadcastPending(true);
     try {
-      await apiPost(`${cfg.api.base}/trips/${tripId}/broadcast/`, {
+      const res = await apiPost<{
+        sent?: number;
+        skipped_blocked?: number;
+        skipped_suspended?: number;
+        skipped_deactivated?: number;
+        skipped_total?: number;
+      }>(`${cfg.api.base}/trips/${tripId}/broadcast/`, {
         message: body,
         exclude_usernames: participants.filter(p => p.is_blocked_by_me || p.is_suspended).map(p => p.username),
       });
-      const sent = reachableParticipants.length;
-      const skippedBlocked = participants.filter(p => p.is_blocked_by_me && !p.is_suspended).length;
-      const skippedSuspended = participants.filter(p => p.is_suspended).length;
+      // Prefer authoritative counts from the server — participants may have
+      // become unavailable (blocked/suspended/deactivated) after this page
+      // loaded, so client-side estimates can drift.
+      const sent = typeof res?.sent === "number" ? res.sent : reachableParticipants.length;
+      const skippedBlocked = res?.skipped_blocked ?? 0;
+      const skippedSuspended = res?.skipped_suspended ?? 0;
+      const skippedDeactivated = res?.skipped_deactivated ?? 0;
+      const skippedUnavailable = skippedSuspended + skippedDeactivated;
       const notes: string[] = [];
       if (skippedBlocked > 0) notes.push(`${skippedBlocked} blocked member${skippedBlocked !== 1 ? "s" : ""}`);
-      if (skippedSuspended > 0) notes.push(`${skippedSuspended} unavailable member${skippedSuspended !== 1 ? "s" : ""}`);
+      if (skippedUnavailable > 0) notes.push(`${skippedUnavailable} unavailable member${skippedUnavailable !== 1 ? "s" : ""}`);
       const skippedNote = notes.length ? ` Skipped ${notes.join(" and ")}.` : "";
       toast.success(`Message sent to ${sent} participant${sent !== 1 ? "s" : ""}.${skippedNote}`);
       setBroadcastOpen(false);
@@ -104,6 +115,7 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
       setBroadcastPending(false);
     }
   };
+
 
 
   const pending = requests.filter(a => a.status === "pending");
