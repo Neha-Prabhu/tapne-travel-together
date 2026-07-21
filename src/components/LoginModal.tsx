@@ -16,7 +16,7 @@ interface LoginModalProps {
 type Step = "form" | "verify";
 
 const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
-  const { login, signup, verifySignupCode, resendSignupCode, lastAuthError } = useAuth();
+  const { login, signup, verifySignupCode, resendSignupCode, lastAuthError, clearAuthError } = useAuth();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [step, setStep] = useState<Step>("form");
   const [name, setName] = useState("");
@@ -36,7 +36,17 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     setName(""); setIdentifier(""); setPassword("");
     setError(""); setVerifyError(""); setLoading(false);
     setStep("form"); setPendingEmail(""); setCode(["", "", "", "", "", ""]);
+    // Consume the one-shot suspension notice so it never re-appears on next open.
+    if (lastAuthError === "__suspended__") clearAuthError?.();
   };
+
+  // Surface a pre-set suspension notice (e.g. after suspended Google sign-in
+  // redirect) exactly once the modal opens.
+  useEffect(() => {
+    if (open && lastAuthError === "__suspended__" && !error) {
+      setError("__suspended__");
+    }
+  }, [open, lastAuthError]);
 
   useEffect(() => {
     if (step !== "verify") return;
@@ -50,9 +60,13 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
 
   const handleGoogleAuth = () => {
     if (googleOAuthUrl) {
-      window.location.href = googleOAuthUrl + "?next=" + encodeURIComponent(window.location.pathname);
+      // Preserve the full location (path + query) so we return to the same view
+      // after OAuth, keeping filters, thread IDs, review focus, etc. intact.
+      const next = window.location.pathname + window.location.search + window.location.hash;
+      window.location.href = googleOAuthUrl + "?next=" + encodeURIComponent(next);
     }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

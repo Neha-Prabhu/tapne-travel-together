@@ -17,12 +17,14 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<any>;
   lastAuthError: string;
+  clearAuthError: () => void;
   /** Open login modal with optional callback after success */
   requireAuth: (onSuccess?: () => void) => void;
   loginModalOpen: boolean;
   setLoginModalOpen: (open: boolean) => void;
   pendingAuthAction: (() => void) | null;
 }
+
 
 export type SignupResult =
   | { status: "verified" }
@@ -49,6 +51,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       store.setAuth(sessionUserToAuthUser(cfg.session.user), cfg.csrf?.token || "session");
     }
   }, []);
+
+  // Handle post-OAuth suspension redirect: providers (e.g. Google) send us
+  // back to the originally requested URL with ?auth_error=suspended. We keep
+  // the rest of the query intact, surface the same generic suspension notice
+  // in the login modal exactly once, and stay signed out so protected content
+  // remains locked.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth_error") === "suspended") {
+      setLastAuthError("__suspended__");
+      setLoginModalOpen(true);
+      params.delete("auth_error");
+      const qs = params.toString();
+      const url = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
+      window.history.replaceState({}, "", url);
+    }
+  }, []);
+
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -237,6 +258,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logout,
       updateProfile,
       lastAuthError,
+      clearAuthError: () => setLastAuthError(""),
       requireAuth,
       loginModalOpen,
       setLoginModalOpen: handleLoginModalChange,

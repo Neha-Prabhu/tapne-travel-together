@@ -609,6 +609,14 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const hostBlocked = !!(trip.host_username && _blockedUsers.has(trip.host_username));
     const hostSuspended = !!(trip.host_username && _suspendedUsers.has(trip.host_username));
     const participants = getMockParticipants(trip.id);
+    const viewerParticipant = username ? participants.find((p: any) => p.username === username) : null;
+    const viewerApproved = !!viewerParticipant && ["approved", "confirmed", "joined"].includes(String((viewerParticipant as any).status || ""));
+    // Trips whose host is suspended are hidden from anyone without an active
+    // commitment. Approved travelers still get the restricted view so they can
+    // withdraw; everyone else gets the standard not-found response.
+    if (hostSuspended && !isHost && !viewerApproved) {
+      return mockError(404, { error: "This trip is not available." });
+    }
     const blockedCoTravelers = participants
       .map((p: any) => p.username)
       .filter((u: string) => u && u !== username && _blockedUsers.has(u));
@@ -623,6 +631,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         average_rating: avg,
         viewer_blocked_with_host: hostBlocked,
         host_suspended: hostSuspended,
+        viewer_is_approved: viewerApproved,
         blocked_co_traveler_usernames: blockedCoTravelers,
       } as any,
       can_manage_trip: !!isHost,
@@ -631,6 +640,26 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     };
     return resp;
   }
+
+  // ── Broadcast (host-only) ──
+  const broadcastMatch = path.match(/^\/trips\/(\d+)\/broadcast\/$/);
+  if (method === "POST" && broadcastMatch) {
+    const tripId = parseInt(broadcastMatch[1]);
+    const parts = getMockParticipants(tripId);
+    const excluded = new Set<string>(((body as any)?.exclude_usernames || []).map(String));
+    let skippedSuspended = 0, skippedBlocked = 0, skippedDeactivated = 0, sent = 0;
+    for (const p of parts) {
+      const u = (p as any).username as string;
+      if (!u) continue;
+      if (_suspendedUsers.has(u)) skippedSuspended++;
+      else if (_deactivatedUsers.has(u)) skippedDeactivated++;
+      else if (_blockedUsers.has(u) || excluded.has(u)) skippedBlocked++;
+      else sent++;
+    }
+    const skipped_total = skippedSuspended + skippedBlocked + skippedDeactivated;
+    return { ok: true, sent, skipped_suspended: skippedSuspended, skipped_blocked: skippedBlocked, skipped_deactivated: skippedDeactivated, skipped_total };
+  }
+
 
 
   // ── Blogs / Experiences ──

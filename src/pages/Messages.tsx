@@ -433,7 +433,7 @@ const Inbox = () => {
                           ownerUsername: msg.sender_username,
                           ownerDisplayName: msg.sender_display_name,
                         })}
-                        className="absolute -right-7 top-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100 focus:opacity-100"
+                        className="absolute -right-6 top-1 rounded p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
                       >
                         <Flag className="h-3.5 w-3.5" />
                       </button>
