@@ -337,7 +337,7 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
               This will be sent to {reachableParticipants.length} confirmed participant{reachableParticipants.length !== 1 ? "s" : ""}.
-              {blockedParticipantCount > 0 && ` ${blockedParticipantCount} blocked member${blockedParticipantCount !== 1 ? "s" : ""} will be skipped.`}
+              {excludedParticipantCount > 0 && ` ${excludedParticipantCount} unavailable member${excludedParticipantCount !== 1 ? "s" : ""} will be skipped.`}
             </p>
             <Textarea
               value={broadcastBody}
