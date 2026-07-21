@@ -476,6 +476,15 @@ const TripDetail = () => {
 
         {/* ─── BODY ─── */}
         <div className="mx-auto max-w-6xl px-4 py-6">
+          {suspendedHostRestricted && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                This host's account isn't available right now. Your itinerary details remain visible. You can withdraw at any time.
+              </span>
+            </div>
+          )}
+
           {isCompleted && isHost && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-muted bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
               <Lock className="h-4 w-4 shrink-0" />
