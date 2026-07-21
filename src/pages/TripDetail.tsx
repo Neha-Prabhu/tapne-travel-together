@@ -869,12 +869,18 @@ const TripDetail = () => {
                                     type="button"
                                     aria-label="Report review"
                                     title="Report"
-                                    onClick={() => setReportTarget({
-                                      type: "review",
-                                      id: r.id,
-                                      label: `Review by @${r.author_username}`,
-                                      ownerUsername: r.author_username,
-                                    })}
+                                    onClick={() => {
+                                      const openReport = () => setReportTarget({
+                                        type: "review",
+                                        id: r.id,
+                                        label: `Review by @${r.author_username}`,
+                                        ownerUsername: r.author_username,
+                                      });
+                                      // Guest review reports must flow through
+                                      // the sign-in gate and resume after auth.
+                                      if (!isAuthenticated) { requireAuth(openReport); return; }
+                                      openReport();
+                                    }}
                                     className="rounded p-1 text-muted-foreground hover:bg-muted"
                                   >
                                     <Flag className="h-3.5 w-3.5" />
