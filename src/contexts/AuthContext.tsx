@@ -258,6 +258,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logout,
       updateProfile,
       lastAuthError,
+      clearAuthError: () => setLastAuthError(""),
       requireAuth,
       loginModalOpen,
       setLoginModalOpen: handleLoginModalChange,
