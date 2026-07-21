@@ -78,11 +78,11 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     setError("");
 
     if (mode === "login") {
-      const ok = await login(identifier, password);
+      const result = await login(identifier, password);
       setLoading(false);
-      if (ok) { onOpenChange(false); onSuccess?.(); reset(); }
-      else if (lastAuthError === "__suspended__") setError("__suspended__");
-      else setError(lastAuthError || "Invalid credentials");
+      if (result.ok) { onOpenChange(false); onSuccess?.(); reset(); }
+      else if (result.reason === "suspended") setError("__suspended__");
+      else setError("Invalid credentials");
       return;
     }
 
