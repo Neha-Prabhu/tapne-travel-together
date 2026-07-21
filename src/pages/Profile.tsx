@@ -1100,6 +1100,12 @@ const Profile = () => {
           ownerDisplayName: p.display_name,
         } : null}
       />
+      <ReportDialog
+        open={!!reviewReport}
+        onOpenChange={(o) => { if (!o) setReviewReport(null); }}
+        target={reviewReport}
+      />
+
 
 
       <Footer />
