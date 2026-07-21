@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
 
-  const login = useCallback(async (identifier: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (identifier: string, password: string): Promise<{ ok: boolean; reason?: "suspended" | "invalid" }> => {
     setLastAuthError("");
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -115,16 +115,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { toast } = await import("sonner");
         toast.success("Welcome back — your account has been reactivated.");
       }
-      return true;
+      return { ok: true };
     } catch (err: any) {
       // Suspended accounts surface a distinct sentinel so the login modal
       // renders the required suspension copy with the support email link.
       if (err?.reason === "suspended") {
         setLastAuthError("__suspended__");
-      } else {
-        setLastAuthError(err?.error || "Invalid credentials");
+        return { ok: false, reason: "suspended" };
       }
-      return false;
+      setLastAuthError(err?.error || "Invalid credentials");
+      return { ok: false, reason: "invalid" };
     }
 
   }, []);
