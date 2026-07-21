@@ -147,6 +147,7 @@ const Profile = () => {
   const [deactivateBlockers, setDeactivateBlockers] = useState<Array<{ trip_id: number; title: string; role: "host" | "traveler"; status?: string; pending_count?: number; approved_count?: number }> | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [reviewReport, setReviewReport] = useState<null | { type: "review"; id: number; label: string; ownerUsername?: string; ownerDisplayName?: string }>(null);
 
   const [blockPending, setBlockPending] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
