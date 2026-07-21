@@ -86,11 +86,15 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
     try {
       await apiPost(`${cfg.api.base}/trips/${tripId}/broadcast/`, {
         message: body,
-        exclude_usernames: participants.filter(p => p.is_blocked_by_me).map(p => p.username),
+        exclude_usernames: participants.filter(p => p.is_blocked_by_me || p.is_suspended).map(p => p.username),
       });
       const sent = reachableParticipants.length;
-      const skipped = blockedParticipantCount;
-      const skippedNote = skipped > 0 ? ` Skipped ${skipped} blocked member${skipped !== 1 ? "s" : ""}.` : "";
+      const skippedBlocked = participants.filter(p => p.is_blocked_by_me && !p.is_suspended).length;
+      const skippedSuspended = participants.filter(p => p.is_suspended).length;
+      const notes: string[] = [];
+      if (skippedBlocked > 0) notes.push(`${skippedBlocked} blocked member${skippedBlocked !== 1 ? "s" : ""}`);
+      if (skippedSuspended > 0) notes.push(`${skippedSuspended} unavailable member${skippedSuspended !== 1 ? "s" : ""}`);
+      const skippedNote = notes.length ? ` Skipped ${notes.join(" and ")}.` : "";
       toast.success(`Message sent to ${sent} participant${sent !== 1 ? "s" : ""}.${skippedNote}`);
       setBroadcastOpen(false);
       setBroadcastBody("");
@@ -104,8 +108,9 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
 
   const pending = requests.filter(a => a.status === "pending");
   const approved = requests.filter(a => a.status === "approved");
-  const reachableParticipants = participants.filter(p => !p.is_blocked_by_me);
-  const blockedParticipantCount = participants.length - reachableParticipants.length;
+  const reachableParticipants = participants.filter(p => !p.is_blocked_by_me && !p.is_suspended);
+  const excludedParticipantCount = participants.length - reachableParticipants.length;
+
 
   if (loading) {
     return (
