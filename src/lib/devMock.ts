@@ -610,7 +610,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const hostSuspended = !!(trip.host_username && _suspendedUsers.has(trip.host_username));
     const participants = getMockParticipants(trip.id);
     const viewerParticipant = username ? participants.find((p: any) => p.username === username) : null;
-    const viewerApproved = !!viewerParticipant && (viewerParticipant.status === "approved" || viewerParticipant.status === "confirmed" || viewerParticipant.status === "joined");
+    const viewerApproved = !!viewerParticipant && ["approved", "confirmed", "joined"].includes(String((viewerParticipant as any).status || ""));
     // Trips whose host is suspended are hidden from anyone without an active
     // commitment. Approved travelers still get the restricted view so they can
     // withdraw; everyone else gets the standard not-found response.
