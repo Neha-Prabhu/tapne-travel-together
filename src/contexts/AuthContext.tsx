@@ -10,7 +10,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   authReady: boolean;
-  login: (identifier: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<{ ok: boolean; reason?: "suspended" | "invalid" }>;
   signup: (name: string, email: string, password: string) => Promise<SignupResult>;
   verifySignupCode: (code: string, details?: { name: string; email: string; password: string }) => Promise<{ ok: boolean; reason?: string }>;
   resendSignupCode: (details?: { name?: string; email?: string; password?: string }) => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
