@@ -13,8 +13,10 @@ import { apiGet, apiPost } from "@/lib/api";
 import type { ThreadData, InboxResponse, MessageData } from "@/types/messaging";
 import {
   MessageCircle, Send, ArrowLeft, Users, MapPin,
-  Loader2, Inbox as InboxIcon, Search,
+  Loader2, Inbox as InboxIcon, Search, Flag,
 } from "lucide-react";
+import ReportDialog, { type ReportTarget } from "@/components/ReportDialog";
+
 import { cn } from "@/lib/utils";
 
 const MIN_SIDEBAR = 280;
@@ -35,6 +37,8 @@ const Inbox = () => {
   const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+
 
   // Check for query params to auto-open a thread
   const openThreadParam = searchParams.get("thread");
@@ -393,32 +397,52 @@ const Inbox = () => {
                       </AvatarFallback>
                     </Avatar>
                   )}
-                  <div
-                    className={cn(
-                      "max-w-[75%] rounded-2xl px-3.5 py-2",
-                      isMine
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-muted text-foreground rounded-bl-md"
-                    )}
-                  >
-                    {!isMine && activeThread.type === "group_chat" && (
-                      <p className="mb-0.5 text-[10px] font-medium opacity-70">
-                        {msg.sender_display_name}
-                      </p>
-                    )}
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
-                    <p
+                  <div className="group relative max-w-[75%]">
+                    <div
                       className={cn(
-                        "mt-1 text-[10px]",
-                        isMine ? "text-primary-foreground/60" : "text-muted-foreground"
+                        "rounded-2xl px-3.5 py-2",
+                        isMine
+                          ? "bg-primary text-primary-foreground rounded-br-md"
+                          : "bg-muted text-foreground rounded-bl-md"
                       )}
                     >
-                      {formatTime(msg.sent_at)}
-                    </p>
+                      {!isMine && activeThread.type === "group_chat" && (
+                        <p className="mb-0.5 text-[10px] font-medium opacity-70">
+                          {msg.sender_display_name}
+                        </p>
+                      )}
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                      <p
+                        className={cn(
+                          "mt-1 text-[10px]",
+                          isMine ? "text-primary-foreground/60" : "text-muted-foreground"
+                        )}
+                      >
+                        {formatTime(msg.sent_at)}
+                      </p>
+                    </div>
+                    {!isMine && (
+                      <button
+                        type="button"
+                        aria-label="Report message"
+                        title="Report"
+                        onClick={() => setReportTarget({
+                          type: "message",
+                          id: msg.id,
+                          label: `${msg.sender_display_name}'s message`,
+                          ownerUsername: msg.sender_username,
+                          ownerDisplayName: msg.sender_display_name,
+                        })}
+                        className="absolute -right-7 top-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100 focus:opacity-100"
+                      >
+                        <Flag className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
             })}
+
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
@@ -431,9 +455,12 @@ const Inbox = () => {
                 ? "You've blocked this member. You can unblock them from Settings."
                 : activeThread.readonly_reason === "blocked_you"
                 ? "This member is no longer available."
+                : activeThread.readonly_reason === "suspended"
+                ? "This account is not available. You can't send new messages."
                 : activeThread.readonly_reason === "deactivated"
                 ? "This account has been deactivated. You can't send new messages."
                 : "This conversation is read-only."}
+
             </div>
           ) : (
             <form
@@ -520,8 +547,14 @@ const Inbox = () => {
           )}
         </div>
       </main>
+      <ReportDialog
+        open={!!reportTarget}
+        onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+        target={reportTarget}
+      />
     </div>
   );
 };
+
 
 export default Inbox;

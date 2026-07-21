@@ -33,6 +33,8 @@ export interface TapneRuntimeConfig {
     account_deactivate: string;
     blocks: string;
     trip_withdraw: string;
+    reports?: string;
+
     // Optional named dashboard locations — present only when backend exposes them.
     dashboard_trips?: string;
     dashboard_reviews?: string;
@@ -181,6 +183,8 @@ export interface ParticipantData {
   status: "confirmed";
   joined_at: string;
   is_blocked_by_me?: boolean;
+  is_suspended?: boolean;
+
 }
 
 export interface ManageTripResponse {

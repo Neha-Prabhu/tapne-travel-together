@@ -20,8 +20,10 @@ import {
   Calendar, MapPin, IndianRupee, Users, ArrowLeft, Clock, Star,
   CheckCircle2, XCircle, Hotel, Shield, HelpCircle, Backpack,
   DollarSign, Sparkles, Heart, UserCircle, Eye, Lock, Send,
-  AlertTriangle, Loader2, MessageCircle, LockOpen, Ban, Settings2
+  AlertTriangle, Loader2, MessageCircle, LockOpen, Ban, Settings2, Flag
 } from "lucide-react";
+import ReportDialog, { type ReportTarget } from "@/components/ReportDialog";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -54,6 +56,8 @@ const TripDetail = () => {
   const [appliedBanner, setAppliedBanner] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawPending, setWithdrawPending] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+
   const bannerKey = user?.id ? `tapne_apply_banner_${user.id}` : null;
   const missingProfileFields = (() => {
     if (!user) return [] as string[];
@@ -97,9 +101,16 @@ const TripDetail = () => {
   const isCompleted = trip?.status === "completed";
   const hasEnded = trip?.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
   const bothBlocked = !!(trip && (trip as any).viewer_blocked_with_host);
+  const hostSuspended = !!(trip && (trip as any).host_suspended);
   const hasCommitment = !!trip && (isHost || joinStatus === "approved" || joinStatus === "pending");
   const commitmentEnded = !!trip && (hasEnded || trip.status === "cancelled" || !hasCommitment);
   const blockedWithHost = !!trip && bothBlocked && hasCommitment && !commitmentEnded && !isHost;
+  // Suspended host puts the trip into a restricted mode for approved travelers
+  // (itinerary + Withdraw only) and hides social/host actions everywhere else.
+  const suspendedHostRestricted = !!trip && hostSuspended && !isHost;
+  const hostSocialHidden = blockedWithHost || suspendedHostRestricted;
+
+
 
   useEffect(() => {
     if (!trip) return;

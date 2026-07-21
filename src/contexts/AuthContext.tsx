@@ -96,9 +96,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       return true;
     } catch (err: any) {
-      setLastAuthError(err?.error || "Invalid credentials");
+      // Suspended accounts surface a distinct sentinel so the login modal
+      // renders the required suspension copy with the support email link.
+      if (err?.reason === "suspended") {
+        setLastAuthError("__suspended__");
+      } else {
+        setLastAuthError(err?.error || "Invalid credentials");
+      }
       return false;
     }
+
   }, []);
 
   const signup = useCallback(async (name: string, email: string, password: string): Promise<SignupResult> => {

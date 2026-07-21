@@ -21,8 +21,10 @@ import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
   AlertTriangle, PauseCircle, UserPlus, UserCheck, CheckCircle2, Shield,
-  Calendar, Sparkles, Heart, Clock, Globe, Instagram,
+  Calendar, Sparkles, Heart, Clock, Globe, Instagram, Flag,
 } from "lucide-react";
+import ReportDialog from "@/components/ReportDialog";
+
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
@@ -74,7 +76,9 @@ interface ProfileResponse {
     is_blocked_by_me?: boolean;
     is_blocked_by_them?: boolean;
     is_deactivated?: boolean;
+    is_suspended?: boolean;
   };
+
   trips_hosted: TripData[];
   trips_joined: TripData[];
   reviews: ReviewItem[];
@@ -142,6 +146,8 @@ const Profile = () => {
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [deactivateBlockers, setDeactivateBlockers] = useState<Array<{ trip_id: number; title: string; role: "host" | "traveler"; status?: string; pending_count?: number; approved_count?: number }> | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+
   const [blockPending, setBlockPending] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
@@ -357,16 +363,14 @@ const Profile = () => {
   }
 
 
-  // When the viewer or the profile owner has blocked the other, replace the
-  // regular profile with a neutral unavailable state that hides every social
-  // action (Follow, Message, Block, tabs, etc.).
-  const isUnavailable = !isOwner && (p.is_blocked_by_me || p.is_blocked_by_them || p.is_deactivated);
+  // When the viewer or the profile owner has blocked the other, or the account
+  // is deactivated/suspended, replace the profile with a neutral unavailable
+  // state. Suspended accounts must not disclose *why* — the copy is generic.
+  const isUnavailable = !isOwner && (p.is_blocked_by_me || p.is_blocked_by_them || p.is_deactivated || p.is_suspended);
   if (isUnavailable) {
-    const reason = p.is_deactivated
-      ? "This account isn't available right now."
-      : p.is_blocked_by_me
-        ? "You've blocked this member. Unblock them from Settings to see their profile again."
-        : "This profile isn't available.";
+    const reason = p.is_blocked_by_me
+      ? "You've blocked this member. Unblock them from Settings to see their profile again."
+      : "This profile isn't available.";
     return (
       <div className="flex min-h-screen flex-col">
         <Navbar />
@@ -386,6 +390,7 @@ const Profile = () => {
       </div>
     );
   }
+
 
   const reviews = profileData?.reviews ?? [];
   const gallery = profileData?.gallery ?? [];
@@ -549,9 +554,13 @@ const Profile = () => {
                   <Button size="sm" variant="outline" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } navigate(`/messages?dm=${p.username}`); }}>
                     <MessageCircle className="mr-1 h-4 w-4" /> Message
                   </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { if (!isAuthenticated) { requireAuth(() => setReportOpen(true)); return; } setReportOpen(true); }}>
+                    <Flag className="mr-1 h-4 w-4" /> Report
+                  </Button>
                   <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } setBlockOpen(true); }}>
                     <Shield className="mr-1 h-4 w-4" /> Block
                   </Button>
+
                 </>
               )}
             </div>
@@ -1054,6 +1063,19 @@ const Profile = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        target={p ? {
+          type: "profile",
+          id: p.username,
+          label: `${p.display_name}'s profile`,
+          ownerUsername: p.username,
+          ownerDisplayName: p.display_name,
+        } : null}
+      />
+
 
       <Footer />
     </div>
