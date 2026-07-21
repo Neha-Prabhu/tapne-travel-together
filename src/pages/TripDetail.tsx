@@ -356,11 +356,17 @@ const TripDetail = () => {
                 Ask a Question
               </Button>
             )}
-            {blockedWithHost && (
+            {suspendedHostRestricted && (
+              <p className="text-xs text-muted-foreground">
+                This host's account isn't available right now. Your itinerary details remain visible and you can withdraw at any time.
+              </p>
+            )}
+            {blockedWithHost && !suspendedHostRestricted && (
               <p className="text-xs text-muted-foreground">
                 You've blocked this host or been blocked. Trip details remain visible; social actions are unavailable until the trip ends or you withdraw.
               </p>
             )}
+
           </CardContent>
         </Card>
       )}
