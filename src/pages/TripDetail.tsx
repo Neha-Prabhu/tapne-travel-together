@@ -743,7 +743,23 @@ const TripDetail = () => {
                             <div key={r.id} className="rounded-lg border p-4">
                               <div className="mb-1 flex items-center justify-between">
                                 <span className="text-sm font-medium text-foreground">@{r.author_username}</span>
-                                <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                                  <button
+                                    type="button"
+                                    aria-label="Report review"
+                                    title="Report"
+                                    onClick={() => setReportTarget({
+                                      type: "review",
+                                      id: r.id,
+                                      label: `Review by @${r.author_username}`,
+                                      ownerUsername: r.author_username,
+                                    })}
+                                    className="rounded p-1 text-muted-foreground hover:bg-muted"
+                                  >
+                                    <Flag className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
                               </div>
                               <div className="mb-1 flex items-center gap-1">
                                 {[1, 2, 3, 4, 5].map(s => (
@@ -754,6 +770,7 @@ const TripDetail = () => {
                               <p className="text-sm text-muted-foreground">{r.body}</p>
                             </div>
                           ))}
+
                         </div>
                       )}
 
