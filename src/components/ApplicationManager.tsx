@@ -238,36 +238,43 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
                 Confirmed Participants ({participants.length})
               </div>
               <div className="space-y-2">
-                {participants.map(p => (
-                  <div key={p.id} className={cn(
-                    "flex items-center gap-3 rounded-lg border p-3",
-                    p.is_blocked_by_me ? "border-muted-foreground/20 bg-muted/30" : "border-primary/20 bg-primary/5"
-                  )}>
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback>{(p.display_name || p.username || "?")[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
-                        {p.is_blocked_by_me && (
-                          <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
-                        )}
+                {participants.map(p => {
+                  const unavailable = p.is_suspended || p.is_blocked_by_me;
+                  return (
+                    <div key={p.id} className={cn(
+                      "flex items-center gap-3 rounded-lg border p-3",
+                      unavailable ? "border-muted-foreground/20 bg-muted/30" : "border-primary/20 bg-primary/5"
+                    )}>
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback>{(p.display_name || p.username || "?")[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
+                          {p.is_suspended ? (
+                            <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Account unavailable</Badge>
+                          ) : p.is_blocked_by_me && (
+                            <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {p.is_suspended ? "Confirmed traveler — messaging disabled" :
+                            p.is_blocked_by_me ? "Confirmed traveler — messaging disabled" :
+                            `Joined ${new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {p.is_blocked_by_me ? "Confirmed traveler — messaging disabled" :
-                          `Joined ${new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
-                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+                        onClick={() => setRemoveTarget(p)}
+                      >
+                        <UserMinus className="mr-1 h-3.5 w-3.5" /> Remove
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
-                      onClick={() => setRemoveTarget(p)}
-                    >
-                      <UserMinus className="mr-1 h-3.5 w-3.5" /> Remove
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
+
               </div>
             </div>
           )}

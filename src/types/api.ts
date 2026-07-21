@@ -225,6 +225,8 @@ export interface EnrollmentRequestData {
   created_at: string;
   reviewed_at?: string;
   is_blocked_by_me?: boolean;
+  is_suspended?: boolean;
+
 }
 
 export interface HostingInboxResponse {
