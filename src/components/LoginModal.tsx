@@ -67,9 +67,11 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
       const ok = await login(identifier, password);
       setLoading(false);
       if (ok) { onOpenChange(false); onSuccess?.(); reset(); }
+      else if (lastAuthError === "__suspended__") setError("__suspended__");
       else setError(lastAuthError || "Invalid credentials");
       return;
     }
+
 
     const result = await signup(name, identifier, password);
     setLoading(false);
@@ -181,7 +183,14 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
                 <Label className="mb-1.5 block text-sm">Password</Label>
                 <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error === "__suspended__" ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  This account has been suspended. Contact{" "}
+                  <a href="mailto:support@tapnetravel.com" className="underline font-medium">support@tapnetravel.com</a>
+                  {" "}if you believe this was a mistake.
+                </div>
+              ) : error ? <p className="text-sm text-destructive">{error}</p> : null}
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {mode === "login" ? "Log In" : "Sign Up"}

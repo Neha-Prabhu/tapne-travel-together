@@ -86,11 +86,15 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
     try {
       await apiPost(`${cfg.api.base}/trips/${tripId}/broadcast/`, {
         message: body,
-        exclude_usernames: participants.filter(p => p.is_blocked_by_me).map(p => p.username),
+        exclude_usernames: participants.filter(p => p.is_blocked_by_me || p.is_suspended).map(p => p.username),
       });
       const sent = reachableParticipants.length;
-      const skipped = blockedParticipantCount;
-      const skippedNote = skipped > 0 ? ` Skipped ${skipped} blocked member${skipped !== 1 ? "s" : ""}.` : "";
+      const skippedBlocked = participants.filter(p => p.is_blocked_by_me && !p.is_suspended).length;
+      const skippedSuspended = participants.filter(p => p.is_suspended).length;
+      const notes: string[] = [];
+      if (skippedBlocked > 0) notes.push(`${skippedBlocked} blocked member${skippedBlocked !== 1 ? "s" : ""}`);
+      if (skippedSuspended > 0) notes.push(`${skippedSuspended} unavailable member${skippedSuspended !== 1 ? "s" : ""}`);
+      const skippedNote = notes.length ? ` Skipped ${notes.join(" and ")}.` : "";
       toast.success(`Message sent to ${sent} participant${sent !== 1 ? "s" : ""}.${skippedNote}`);
       setBroadcastOpen(false);
       setBroadcastBody("");
@@ -104,8 +108,9 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
 
   const pending = requests.filter(a => a.status === "pending");
   const approved = requests.filter(a => a.status === "approved");
-  const reachableParticipants = participants.filter(p => !p.is_blocked_by_me);
-  const blockedParticipantCount = participants.length - reachableParticipants.length;
+  const reachableParticipants = participants.filter(p => !p.is_blocked_by_me && !p.is_suspended);
+  const excludedParticipantCount = participants.length - reachableParticipants.length;
+
 
   if (loading) {
     return (
@@ -194,14 +199,18 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
                     {req.status === "denied" && <XCircle className="mr-0.5 h-3 w-3" />}
                     {req.status}
                   </Badge>
-                  {req.is_blocked_by_me && (
+                  {req.is_suspended ? (
+                    <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Account unavailable</Badge>
+                  ) : req.is_blocked_by_me && (
                     <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">Applied {new Date(req.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
               </div>
               <div className="flex items-center gap-1.5">
-                {req.is_blocked_by_me ? (
+                {req.is_suspended ? (
+                  <span className="text-xs text-muted-foreground pr-1">Unavailable</span>
+                ) : req.is_blocked_by_me ? (
                   <span className="text-xs text-muted-foreground pr-1">Unavailable</span>
                 ) : (
                   <>
@@ -220,6 +229,8 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
             </div>
           ))}
 
+
+
           {participants.length > 0 && (
             <div className="pt-3 mt-3 border-t">
               <div className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -227,36 +238,43 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
                 Confirmed Participants ({participants.length})
               </div>
               <div className="space-y-2">
-                {participants.map(p => (
-                  <div key={p.id} className={cn(
-                    "flex items-center gap-3 rounded-lg border p-3",
-                    p.is_blocked_by_me ? "border-muted-foreground/20 bg-muted/30" : "border-primary/20 bg-primary/5"
-                  )}>
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback>{(p.display_name || p.username || "?")[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
-                        {p.is_blocked_by_me && (
-                          <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
-                        )}
+                {participants.map(p => {
+                  const unavailable = p.is_suspended || p.is_blocked_by_me;
+                  return (
+                    <div key={p.id} className={cn(
+                      "flex items-center gap-3 rounded-lg border p-3",
+                      unavailable ? "border-muted-foreground/20 bg-muted/30" : "border-primary/20 bg-primary/5"
+                    )}>
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback>{(p.display_name || p.username || "?")[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{p.display_name || p.username}</p>
+                          {p.is_suspended ? (
+                            <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Account unavailable</Badge>
+                          ) : p.is_blocked_by_me && (
+                            <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground border-muted-foreground/40">Blocked</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {p.is_suspended ? "Confirmed traveler — messaging disabled" :
+                            p.is_blocked_by_me ? "Confirmed traveler — messaging disabled" :
+                            `Joined ${new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {p.is_blocked_by_me ? "Confirmed traveler — messaging disabled" :
-                          `Joined ${new Date(p.joined_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
-                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+                        onClick={() => setRemoveTarget(p)}
+                      >
+                        <UserMinus className="mr-1 h-3.5 w-3.5" /> Remove
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
-                      onClick={() => setRemoveTarget(p)}
-                    >
-                      <UserMinus className="mr-1 h-3.5 w-3.5" /> Remove
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
+
               </div>
             </div>
           )}
@@ -332,7 +350,7 @@ const ApplicationManager = ({ tripId }: ApplicationManagerProps) => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
               This will be sent to {reachableParticipants.length} confirmed participant{reachableParticipants.length !== 1 ? "s" : ""}.
-              {blockedParticipantCount > 0 && ` ${blockedParticipantCount} blocked member${blockedParticipantCount !== 1 ? "s" : ""} will be skipped.`}
+              {excludedParticipantCount > 0 && ` ${excludedParticipantCount} unavailable member${excludedParticipantCount !== 1 ? "s" : ""} will be skipped.`}
             </p>
             <Textarea
               value={broadcastBody}

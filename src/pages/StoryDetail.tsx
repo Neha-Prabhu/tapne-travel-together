@@ -9,7 +9,9 @@ import { apiGet, apiDelete } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { BlogData } from "@/types/api";
 import { toast } from "sonner";
-import { Loader2, Calendar, MapPin, Edit, ArrowLeft, Trash2 } from "lucide-react";
+import { Loader2, Calendar, MapPin, Edit, ArrowLeft, Trash2, Flag } from "lucide-react";
+import ReportDialog from "@/components/ReportDialog";
+
 import { generateHTML } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import ImageExt from "@tiptap/extension-image";
@@ -26,11 +28,13 @@ function renderBody(body?: string): string {
 const StoryDetail = () => {
   const { storyId } = useParams<{ storyId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, requireAuth } = useAuth();
   const [story, setStory] = useState<BlogData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+
 
   const handleDelete = async () => {
     if (!story) return;
@@ -103,7 +107,7 @@ const StoryDetail = () => {
 
           <div className="mb-3 flex items-center justify-between gap-3">
             <h1 className="text-3xl font-bold leading-tight text-foreground md:text-4xl">{story.title}</h1>
-            {isOwner && (
+            {isOwner ? (
               <div className="flex items-center gap-2 shrink-0">
                 <Button variant="outline" size="sm" asChild>
                   <Link to={`/stories/${story.slug}/edit`}><Edit className="mr-1.5 h-3.5 w-3.5" />Edit</Link>
@@ -113,7 +117,12 @@ const StoryDetail = () => {
                   Delete
                 </Button>
               </div>
+            ) : (
+              <Button variant="ghost" size="sm" className="shrink-0" onClick={() => { if (!isAuthenticated) { requireAuth(() => setReportOpen(true)); return; } setReportOpen(true); }}>
+                <Flag className="mr-1.5 h-3.5 w-3.5" />Report
+              </Button>
             )}
+
           </div>
 
           {story.short_description && (
@@ -153,8 +162,20 @@ const StoryDetail = () => {
         </article>
       </main>
       <Footer />
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        target={story ? {
+          type: "story",
+          id: story.slug,
+          label: story.title,
+          ownerUsername: story.author_username,
+          ownerDisplayName: story.author_display_name,
+        } : null}
+      />
     </div>
   );
 };
+
 
 export default StoryDetail;

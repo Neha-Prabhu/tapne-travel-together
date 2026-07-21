@@ -28,7 +28,7 @@ export interface ThreadData {
   unread_count: number;
   messages: MessageData[];
   readonly?: boolean;
-  readonly_reason?: "blocked_by_you" | "blocked_you" | "deactivated";
+  readonly_reason?: "blocked_by_you" | "blocked_you" | "deactivated" | "suspended";
 }
 
 export interface InboxResponse {

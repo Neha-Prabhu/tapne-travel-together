@@ -20,8 +20,10 @@ import {
   Calendar, MapPin, IndianRupee, Users, ArrowLeft, Clock, Star,
   CheckCircle2, XCircle, Hotel, Shield, HelpCircle, Backpack,
   DollarSign, Sparkles, Heart, UserCircle, Eye, Lock, Send,
-  AlertTriangle, Loader2, MessageCircle, LockOpen, Ban, Settings2
+  AlertTriangle, Loader2, MessageCircle, LockOpen, Ban, Settings2, Flag
 } from "lucide-react";
+import ReportDialog, { type ReportTarget } from "@/components/ReportDialog";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -54,6 +56,8 @@ const TripDetail = () => {
   const [appliedBanner, setAppliedBanner] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawPending, setWithdrawPending] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+
   const bannerKey = user?.id ? `tapne_apply_banner_${user.id}` : null;
   const missingProfileFields = (() => {
     if (!user) return [] as string[];
@@ -97,9 +101,16 @@ const TripDetail = () => {
   const isCompleted = trip?.status === "completed";
   const hasEnded = trip?.ends_at ? new Date(trip.ends_at).getTime() < Date.now() : isCompleted;
   const bothBlocked = !!(trip && (trip as any).viewer_blocked_with_host);
+  const hostSuspended = !!(trip && (trip as any).host_suspended);
   const hasCommitment = !!trip && (isHost || joinStatus === "approved" || joinStatus === "pending");
   const commitmentEnded = !!trip && (hasEnded || trip.status === "cancelled" || !hasCommitment);
   const blockedWithHost = !!trip && bothBlocked && hasCommitment && !commitmentEnded && !isHost;
+  // Suspended host puts the trip into a restricted mode for approved travelers
+  // (itinerary + Withdraw only) and hides social/host actions everywhere else.
+  const suspendedHostRestricted = !!trip && hostSuspended && !isHost;
+  const hostSocialHidden = blockedWithHost || suspendedHostRestricted;
+
+
 
   useEffect(() => {
     if (!trip) return;
@@ -345,11 +356,17 @@ const TripDetail = () => {
                 Ask a Question
               </Button>
             )}
-            {blockedWithHost && (
+            {suspendedHostRestricted && (
+              <p className="text-xs text-muted-foreground">
+                This host's account isn't available right now. Your itinerary details remain visible and you can withdraw at any time.
+              </p>
+            )}
+            {blockedWithHost && !suspendedHostRestricted && (
               <p className="text-xs text-muted-foreground">
                 You've blocked this host or been blocked. Trip details remain visible; social actions are unavailable until the trip ends or you withdraw.
               </p>
             )}
+
           </CardContent>
         </Card>
       )}
@@ -406,9 +423,25 @@ const TripDetail = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </div>
           <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl px-4 pb-6 md:pb-8">
-            <Button variant="ghost" size="sm" asChild className="mb-3 text-white/80 hover:text-white hover:bg-white/10">
-              <Link to="/search?intent=trips"><ArrowLeft className="mr-1 h-4 w-4" /> Back</Link>
-            </Button>
+            <div className="mb-3 flex items-center justify-between">
+              <Button variant="ghost" size="sm" asChild className="text-white/80 hover:text-white hover:bg-white/10">
+                <Link to="/search?intent=trips"><ArrowLeft className="mr-1 h-4 w-4" /> Back</Link>
+              </Button>
+              {!isHost && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/80 hover:text-white hover:bg-white/10"
+                  onClick={() => {
+                    if (!isAuthenticated) { requireAuth(() => setReportTarget({ type: "trip", id: trip.id, label: trip.title, ownerUsername: trip.host_username, ownerDisplayName: trip.host_display_name })); return; }
+                    setReportTarget({ type: "trip", id: trip.id, label: trip.title, ownerUsername: trip.host_username, ownerDisplayName: trip.host_display_name });
+                  }}
+                >
+                  <Flag className="mr-1 h-4 w-4" /> Report
+                </Button>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {trip.trip_type && <Badge className="bg-primary text-primary-foreground">{trip.trip_type}</Badge>}
               {trip.trip_vibe?.map(v => (
@@ -443,6 +476,15 @@ const TripDetail = () => {
 
         {/* ─── BODY ─── */}
         <div className="mx-auto max-w-6xl px-4 py-6">
+          {suspendedHostRestricted && (
+            <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>
+                This host's account isn't available right now. Your itinerary details remain visible. You can withdraw at any time.
+              </span>
+            </div>
+          )}
+
           {isCompleted && isHost && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-muted bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
               <Lock className="h-4 w-4 shrink-0" />
@@ -726,7 +768,23 @@ const TripDetail = () => {
                             <div key={r.id} className="rounded-lg border p-4">
                               <div className="mb-1 flex items-center justify-between">
                                 <span className="text-sm font-medium text-foreground">@{r.author_username}</span>
-                                <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                                  <button
+                                    type="button"
+                                    aria-label="Report review"
+                                    title="Report"
+                                    onClick={() => setReportTarget({
+                                      type: "review",
+                                      id: r.id,
+                                      label: `Review by @${r.author_username}`,
+                                      ownerUsername: r.author_username,
+                                    })}
+                                    className="rounded p-1 text-muted-foreground hover:bg-muted"
+                                  >
+                                    <Flag className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
                               </div>
                               <div className="mb-1 flex items-center gap-1">
                                 {[1, 2, 3, 4, 5].map(s => (
@@ -737,6 +795,7 @@ const TripDetail = () => {
                               <p className="text-sm text-muted-foreground">{r.body}</p>
                             </div>
                           ))}
+
                         </div>
                       )}
 
@@ -896,7 +955,13 @@ const TripDetail = () => {
         </div>
         <div className="h-20 lg:hidden" />
       </main>
+      <ReportDialog
+        open={!!reportTarget}
+        onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+        target={reportTarget}
+      />
       <Footer />
+
 
       {/* Booking Modal */}
       <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />

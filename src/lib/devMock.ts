@@ -142,7 +142,10 @@ const _followedUsers = new Set<string>();
 const _followerCounts = new Map<string, number>();
 const _blockedUsers = new Set<string>();
 const _deactivatedUsers = new Set<string>(["ananya_desai"]);
+const _suspendedUsers = new Set<string>(["ravi_kumar"]);
+const _submittedReports = new Set<string>();
 const _tripParticipation = new Map<number, "pending" | "approved">();
+
 
 // Pending signup verification (dev-only in-memory).
 interface PendingSignup { name: string; email: string; password: string; code: string; expiresAt: number; attempts: number; }
@@ -300,6 +303,17 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     }
   }
 
+  // ── Reports ──
+  // Report submissions are always acknowledged (a repeated report for the same
+  // target still returns success so the reporter never doubts it landed).
+  if (method === "POST" && path === "/reports/") {
+    const b = body as any;
+    const key = `${b?.target_type || "?"}:${b?.target_id || "?"}`;
+    _submittedReports.add(key);
+    return { ok: true, submitted: true };
+  }
+
+
 
 
   // ── User search ──
@@ -382,6 +396,13 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "POST" && path === "/auth/login/") {
     const b = body as any;
     const identifier = (b?.username || "").toString().toLowerCase();
+    // Suspended accounts stay signed out — the client renders the required copy.
+    if (identifier && _suspendedUsers.has(identifier)) {
+      return mockError(403, {
+        error: "This account has been suspended. Contact support@tapnetravel.com if you believe this was a mistake.",
+        reason: "suspended",
+      });
+    }
     // Detect reactivation: if the account was previously deactivated, clear that
     // flag and signal the client so it can show the one-shot welcome-back toast.
     let reactivated = false;
@@ -392,6 +413,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     _devUser = MOCK_SESSION_USERS.find(u => u.username === identifier) || MOCK_SESSION_USERS[0];
     return { user: _devUser, reactivated };
   }
+
 
   if (method === "POST" && path === "/auth/signup/") {
     const b = body as any;
@@ -585,6 +607,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     // Blocking state: hide social entry points on shared trips whenever the
     // viewer and the host (or a co-traveler) have blocked each other.
     const hostBlocked = !!(trip.host_username && _blockedUsers.has(trip.host_username));
+    const hostSuspended = !!(trip.host_username && _suspendedUsers.has(trip.host_username));
     const participants = getMockParticipants(trip.id);
     const blockedCoTravelers = participants
       .map((p: any) => p.username)
@@ -595,10 +618,11 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         booking_status: _tripBookingStatus.get(trip.id) || (trip.spots_left === 0 ? "full" : "open"),
         reviews,
         viewer_review: viewerReview,
-        can_review: !!_devUser && !isHost && !hostBlocked,
+        can_review: !!_devUser && !isHost && !hostBlocked && !hostSuspended,
         reviews_count: reviews.length,
         average_rating: avg,
         viewer_blocked_with_host: hostBlocked,
+        host_suspended: hostSuspended,
         blocked_co_traveler_usernames: blockedCoTravelers,
       } as any,
       can_manage_trip: !!isHost,
@@ -607,6 +631,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     };
     return resp;
   }
+
 
   // ── Blogs / Experiences ──
   if (method === "GET" && path === "/blogs/") {
@@ -828,12 +853,13 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     if (!su) return { profile: null, trips_hosted: [], trips_joined: [], reviews: [], gallery: [] };
 
     // If the viewer and target have blocked each other, or the target is
-    // deactivated, respond with a minimal profile envelope only. Never send
-    // bio, trips, stories, reviews, gallery, or follower counts — the client
-    // shouldn't be able to reveal hidden content even briefly.
+    // deactivated/suspended, respond with a minimal profile envelope only.
+    // Never leak bio, trips, stories, reviews, or gallery, and never disclose
+    // *why* a suspended account is unavailable — treat it as generically hidden.
     const targetBlockedByMe = _blockedUsers.has(su.username);
     const targetDeactivated = _deactivatedUsers.has(su.username);
-    if (targetBlockedByMe || targetDeactivated) {
+    const targetSuspended = _suspendedUsers.has(su.username);
+    if (targetBlockedByMe || targetDeactivated || targetSuspended) {
       return {
         profile: {
           username: su.username,
@@ -841,10 +867,12 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
           unavailable: true,
           is_blocked_by_me: targetBlockedByMe,
           is_deactivated: targetDeactivated,
+          is_suspended: targetSuspended,
         },
         trips_hosted: [], trips_joined: [], reviews: [], gallery: [], stories: [],
       };
     }
+
 
     const hostedTrips = MOCK_TRIPS.filter(t => t.host_username === su.username);
     const joinedTrips = MOCK_TRIPS.filter(t => t.host_username !== su.username).slice(0, 2);
@@ -1002,6 +1030,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       let readonly_reason: any;
       if (t.type === "dm" && other) {
         if (_blockedUsers.has(other.username)) { readonly = true; readonly_reason = "blocked_by_you"; }
+        else if (_suspendedUsers.has(other.username)) { readonly = true; readonly_reason = "suspended"; }
         else if (_deactivatedUsers.has(other.username)) { readonly = true; readonly_reason = "deactivated"; }
       }
       return { ...t, readonly, readonly_reason };
@@ -1009,6 +1038,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const resp: InboxResponse = { threads };
     return resp;
   }
+
 
   // ── Send message to thread ──
   const threadMsgMatch = path.match(/^\/dm\/inbox\/(\d+)\/messages\/$/);
@@ -1024,9 +1054,13 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     if (other && _blockedUsers.has(other.username)) {
       return mockError(403, { error: "You've blocked this member.", readonly_reason: "blocked_by_you" });
     }
+    if (other && _suspendedUsers.has(other.username)) {
+      return mockError(403, { error: "This account is not available.", readonly_reason: "suspended" });
+    }
     if (other && _deactivatedUsers.has(other.username)) {
       return mockError(403, { error: "This account has been deactivated.", readonly_reason: "deactivated" });
     }
+
     const b = body as any;
     const newMsg: MessageData = {
       id: ++_mockMsgIdCounter,
