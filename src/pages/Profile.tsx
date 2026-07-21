@@ -779,7 +779,9 @@ const Profile = () => {
                       </Select>
                     </div>
                     <div className="space-y-4">
-                      {pageItems.map((r) => (
+                      {pageItems.map((r) => {
+                        const isOwnReview = !!user?.username && r.author_username === user.username;
+                        return (
                         <Card key={r.id}>
                           <CardContent className="p-4">
                             <div className="flex items-start gap-3">
@@ -807,10 +809,32 @@ const Profile = () => {
                                   </Link>
                                 )}
                               </div>
+                              {!isOwnReview && (
+                                <button
+                                  type="button"
+                                  aria-label="Report review"
+                                  title="Report"
+                                  onClick={() => {
+                                    const openReport = () => setReviewReport({
+                                      type: "review",
+                                      id: r.id,
+                                      label: `Review by ${r.author_display_name || r.author_username || "member"}`,
+                                      ownerUsername: r.author_username,
+                                      ownerDisplayName: r.author_display_name,
+                                    });
+                                    if (!isAuthenticated) { requireAuth(openReport); return; }
+                                    openReport();
+                                  }}
+                                  className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground shrink-0"
+                                >
+                                  <Flag className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
-                      ))}
+                        );
+                      })}
                     </div>
                     {totalPages > 1 && (
                       <div className="flex items-center justify-center gap-2 pt-2">
