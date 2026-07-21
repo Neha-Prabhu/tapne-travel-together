@@ -946,7 +946,13 @@ const TripDetail = () => {
         </div>
         <div className="h-20 lg:hidden" />
       </main>
+      <ReportDialog
+        open={!!reportTarget}
+        onOpenChange={(o) => { if (!o) setReportTarget(null); }}
+        target={reportTarget}
+      />
       <Footer />
+
 
       {/* Booking Modal */}
       <BookingModal open={bookingModalOpen} onOpenChange={setBookingModalOpen} trip={trip} />
