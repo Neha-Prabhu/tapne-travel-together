@@ -146,6 +146,101 @@ const TripDetail = () => {
     );
   }
 
+  // ── Restricted view: suspended host + approved traveler ───────────────────
+  // Non-approved visitors are already 404'd by the server. Approved travelers
+  // see only the essentials they need to make a safety decision + Withdraw.
+  if (suspendedHostRestricted) {
+    const fmt = (iso?: string) => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="mx-auto max-w-3xl px-4 py-8">
+          <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-900 dark:text-amber-200">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">This host's account isn't available right now.</p>
+                <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
+                  Your itinerary and participation details remain visible. You can withdraw at any time. Social actions, messaging, reviews, and applications are unavailable for this trip.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-bold text-foreground">{trip.title}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            {trip.destination && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" />{trip.destination}</span>}
+            {trip.starts_at && trip.ends_at && (
+              <span className="inline-flex items-center gap-1"><Calendar className="h-4 w-4" />{fmt(trip.starts_at)} – {fmt(trip.ends_at)}</span>
+            )}
+            <Badge variant="secondary" className="capitalize">
+              {joinStatus === "pending" ? "Request pending" : joinStatus === "approved" ? "You're approved" : trip.status || "active"}
+            </Badge>
+          </div>
+
+          {trip.itinerary_days && trip.itinerary_days.length > 0 && (
+            <section className="mt-8">
+              <h2 className="mb-3 text-lg font-semibold">Itinerary</h2>
+              <div className="space-y-3">
+                {trip.itinerary_days.map((day: any, i: number) => (
+                  <Card key={i}>
+                    <CardContent className="p-4">
+                      <div className="mb-1 text-sm font-semibold text-foreground">Day {day.day_number ?? i + 1}{day.title ? ` · ${day.title}` : ""}</div>
+                      {day.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{day.description}</p>}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="mt-8">
+            <Button variant="destructive" onClick={() => setWithdrawOpen(true)}>
+              {joinStatus === "pending" ? "Cancel request" : "Withdraw from trip"}
+            </Button>
+          </div>
+        </main>
+
+        <AlertDialog open={withdrawOpen} onOpenChange={(o) => { if (!withdrawPending) setWithdrawOpen(o); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{joinStatus === "pending" ? "Cancel your request?" : "Withdraw from this trip?"}</AlertDialogTitle>
+              <AlertDialogDescription>
+                You can rejoin later if spots remain. This releases your seat.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={withdrawPending}>Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={withdrawPending}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  setWithdrawPending(true);
+                  try {
+                    const cfg = window.TAPNE_RUNTIME_CONFIG;
+                    const url = (cfg.api.trip_withdraw || "/trips/:id/withdraw/").replace(":id", String(trip.id));
+                    await apiPost(url, {});
+                    toast.success(joinStatus === "pending" ? "Request cancelled." : "You've withdrawn from the trip.");
+                    setWithdrawOpen(false);
+                    navigate("/", { replace: true });
+                  } catch (err: any) {
+                    toast.error(err?.error || "Could not withdraw. Please try again.");
+                  } finally {
+                    setWithdrawPending(false);
+                  }
+                }}
+              >
+                {joinStatus === "pending" ? "Cancel request" : "Withdraw"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Footer />
+      </div>
+    );
+  }
+
+
   const spotsLeft = trip.spots_left ?? (trip.total_seats || 0);
   const isFull = spotsLeft <= 0;
   const accessType = trip.trip_type === "invite" ? "invite" : "open"; // simplified
