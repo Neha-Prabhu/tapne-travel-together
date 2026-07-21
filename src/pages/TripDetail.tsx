@@ -423,9 +423,25 @@ const TripDetail = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </div>
           <div className="absolute inset-x-0 bottom-0 mx-auto max-w-6xl px-4 pb-6 md:pb-8">
-            <Button variant="ghost" size="sm" asChild className="mb-3 text-white/80 hover:text-white hover:bg-white/10">
-              <Link to="/search?intent=trips"><ArrowLeft className="mr-1 h-4 w-4" /> Back</Link>
-            </Button>
+            <div className="mb-3 flex items-center justify-between">
+              <Button variant="ghost" size="sm" asChild className="text-white/80 hover:text-white hover:bg-white/10">
+                <Link to="/search?intent=trips"><ArrowLeft className="mr-1 h-4 w-4" /> Back</Link>
+              </Button>
+              {!isHost && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/80 hover:text-white hover:bg-white/10"
+                  onClick={() => {
+                    if (!isAuthenticated) { requireAuth(() => setReportTarget({ type: "trip", id: trip.id, label: trip.title, ownerUsername: trip.host_username, ownerDisplayName: trip.host_display_name })); return; }
+                    setReportTarget({ type: "trip", id: trip.id, label: trip.title, ownerUsername: trip.host_username, ownerDisplayName: trip.host_display_name });
+                  }}
+                >
+                  <Flag className="mr-1 h-4 w-4" /> Report
+                </Button>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {trip.trip_type && <Badge className="bg-primary text-primary-foreground">{trip.trip_type}</Badge>}
               {trip.trip_vibe?.map(v => (
