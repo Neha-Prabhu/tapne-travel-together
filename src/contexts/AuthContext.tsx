@@ -16,6 +16,7 @@ interface AuthContextType {
   resendSignupCode: (details?: { name?: string; email?: string; password?: string }) => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<any>;
+  setUserMedia: (patch: Partial<Pick<User, "avatar" | "avatar_id" | "cover_photo_url" | "cover_id" | "gallery_media" | "gallery_photos">>) => void;
   lastAuthError: string;
   clearAuthError: () => void;
   /** Open login modal with optional callback after success */
