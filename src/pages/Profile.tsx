@@ -237,25 +237,21 @@ const Profile = () => {
     setEditBio(p.bio);
     setEditLocation(p.location);
     setEditTags(p.travel_tags ?? []);
-    avatarField.resetTo(p.avatar_url || null);
+    avatarField.resetTo(
+      p.avatar_id && p.avatar_url ? { id: p.avatar_id, url: p.avatar_url } : null,
+    );
     setAvatarUploadError(null);
     setEditOpen(true);
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     const err = validateImageFile(file);
     if (err) { setAvatarUploadError(err); toast.error(err); return; }
     setAvatarUploadError(null);
-    try {
-      const url = await readFileAsDataUrl(file);
-      avatarField.setValue(url);
-    } catch {
-      const msg = "Could not read image file.";
-      setAvatarUploadError(msg); toast.error(msg);
-    }
+    avatarField.uploadFile(file);
   };
 
   const toggleTag = (tag: string) => {
@@ -269,11 +265,12 @@ const Profile = () => {
   useEffect(() => {
     if (!profileData || !p) return;
     if (!isOwner) return;
-    const confirmedAvatar = avatarField.confirmed ?? undefined;
-    if ((p.avatar_url || undefined) === (confirmedAvatar || undefined)) return;
+    const confirmedUrl = avatarField.confirmed?.url;
+    const confirmedId = avatarField.confirmed?.id;
+    if ((p.avatar_url || undefined) === (confirmedUrl || undefined) && p.avatar_id === confirmedId) return;
     setProfileData({
       ...profileData,
-      profile: { ...p, avatar_url: confirmedAvatar || "" },
+      profile: { ...p, avatar_url: confirmedUrl || "", avatar_id: confirmedId },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarField.confirmed]);
@@ -296,7 +293,8 @@ const Profile = () => {
             bio: next.bio ?? editBio,
             location: next.location ?? editLocation,
             travel_tags: next.travel_tags ?? editTags,
-            avatar_url: avatarField.confirmed ?? p.avatar_url,
+            avatar_url: avatarField.confirmed?.url ?? p.avatar_url,
+            avatar_id: avatarField.confirmed?.id ?? p.avatar_id,
           },
         });
       }
