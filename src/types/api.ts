@@ -1,5 +1,8 @@
 // ─── Runtime Config ───────────────────────────────────────────────────────
 
+export type MediaItem = { id: number; url: string };
+
+
 export interface TapneRuntimeConfig {
   app_name: string;
   frontend_mode: string;
