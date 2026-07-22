@@ -295,6 +295,81 @@ let _devSettings: Record<string, unknown> = _loadDevSettings();
 export function resolveMockRequest(method: string, url: string, body?: unknown): unknown {
   const path = url.replace("/__devmock__", "").replace(/\?.*$/, "");
 
+  // ── Profile media (multipart) ──
+  // Simulated failure: any filename containing "fail" rejects the request so
+  // the UI's error/retry state can be exercised in the preview.
+  const mediaFile = (b: unknown): File | null => {
+    if (typeof FormData !== "undefined" && b instanceof FormData) {
+      const f = b.get("file");
+      return f instanceof File ? f : null;
+    }
+    return null;
+  };
+  const mediaRejection = (f: File | null) => {
+    if (!f) return mockError(400, { error: "No file provided" });
+    if (f.name.toLowerCase().includes("fail")) return mockError(500, { error: "Simulated upload failure" });
+    return null;
+  };
+
+  if (method === "POST" && path === "/accounts/me/avatar/") {
+    const file = mediaFile(body);
+    const rej = mediaRejection(file);
+    if (rej) return rej;
+    const item = { id: nextMediaId(), url: URL.createObjectURL(file!) };
+    if (_devUser) _devUser = { ..._devUser, avatar_id: item.id, avatar_url: item.url } as any;
+    return { avatar: item };
+  }
+  if (method === "DELETE" && /^\/accounts\/me\/avatar\/\d+\/$/.test(path)) {
+    const id = parseInt(path.split("/").filter(Boolean).slice(-1)[0]);
+    if (_devUser && (_devUser as any).avatar_id === id) {
+      _devUser = { ..._devUser, avatar_id: undefined, avatar_url: "" } as any;
+    }
+    return { ok: true };
+  }
+  if (method === "POST" && path === "/accounts/me/cover/") {
+    const file = mediaFile(body);
+    const rej = mediaRejection(file);
+    if (rej) return rej;
+    const item = { id: nextMediaId(), url: URL.createObjectURL(file!) };
+    if (_devUser) _devUser = { ..._devUser, cover_id: item.id, cover_photo_url: item.url } as any;
+    return { cover: item };
+  }
+  if (method === "DELETE" && /^\/accounts\/me\/cover\/\d+\/$/.test(path)) {
+    const id = parseInt(path.split("/").filter(Boolean).slice(-1)[0]);
+    if (_devUser && (_devUser as any).cover_id === id) {
+      _devUser = { ..._devUser, cover_id: undefined, cover_photo_url: "" } as any;
+    }
+    return { ok: true };
+  }
+  if (method === "POST" && path === "/accounts/me/gallery/") {
+    const file = mediaFile(body);
+    const rej = mediaRejection(file);
+    if (rej) return rej;
+    const cur: Array<{ id: number; url: string }> = ((_devUser as any)?.gallery_media) ?? [];
+    if (cur.length >= 12) return mockError(400, { error: "Gallery limit reached." });
+    const item = { id: nextMediaId(), url: URL.createObjectURL(file!) };
+    const next = [...cur, item];
+    if (_devUser) _devUser = { ..._devUser, gallery_media: next } as any;
+    return { item, gallery: next };
+  }
+  if (method === "DELETE" && /^\/accounts\/me\/gallery\/\d+\/$/.test(path)) {
+    const id = parseInt(path.split("/").filter(Boolean).slice(-1)[0]);
+    const cur: Array<{ id: number; url: string }> = ((_devUser as any)?.gallery_media) ?? [];
+    const next = cur.filter((x) => x.id !== id);
+    if (_devUser) _devUser = { ..._devUser, gallery_media: next } as any;
+    return { ok: true, gallery: next };
+  }
+  if (method === "POST" && path === "/accounts/me/gallery/reorder/") {
+    const ids = ((body as any)?.ids) as number[] | undefined;
+    if (!Array.isArray(ids)) return mockError(400, { error: "ids required" });
+    const cur: Array<{ id: number; url: string }> = ((_devUser as any)?.gallery_media) ?? [];
+    const byId = new Map(cur.map((x) => [x.id, x]));
+    const next = ids.map((id) => byId.get(id)).filter(Boolean) as Array<{ id: number; url: string }>;
+    if (next.length !== cur.length) return mockError(400, { error: "ids do not match current gallery" });
+    if (_devUser) _devUser = { ..._devUser, gallery_media: next } as any;
+    return { ok: true, gallery: next };
+  }
+
   // ── Settings ──
   if (path === "/settings/") {
     if (method === "GET") {
@@ -302,13 +377,14 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       return { ..._devSettings };
     }
     if (method === "PATCH" || method === "POST") {
-      if (body && typeof body === "object") {
+      if (body && typeof body === "object" && !(typeof FormData !== "undefined" && body instanceof FormData)) {
         _devSettings = { ..._devSettings, ...(body as Record<string, unknown>) };
         _saveDevSettings(_devSettings);
       }
       return { ok: true, ..._devSettings };
     }
   }
+
 
   // ── Reports ──
   // Report submissions are always acknowledged (a repeated report for the same
