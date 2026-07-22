@@ -24,7 +24,10 @@ import {
   Calendar, Sparkles, Heart, Clock, Globe, Instagram, Flag, Check, AlertCircle,
 } from "lucide-react";
 import ReportDialog from "@/components/ReportDialog";
-import { readFileAsDataUrl, useSavedField, validateImageFile } from "@/features/profile/useSavedField";
+import { useMediaSlot } from "@/features/profile/useMediaSlot";
+import { uploadAvatar, deleteAvatar } from "@/features/profile/media";
+import { validateImageFile } from "@/features/profile/useSavedField";
+import type { MediaItem } from "@/types/api";
 
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
