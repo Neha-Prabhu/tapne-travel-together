@@ -227,8 +227,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gallery_photos: p.gallery_photos ?? (updates as any).gallery_photos ?? store.user?.gallery_photos,
       });
       return data.profile;
-    } catch {
-      return null;
+    } catch (err) {
+      throw err;
     }
   }, []);
 
