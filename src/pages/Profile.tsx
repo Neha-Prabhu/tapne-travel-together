@@ -59,6 +59,7 @@ interface ProfileResponse {
     website: string;
     instagram_url?: string;
     avatar_url?: string;
+    avatar_id?: number;
     travel_tags?: string[];
     is_host?: boolean;
     member_since?: string;
