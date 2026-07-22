@@ -364,7 +364,6 @@ const ProfileEdit = () => {
                     >
                       <X className="h-4 w-4" />
                     </button>
-                    {avatarField.saving}
                     {coverField.saving && (
                       <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-xs text-foreground">
                         <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
