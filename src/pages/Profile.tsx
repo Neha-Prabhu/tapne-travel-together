@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -21,9 +21,10 @@ import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
   AlertTriangle, PauseCircle, UserPlus, UserCheck, CheckCircle2, Shield,
-  Calendar, Sparkles, Heart, Clock, Globe, Instagram, Flag,
+  Calendar, Sparkles, Heart, Clock, Globe, Instagram, Flag, Check, AlertCircle,
 } from "lucide-react";
 import ReportDialog from "@/components/ReportDialog";
+import { readFileAsDataUrl, useSavedField, validateImageFile } from "@/features/profile/useSavedField";
 
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
@@ -138,8 +139,12 @@ const Profile = () => {
   const [editBio, setEditBio] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
-  const [editAvatar, setEditAvatar] = useState<string | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+
+  const saveDialogAvatar = useCallback(async (v: string | null) => {
+    await updateProfile({ avatar: v ?? "" } as any);
+  }, [updateProfile]);
+  const avatarField = useSavedField<string | null>(null, { save: saveDialogAvatar });
 
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
