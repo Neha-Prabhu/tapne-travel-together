@@ -261,6 +261,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       resendSignupCode,
       logout,
       updateProfile,
+      setUserMedia,
       lastAuthError,
       clearAuthError: () => setLastAuthError(""),
       requireAuth,
