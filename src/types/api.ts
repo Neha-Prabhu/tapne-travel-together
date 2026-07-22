@@ -34,6 +34,10 @@ export interface TapneRuntimeConfig {
     blocks: string;
     trip_withdraw: string;
     reports?: string;
+    media_avatar?: string;
+    media_cover?: string;
+    media_gallery?: string;
+    media_gallery_reorder?: string;
 
     // Optional named dashboard locations — present only when backend exposes them.
     dashboard_trips?: string;
