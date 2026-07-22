@@ -38,6 +38,10 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     blocks: "/__devmock__/blocks/",
     trip_withdraw: "/__devmock__/trips/withdraw/",
     reports: "/__devmock__/reports/",
+    media_avatar: "/__devmock__/accounts/me/avatar/",
+    media_cover: "/__devmock__/accounts/me/cover/",
+    media_gallery: "/__devmock__/accounts/me/gallery/",
+    media_gallery_reorder: "/__devmock__/accounts/me/gallery/reorder/",
   },
 
   csrf: {
