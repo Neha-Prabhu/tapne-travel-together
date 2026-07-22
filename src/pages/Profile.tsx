@@ -226,21 +226,25 @@ const Profile = () => {
     setEditBio(p.bio);
     setEditLocation(p.location);
     setEditTags(p.travel_tags ?? []);
-    setAvatarPreview(p.avatar_url || null);
-    setEditAvatar(null);
+    avatarField.resetTo(p.avatar_url || null);
+    setAvatarUploadError(null);
     setEditOpen(true);
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEditAvatar(reader.result as string);
-      setAvatarPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setAvatarUploadError(err); toast.error(err); return; }
+    setAvatarUploadError(null);
+    try {
+      const url = await readFileAsDataUrl(file);
+      avatarField.setValue(url);
+    } catch {
+      const msg = "Could not read image file.";
+      setAvatarUploadError(msg); toast.error(msg);
+    }
   };
 
   const toggleTag = (tag: string) => {
@@ -249,30 +253,48 @@ const Profile = () => {
     );
   };
 
-  const saveEdit = async () => {
-    const updated = await updateProfile({
-      name: editName,
-      bio: editBio,
-      location: editLocation,
-      avatar: avatarPreview ?? undefined,
-      travel_tags: editTags,
+  // Reflect the latest confirmed avatar back into the visible profile card
+  // so refresh-independent state stays in sync as the queue confirms saves.
+  useEffect(() => {
+    if (!profileData || !p) return;
+    if (!isOwner) return;
+    const confirmedAvatar = avatarField.confirmed ?? undefined;
+    if ((p.avatar_url || undefined) === (confirmedAvatar || undefined)) return;
+    setProfileData({
+      ...profileData,
+      profile: { ...p, avatar_url: confirmedAvatar || "" },
     });
-    if (profileData && p) {
-      const next = updated || {};
-      setProfileData({
-        ...profileData,
-        profile: {
-          ...p,
-          display_name: next.display_name ?? editName,
-          bio: next.bio ?? editBio,
-          location: next.location ?? editLocation,
-          travel_tags: next.travel_tags ?? editTags,
-          avatar_url: next.avatar_url ?? avatarPreview ?? p.avatar_url,
-        },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarField.confirmed]);
+
+  const saveEdit = async () => {
+    try {
+      const updated = await updateProfile({
+        name: editName,
+        bio: editBio,
+        location: editLocation,
+        travel_tags: editTags,
       });
+      if (profileData && p) {
+        const next = updated || {};
+        setProfileData({
+          ...profileData,
+          profile: {
+            ...p,
+            display_name: next.display_name ?? editName,
+            bio: next.bio ?? editBio,
+            location: next.location ?? editLocation,
+            travel_tags: next.travel_tags ?? editTags,
+            avatar_url: avatarField.confirmed ?? p.avatar_url,
+          },
+        });
+      }
+      toast.success("Profile updated!");
+      setEditOpen(false);
+    } catch {
+      toast.error("Could not save profile.");
     }
-    toast.success("Profile updated!");
-    setEditOpen(false);
+
   };
 
   const handleBlock = async () => {
