@@ -951,7 +951,7 @@ const Profile = () => {
             <div className="flex flex-col items-center gap-2">
               <div className="relative">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={avatarField.value || undefined} />
+                  <AvatarImage src={avatarField.displayUrl || undefined} />
                   <AvatarFallback className="text-2xl bg-accent text-accent-foreground">
                     {editName?.[0]?.toUpperCase() ?? "?"}
                   </AvatarFallback>
