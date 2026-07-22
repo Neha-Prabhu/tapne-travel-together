@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -21,9 +21,10 @@ import {
   MapPin, Edit, Loader2, Star, MessageCircle, Compass,
   Award, Users, Image as ImageIcon, Camera, X, Settings,
   AlertTriangle, PauseCircle, UserPlus, UserCheck, CheckCircle2, Shield,
-  Calendar, Sparkles, Heart, Clock, Globe, Instagram, Flag,
+  Calendar, Sparkles, Heart, Clock, Globe, Instagram, Flag, Check, AlertCircle,
 } from "lucide-react";
 import ReportDialog from "@/components/ReportDialog";
+import { readFileAsDataUrl, useSavedField, validateImageFile } from "@/features/profile/useSavedField";
 
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
@@ -138,8 +139,12 @@ const Profile = () => {
   const [editBio, setEditBio] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
-  const [editAvatar, setEditAvatar] = useState<string | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+
+  const saveDialogAvatar = useCallback(async (v: string | null) => {
+    await updateProfile({ avatar: v ?? "" } as any);
+  }, [updateProfile]);
+  const avatarField = useSavedField<string | null>(null, { save: saveDialogAvatar });
 
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -221,21 +226,25 @@ const Profile = () => {
     setEditBio(p.bio);
     setEditLocation(p.location);
     setEditTags(p.travel_tags ?? []);
-    setAvatarPreview(p.avatar_url || null);
-    setEditAvatar(null);
+    avatarField.resetTo(p.avatar_url || null);
+    setAvatarUploadError(null);
     setEditOpen(true);
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEditAvatar(reader.result as string);
-      setAvatarPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { setAvatarUploadError(err); toast.error(err); return; }
+    setAvatarUploadError(null);
+    try {
+      const url = await readFileAsDataUrl(file);
+      avatarField.setValue(url);
+    } catch {
+      const msg = "Could not read image file.";
+      setAvatarUploadError(msg); toast.error(msg);
+    }
   };
 
   const toggleTag = (tag: string) => {
@@ -244,30 +253,48 @@ const Profile = () => {
     );
   };
 
-  const saveEdit = async () => {
-    const updated = await updateProfile({
-      name: editName,
-      bio: editBio,
-      location: editLocation,
-      avatar: avatarPreview ?? undefined,
-      travel_tags: editTags,
+  // Reflect the latest confirmed avatar back into the visible profile card
+  // so refresh-independent state stays in sync as the queue confirms saves.
+  useEffect(() => {
+    if (!profileData || !p) return;
+    if (!isOwner) return;
+    const confirmedAvatar = avatarField.confirmed ?? undefined;
+    if ((p.avatar_url || undefined) === (confirmedAvatar || undefined)) return;
+    setProfileData({
+      ...profileData,
+      profile: { ...p, avatar_url: confirmedAvatar || "" },
     });
-    if (profileData && p) {
-      const next = updated || {};
-      setProfileData({
-        ...profileData,
-        profile: {
-          ...p,
-          display_name: next.display_name ?? editName,
-          bio: next.bio ?? editBio,
-          location: next.location ?? editLocation,
-          travel_tags: next.travel_tags ?? editTags,
-          avatar_url: next.avatar_url ?? avatarPreview ?? p.avatar_url,
-        },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarField.confirmed]);
+
+  const saveEdit = async () => {
+    try {
+      const updated = await updateProfile({
+        name: editName,
+        bio: editBio,
+        location: editLocation,
+        travel_tags: editTags,
       });
+      if (profileData && p) {
+        const next = updated || {};
+        setProfileData({
+          ...profileData,
+          profile: {
+            ...p,
+            display_name: next.display_name ?? editName,
+            bio: next.bio ?? editBio,
+            location: next.location ?? editLocation,
+            travel_tags: next.travel_tags ?? editTags,
+            avatar_url: avatarField.confirmed ?? p.avatar_url,
+          },
+        });
+      }
+      toast.success("Profile updated!");
+      setEditOpen(false);
+    } catch {
+      toast.error("Could not save profile.");
     }
-    toast.success("Profile updated!");
-    setEditOpen(false);
+
   };
 
   const handleBlock = async () => {
@@ -911,22 +938,53 @@ const Profile = () => {
             <DialogDescription>Update your profile details below.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 pt-2">
-            {/* Avatar upload */}
-            <div className="flex flex-col items-center gap-3">
+            {/* Avatar upload — saves immediately, independent of Save Changes */}
+            <div className="flex flex-col items-center gap-2">
               <div className="relative">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={avatarPreview || undefined} />
+                  <AvatarImage src={avatarField.value || undefined} />
                   <AvatarFallback className="text-2xl bg-accent text-accent-foreground">
                     {editName?.[0]?.toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
-                <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90">
-                  <Camera className="h-3.5 w-3.5" />
-                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                <label className={cn(
+                  "absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90",
+                  avatarField.saving && "pointer-events-none opacity-70",
+                )}>
+                  {avatarField.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={avatarField.saving}
+                  />
                 </label>
               </div>
-              <p className="text-xs text-muted-foreground">Click camera to change photo</p>
+              {avatarField.status === "saving" && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Uploading photo…
+                </span>
+              )}
+              {avatarField.status === "saved" && (
+                <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
+                  <Check className="h-3 w-3" /> Photo saved
+                </span>
+              )}
+              {avatarField.status === "error" && (
+                <span className="inline-flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3" /> {avatarField.error || "Upload failed"}
+                  <button type="button" onClick={avatarField.retry} className="ml-1 underline">Retry</button>
+                </span>
+              )}
+              {avatarField.status === "idle" && (
+                <p className="text-xs text-muted-foreground">Click camera to change photo (JPEG, PNG, or WebP, up to 2 MB)</p>
+              )}
+              {avatarUploadError && avatarField.status !== "error" && (
+                <span className="text-xs text-destructive">{avatarUploadError}</span>
+              )}
             </div>
+
 
             {/* Editable fields */}
             <div>
