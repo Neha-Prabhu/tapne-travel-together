@@ -131,7 +131,7 @@ function parseInstagramHandle(url?: string | null): string | null {
 const Profile = () => {
   const { profileId: profileIdParam } = useParams<{ profileId: string }>();
   const userId = profileIdParam;
-  const { user, isAuthenticated, updateProfile, requireAuth, logout } = useAuth();
+  const { user, isAuthenticated, updateProfile, requireAuth, logout, setUserMedia } = useAuth();
   const navigate = useNavigate();
 
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
