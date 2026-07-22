@@ -146,6 +146,13 @@ const _suspendedUsers = new Set<string>(["ravi_kumar"]);
 const _submittedReports = new Set<string>();
 const _tripParticipation = new Map<number, "pending" | "approved">();
 
+// ── Profile media state (dev-only, in-memory) ──
+// Real backend persists this row-per-item; here we simulate with numeric IDs
+// and blob URLs so the browser never round-trips base64 for media.
+let _mediaIdSeq = 10_000;
+function nextMediaId() { return ++_mediaIdSeq; }
+
+
 
 // Pending signup verification (dev-only in-memory).
 interface PendingSignup { name: string; email: string; password: string; code: string; expiresAt: number; attempts: number; }
