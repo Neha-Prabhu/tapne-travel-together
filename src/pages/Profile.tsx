@@ -145,10 +145,17 @@ const Profile = () => {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
 
-  const saveDialogAvatar = useCallback(async (v: string | null) => {
-    await updateProfile({ avatar: v ?? "" } as any);
-  }, [updateProfile]);
-  const avatarField = useSavedField<string | null>(null, { save: saveDialogAvatar });
+  const avatarField = useMediaSlot({
+    upload: uploadAvatar,
+    remove: deleteAvatar,
+    initial: null,
+    onConfirmed: (item) => {
+      setUserMedia({
+        avatar: item?.url || "",
+        avatar_id: item?.id,
+      } as any);
+    },
+  });
 
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
