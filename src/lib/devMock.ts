@@ -1028,15 +1028,28 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     ] : [];
     const reviewDistribution = isHost ? { "5": 70, "4": 20, "3": 5, "2": 3, "1": 2 } : { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
 
-    const isComplete = !!(overlay.avatar_url || mu?.avatar) && !!(su.bio || mu?.bio) && !!(su.location || mu?.location) && (overlay.gallery_photos?.length ?? mockGallery.length) > 0;
+    // Media rendering: prefer per-item entries with stable IDs. Fall back to
+    // legacy string arrays only when the media state hasn't been touched yet.
+    const overlayGalleryMedia: Array<{ id: number; url: string }> | undefined = overlay.gallery_media;
+    const seededGalleryMedia: Array<{ id: number; url: string }> = isHost
+      ? mockGallery.map((url, i) => ({ id: 5000 + i, url }))
+      : [];
+    const effectiveGalleryMedia = overlayGalleryMedia ?? seededGalleryMedia;
+    const effectiveGalleryUrls = effectiveGalleryMedia.map((m) => m.url);
+    const effectiveAvatarUrl = overlay.avatar_url ?? mu?.avatar;
+    const effectiveAvatarId: number | undefined = overlay.avatar_id;
+    const effectiveCoverUrl = overlay.cover_photo_url ?? (isHost
+      ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80"
+      : undefined);
+    const effectiveCoverId: number | undefined = overlay.cover_id;
+
+    const isComplete = !!effectiveAvatarUrl && !!(su.bio || mu?.bio) && !!(su.location || mu?.location) && effectiveGalleryUrls.length > 0;
     const missingFields: string[] = [];
-    if (!(overlay.avatar_url || mu?.avatar)) missingFields.push("avatar");
+    if (!effectiveAvatarUrl) missingFields.push("avatar");
     if (!(su.bio || mu?.bio)) missingFields.push("bio");
     if (!(su.location || mu?.location)) missingFields.push("location");
-    const effectiveCover = overlay.cover_photo_url ?? (isHost ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80" : undefined);
-    const effectiveGallery = overlay.gallery_photos ?? (isHost ? mockGallery : []);
-    if (isHost && !effectiveCover) missingFields.push("cover_photo");
-    if (isHost && !(effectiveGallery?.length)) missingFields.push("gallery_photos");
+    if (isHost && !effectiveCoverUrl) missingFields.push("cover_photo");
+    if (isHost && !effectiveGalleryUrls.length) missingFields.push("gallery_photos");
 
     return {
       profile: {
@@ -1046,12 +1059,15 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         bio: su.bio || mu?.bio || "",
         location: su.location || mu?.location || "",
         website: su.website,
-        avatar_url: overlay.avatar_url ?? mu?.avatar,
+        avatar_url: effectiveAvatarUrl,
+        avatar_id: effectiveAvatarId,
         travel_tags: overlay.travel_tags ?? ["Mountains", "Backpacking", "Culture", "Photography"],
         is_host: isHost,
         member_since: "2024-03-15",
-        cover_photo_url: overlay.cover_photo_url ?? (isHost ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80" : undefined),
-        gallery_photos: overlay.gallery_photos ?? (isHost ? mockGallery : []),
+        cover_photo_url: effectiveCoverUrl,
+        cover_id: effectiveCoverId,
+        gallery_photos: effectiveGalleryUrls,
+        gallery_media: effectiveGalleryMedia,
         average_rating: isHost ? 4.6 : undefined,
         reviews_count: isHost ? reviewsReceived.length : 0,
         trips_hosted: hostedTrips.length,
@@ -1074,7 +1090,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       trips_hosted: hostedTrips,
       trips_joined: joinedTrips,
       reviews: isHost ? reviewsReceived.map((r: any) => ({ id: r.id, reviewer_name: r.author_display_name, reviewer_avatar: r.author_avatar_url, rating: r.rating, text: r.body, trip_title: r.trip_title, created_at: r.created_at })) : [],
-      gallery: isHost ? mockGallery : [],
+      gallery: effectiveGalleryUrls,
       stories: userStories,
     };
   }
@@ -1086,15 +1102,16 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   if (method === "PATCH" && path === "/accounts/me/") {
     const b = body as any;
+    // Text-only PATCH. Media fields are ignored here — clients must use the
+    // dedicated multipart media endpoints. If a client accidentally includes
+    // avatar/cover/gallery bytes they will be silently dropped.
     if (_devUser) {
       if (b?.display_name) _devUser = { ..._devUser, display_name: b.display_name };
       if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
       if (b?.location !== undefined) _devUser = { ..._devUser, location: b.location };
       if (b?.website !== undefined) _devUser = { ..._devUser, website: b.website };
+      if (b?.instagram_url !== undefined) _devUser = { ..._devUser, instagram_url: b.instagram_url } as any;
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
-      if (b?.avatar_url !== undefined) _devUser = { ..._devUser, avatar_url: b.avatar_url } as any;
-      if (b?.cover_photo_url !== undefined) _devUser = { ..._devUser, cover_photo_url: b.cover_photo_url } as any;
-      if (b?.gallery_photos !== undefined) _devUser = { ..._devUser, gallery_photos: b.gallery_photos } as any;
     }
     const u: any = _devUser || {};
     return {
@@ -1104,13 +1121,18 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         bio: u.bio,
         location: u.location,
         website: u.website,
-        avatar_url: u.avatar_url,
+        instagram_url: u.instagram_url,
         travel_tags: u.travel_tags,
+        avatar_url: u.avatar_url,
+        avatar_id: u.avatar_id,
         cover_photo_url: u.cover_photo_url,
-        gallery_photos: u.gallery_photos,
+        cover_id: u.cover_id,
+        gallery_photos: Array.isArray(u.gallery_media) ? u.gallery_media.map((x: any) => x.url) : undefined,
+        gallery_media: u.gallery_media,
       },
     };
   }
+
 
   // ── Hosting inbox ──
   if (method === "GET" && path.startsWith("/hosting/inbox")) {
