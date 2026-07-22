@@ -79,3 +79,23 @@ export async function apiDelete(url: string): Promise<void> {
     throw e;
   }
 }
+
+// Multipart file upload (POST). Never JSON-encodes the body — the FormData
+// serializes as `multipart/form-data` and browser sets the boundary header.
+export async function apiUpload<T>(url: string, formData: FormData): Promise<T> {
+  if (IS_DEV_MODE) return unwrapMock<T>(resolveMockRequest("POST", url, formData));
+  const c = cfg();
+  const cookieName = c.csrf.cookie_name;
+  let token = c.csrf.token;
+  const raw = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(cookieName + "="));
+  if (raw) token = decodeURIComponent(raw.split("=")[1] || "") || token;
+  const res = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { [c.csrf.header_name]: token },
+    body: formData,
+  });
+  return unwrapReal(res);
+}
