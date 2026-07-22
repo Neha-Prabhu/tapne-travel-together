@@ -203,16 +203,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateProfile = useCallback(async (updates: Partial<User>) => {
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
+      // Text-only fields. Profile media (avatar, cover, gallery) is persisted
+      // through dedicated multipart endpoints — never sent as part of this
+      // JSON PATCH.
       const payload: Record<string, unknown> = {};
       if (updates.name !== undefined) payload.display_name = updates.name;
       if (updates.bio !== undefined) payload.bio = updates.bio;
       if (updates.location !== undefined) payload.location = updates.location;
       if (updates.website !== undefined) payload.website = updates.website;
       if ((updates as any).instagram_url !== undefined) payload.instagram_url = (updates as any).instagram_url;
-      if (updates.avatar !== undefined) payload.avatar_url = updates.avatar;
       if (updates.travel_tags !== undefined) payload.travel_tags = updates.travel_tags;
-      if ((updates as any).cover_photo_url !== undefined) payload.cover_photo_url = (updates as any).cover_photo_url;
-      if ((updates as any).gallery_photos !== undefined) payload.gallery_photos = (updates as any).gallery_photos;
       const data = await apiPatch<{ profile: any }>(cfg.api.profile_me, payload);
       const p = data.profile || {};
       store.updateUser({
@@ -221,16 +221,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         location: p.location ?? updates.location ?? store.user?.location,
         website: p.website ?? updates.website ?? store.user?.website,
         instagram_url: p.instagram_url ?? (updates as any).instagram_url ?? (store.user as any)?.instagram_url,
-        avatar: p.avatar_url ?? updates.avatar ?? store.user?.avatar,
         travel_tags: p.travel_tags ?? updates.travel_tags ?? store.user?.travel_tags,
-        cover_photo_url: p.cover_photo_url ?? (updates as any).cover_photo_url ?? store.user?.cover_photo_url,
-        gallery_photos: p.gallery_photos ?? (updates as any).gallery_photos ?? store.user?.gallery_photos,
       });
       return data.profile;
     } catch (err) {
       throw err;
     }
   }, []);
+
+  const setUserMedia = useCallback((patch: Partial<Pick<User, "avatar" | "avatar_id" | "cover_photo_url" | "cover_id" | "gallery_media" | "gallery_photos">>) => {
+    store.updateUser(patch);
+  }, []);
+
+
 
   const requireAuth = useCallback((onSuccess?: () => void) => {
     if (user) {
