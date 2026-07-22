@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -13,32 +13,34 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
   Loader2, Save, Eye, ArrowLeft, Camera, ImagePlus, X, ArrowUp, ArrowDown,
-  Lightbulb, ChevronLeft, ChevronRight, Check, AlertCircle,
+  Lightbulb, ChevronLeft, ChevronRight, Check, AlertCircle, RotateCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { validateImageFile } from "@/features/profile/useSavedField";
+import { useMediaSlot, type MediaSlotStatus } from "@/features/profile/useMediaSlot";
+import { useGalleryMedia } from "@/features/profile/useGalleryMedia";
+import type { MediaItem } from "@/types/api";
 import {
-  readFileAsDataUrl,
-  useSavedField,
-  validateImageFile,
-  type FieldStatus,
-} from "@/features/profile/useSavedField";
+  uploadAvatar, deleteAvatar,
+  uploadCover, deleteCover,
+  uploadGalleryPhoto, deleteGalleryPhoto, reorderGallery,
+} from "@/features/profile/media";
 
 const TRAVEL_TAGS = ["Backpacking", "Culture", "Trek", "Social", "Workation", "Beach", "Mountains", "Photography", "Food", "Wellness", "Adventure", "Road Trip", "Solo", "Luxury", "Budget"];
 const GALLERY_LIMIT = 12;
 
-const arraysEqual = (a: string[], b: string[]) =>
-  a.length === b.length && a.every((v, i) => v === b[i]);
-
-function StatusPill({ status, error, onRetry, label }: {
-  status: FieldStatus;
+function MediaStatusPill({ status, error, onRetry, label, uploadingLabel = "Saving" }: {
+  status: MediaSlotStatus;
   error: string | null;
   onRetry: () => void;
   label: string;
+  uploadingLabel?: string;
 }) {
-  if (status === "saving") {
+  if (status === "uploading" || status === "removing") {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        <Loader2 className="h-3 w-3 animate-spin" /> Saving {label}…
+        <Loader2 className="h-3 w-3 animate-spin" />
+        {status === "removing" ? "Removing" : uploadingLabel} {label}…
       </span>
     );
   }
@@ -61,7 +63,7 @@ function StatusPill({ status, error, onRetry, label }: {
 }
 
 const ProfileEdit = () => {
-  const { user, isAuthenticated, requireAuth, updateProfile } = useAuth();
+  const { user, isAuthenticated, requireAuth, updateProfile, setUserMedia } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const isPreview = searchParams.get("mode") === "preview";
@@ -99,20 +101,30 @@ const ProfileEdit = () => {
   const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // ── Media fields (each saves itself immediately) ──
-  const saveAvatar = useCallback(async (v: string | null) => {
-    await updateProfile({ avatar: v ?? "" } as any);
-  }, [updateProfile]);
-  const saveCover = useCallback(async (v: string | null) => {
-    await updateProfile({ cover_photo_url: v ?? "" } as any);
-  }, [updateProfile]);
-  const saveGallery = useCallback(async (v: string[]) => {
-    await updateProfile({ gallery_photos: v } as any);
-  }, [updateProfile]);
-
-  const avatarField = useSavedField<string | null>(null, { save: saveAvatar });
-  const coverField = useSavedField<string | null>(null, { save: saveCover });
-  const galleryField = useSavedField<string[]>([], { save: saveGallery, isEqual: arraysEqual });
+  // ── Media fields (each saves itself immediately via multipart) ──
+  const avatarField = useMediaSlot({
+    upload: uploadAvatar,
+    remove: deleteAvatar,
+    initial: null,
+    onConfirmed: (item) => setUserMedia({ avatar: item?.url || "", avatar_id: item?.id } as any),
+  });
+  const coverField = useMediaSlot({
+    upload: uploadCover,
+    remove: deleteCover,
+    initial: null,
+    onConfirmed: (item) => setUserMedia({ cover_photo_url: item?.url || "", cover_id: item?.id } as any),
+  });
+  const gallery = useGalleryMedia({
+    uploadOne: uploadGalleryPhoto,
+    removeOne: deleteGalleryPhoto,
+    reorder: reorderGallery,
+    initial: [],
+    limit: GALLERY_LIMIT,
+    onItemsChange: (items) => setUserMedia({
+      gallery_media: items,
+      gallery_photos: items.map((i) => i.url),
+    } as any),
+  });
 
   const hydratedRef = useRef(false);
   useEffect(() => {
@@ -124,10 +136,16 @@ const ProfileEdit = () => {
     setWebsite((user as any).website || "");
     setInstagramUrl((user as any).instagram_url || "");
     setTags((user as any).travel_tags || []);
-    avatarField.resetTo(user.avatar || null);
-    coverField.resetTo((user as any).cover_photo_url || null);
-    galleryField.resetTo((user as any).gallery_photos || []);
-  }, [user, avatarField, coverField, galleryField]);
+    const u: any = user;
+    avatarField.resetTo(u.avatar_id && u.avatar ? { id: u.avatar_id, url: u.avatar } : null);
+    coverField.resetTo(u.cover_id && u.cover_photo_url ? { id: u.cover_id, url: u.cover_photo_url } : null);
+    const seededGallery: MediaItem[] = Array.isArray(u.gallery_media) && u.gallery_media.length
+      ? u.gallery_media
+      : Array.isArray(u.gallery_photos)
+        ? u.gallery_photos.map((url: string, i: number) => ({ id: -1 - i, url }))
+        : [];
+    gallery.resetTo(seededGallery.filter((m) => m.id > 0));
+  }, [user, avatarField, coverField, gallery]);
 
   const bioRef = useRef<HTMLTextAreaElement>(null);
   const locationRef = useRef<HTMLInputElement>(null);
@@ -156,96 +174,47 @@ const ProfileEdit = () => {
   const toggleTag = (t: string) => setTags(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
 
   // ── Media handlers ──
-  const pickSingle = useCallback(async (
-    file: File,
-    apply: (dataUrl: string) => void,
-  ) => {
+  const pickSingle = useCallback((file: File, apply: (f: File) => void) => {
     const err = validateImageFile(file);
     if (err) { setUploadError(err); toast.error(err); return; }
     setUploadError(null);
-    try {
-      const url = await readFileAsDataUrl(file);
-      apply(url);
-    } catch {
-      const msg = "Could not read image file.";
-      setUploadError(msg); toast.error(msg);
-    }
+    apply(file);
   }, []);
 
-  const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
-    await pickSingle(f, (url) => avatarField.setValue(url));
+    pickSingle(f, (file) => avatarField.uploadFile(file));
   };
-  const handleCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCover = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
-    await pickSingle(f, (url) => coverField.setValue(url));
+    pickSingle(f, (file) => coverField.uploadFile(file));
   };
-  const handleGalleryAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = "";
     if (picked.length === 0) return;
-
-    const capacity = GALLERY_LIMIT - galleryField.value.length;
-    if (capacity <= 0) {
-      const msg = `Gallery already has ${GALLERY_LIMIT} photos.`;
-      setUploadError(msg); toast.error(msg); return;
-    }
 
     const accepted: File[] = [];
     const rejected: string[] = [];
     for (const f of picked) {
       const err = validateImageFile(f);
       if (err) { rejected.push(err); continue; }
-      if (accepted.length >= capacity) {
-        rejected.push(`${f.name}: gallery limit of ${GALLERY_LIMIT} reached.`);
-        continue;
-      }
       accepted.push(f);
     }
     if (rejected.length) {
-      const msg = rejected.join(" ");
-      setUploadError(msg);
+      setUploadError(rejected.join(" "));
       toast.error(rejected[0]);
     } else {
       setUploadError(null);
     }
     if (accepted.length === 0) return;
-
-    // Read one file at a time and enqueue after each successful read so
-    // partial batches persist even if a later file fails to read.
-    const existing = new Set(galleryField.value);
-    const nextBatch: string[] = [];
-    for (const f of accepted) {
-      try {
-        const url = await readFileAsDataUrl(f);
-        if (existing.has(url)) continue; // never create duplicate tiles
-        existing.add(url);
-        nextBatch.push(url);
-      } catch {
-        toast.error(`${f.name}: could not be read.`);
-      }
+    const { rejected: overCapacity } = gallery.addFiles(accepted);
+    if (overCapacity > 0) {
+      const msg = `${overCapacity} photo${overCapacity === 1 ? "" : "s"} skipped — gallery limit is ${GALLERY_LIMIT}.`;
+      setUploadError(msg);
+      toast.error(msg);
     }
-    if (nextBatch.length === 0) return;
-    galleryField.setValue([...galleryField.value, ...nextBatch]);
   };
-
-  const removeGallery = (i: number) => {
-    if (galleryField.saving) return;
-    galleryField.setValue(galleryField.value.filter((_, idx) => idx !== i));
-  };
-  const moveGallery = (i: number, dir: -1 | 1) => {
-    if (galleryField.saving) return;
-    const next = [...galleryField.value];
-    const j = i + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[i], next[j]] = [next[j], next[i]];
-    galleryField.setValue(next);
-  };
-
-  const confirmedGallerySet = useMemo(
-    () => new Set(galleryField.confirmed),
-    [galleryField.confirmed],
-  );
 
   const handleSave = async () => {
     setSaving(true);
@@ -282,7 +251,7 @@ const ProfileEdit = () => {
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
           <div className="flex items-start gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={avatarField.confirmed || undefined} />
+              <AvatarImage src={avatarField.confirmed?.url || undefined} />
               <AvatarFallback>{name[0]?.toUpperCase() || "?"}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -354,18 +323,25 @@ const ProfileEdit = () => {
             {/* Avatar */}
             <div ref={avatarRef} className={cn("flex items-center gap-4 rounded-lg p-2 -m-2 transition-all", focused("avatar") && "ring-2 ring-primary/60 bg-primary/5")}>
               <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarField.value || undefined} />
+                <AvatarImage src={avatarField.displayUrl || undefined} />
                 <AvatarFallback className="text-2xl bg-accent text-accent-foreground">{name[0]?.toUpperCase() || "?"}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-1.5">
-                <label className={cn(
-                  "inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-muted",
-                  avatarField.saving && "pointer-events-none opacity-60",
-                )}>
-                  <Camera className="h-4 w-4" /> {avatarField.value ? "Change photo" : "Upload photo"}
-                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatar} disabled={avatarField.saving} />
-                </label>
-                <StatusPill status={avatarField.status} error={avatarField.error} onRetry={avatarField.retry} label="photo" />
+                <div className="flex items-center gap-2">
+                  <label className={cn(
+                    "inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:bg-muted",
+                    avatarField.saving && "pointer-events-none opacity-60",
+                  )}>
+                    <Camera className="h-4 w-4" /> {avatarField.confirmed ? "Change photo" : "Upload photo"}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatar} disabled={avatarField.saving} />
+                  </label>
+                  {avatarField.confirmed && !avatarField.saving && (
+                    <Button variant="ghost" size="sm" onClick={avatarField.removeItem}>
+                      <X className="mr-1 h-3.5 w-3.5" />Remove
+                    </Button>
+                  )}
+                </div>
+                <MediaStatusPill status={avatarField.status} error={avatarField.error} onRetry={avatarField.retry} label="photo" uploadingLabel="Uploading" />
               </div>
             </div>
 
@@ -373,24 +349,26 @@ const ProfileEdit = () => {
             <div ref={coverRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("cover_photo") && "ring-2 ring-primary/60 bg-primary/5")}>
               <div className="flex items-center justify-between">
                 <Label>Cover photo</Label>
-                <StatusPill status={coverField.status} error={coverField.error} onRetry={coverField.retry} label="cover" />
+                <MediaStatusPill status={coverField.status} error={coverField.error} onRetry={coverField.retry} label="cover" uploadingLabel="Uploading" />
               </div>
               <div className="relative h-40 w-full overflow-hidden rounded-lg border bg-muted">
-                {coverField.value ? (
+                {coverField.displayUrl ? (
                   <>
-                    <img src={coverField.value} alt="" className="h-full w-full object-cover" />
+                    <img src={coverField.displayUrl} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => coverField.setValue(null)}
+                      onClick={coverField.removeItem}
                       disabled={coverField.saving}
                       className="absolute right-2 top-2 rounded-full bg-background/90 p-1 shadow disabled:opacity-50"
                       aria-label="Remove cover photo"
                     >
                       <X className="h-4 w-4" />
                     </button>
+                    {avatarField.saving}
                     {coverField.saving && (
                       <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-xs text-foreground">
-                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Uploading…
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        {coverField.status === "removing" ? "Removing…" : "Uploading…"}
                       </div>
                     )}
                   </>
@@ -404,7 +382,7 @@ const ProfileEdit = () => {
                   </label>
                 )}
               </div>
-              {coverField.value && (
+              {coverField.displayUrl && (
                 <label className={cn(
                   "inline-flex cursor-pointer items-center gap-2 text-xs text-primary hover:underline",
                   coverField.saving && "pointer-events-none opacity-60",
@@ -445,25 +423,41 @@ const ProfileEdit = () => {
             <div ref={galleryRef} className={cn("space-y-2 rounded-lg p-2 -m-2", focused("gallery_photos") && "ring-2 ring-primary/60 bg-primary/5")}>
               <div className="flex items-center justify-between">
                 <Label>Gallery photos</Label>
-                <StatusPill status={galleryField.status} error={galleryField.error} onRetry={galleryField.retry} label="gallery" />
+                {gallery.reorderStatus === "saving" && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Saving order…
+                  </span>
+                )}
+                {gallery.reorderStatus === "saved" && (
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
+                    <Check className="h-3 w-3" /> Order saved
+                  </span>
+                )}
+                {gallery.reorderStatus === "error" && (
+                  <span className="inline-flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {gallery.reorderError || "Reorder failed"}
+                    <button type="button" onClick={gallery.retryReorder} className="ml-1 underline">Retry</button>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 Up to {GALLERY_LIMIT} photos. JPEG, PNG, or WebP up to 2 MB each.
               </p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {galleryField.value.map((url, i) => {
-                  const isPending = !confirmedGallerySet.has(url);
+                {gallery.items.map((item, i) => {
                   const isFirst = i === 0;
-                  const isLast = i === galleryField.value.length - 1;
-                  const disabled = galleryField.saving;
+                  const isLast = i === gallery.items.length - 1;
+                  const removal = gallery.removals[item.id];
+                  const isRemoving = removal?.status === "removing";
+                  const removeErr = removal?.status === "error";
                   return (
-                    <div key={`${i}-${url.slice(-16)}`} className="relative aspect-square overflow-hidden rounded-md border bg-muted">
-                      <img src={url} alt="" className="h-full w-full object-cover" />
+                    <div key={item.id} className="relative aspect-square overflow-hidden rounded-md border bg-muted">
+                      <img src={item.url} alt="" className="h-full w-full object-cover" />
                       <div className="absolute inset-x-0 top-0 flex justify-end p-1">
                         <button
                           type="button"
-                          onClick={() => removeGallery(i)}
-                          disabled={disabled}
+                          onClick={() => gallery.remove(item.id)}
+                          disabled={isRemoving}
                           className="rounded-full bg-background/90 p-1 shadow-sm disabled:opacity-50"
                           aria-label="Remove photo"
                         >
@@ -473,8 +467,8 @@ const ProfileEdit = () => {
                       <div className="absolute inset-x-0 bottom-0 flex justify-between p-1">
                         <button
                           type="button"
-                          onClick={() => moveGallery(i, -1)}
-                          disabled={disabled || isFirst}
+                          onClick={() => gallery.move(item.id, -1)}
+                          disabled={isFirst || isRemoving}
                           className={cn(
                             "rounded-full bg-background/90 p-1 shadow-sm disabled:opacity-30",
                             isFirst && "invisible",
@@ -485,8 +479,8 @@ const ProfileEdit = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => moveGallery(i, 1)}
-                          disabled={disabled || isLast}
+                          onClick={() => gallery.move(item.id, 1)}
+                          disabled={isLast || isRemoving}
                           className={cn(
                             "rounded-full bg-background/90 p-1 shadow-sm disabled:opacity-30",
                             isLast && "invisible",
@@ -496,19 +490,46 @@ const ProfileEdit = () => {
                           <ArrowDown className="h-3 w-3" />
                         </button>
                       </div>
-                      {isPending && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-[10px] font-medium text-foreground">
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Uploading
+                      {isRemoving && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-background/50 text-[10px] font-medium text-foreground">
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Removing
+                        </div>
+                      )}
+                      {removeErr && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-destructive/20 text-[10px] font-medium text-destructive">
+                          <span>{removal?.error || "Remove failed"}</span>
+                          <button type="button" onClick={() => gallery.retryRemove(item.id)} className="inline-flex items-center gap-1 underline">
+                            <RotateCw className="h-3 w-3" />Retry
+                          </button>
                         </div>
                       )}
                     </div>
                   );
                 })}
-                {galleryField.value.length < GALLERY_LIMIT && (
-                  <label className={cn(
-                    "flex aspect-square cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/30 text-xs text-muted-foreground hover:bg-muted/40",
-                    galleryField.saving && "pointer-events-none opacity-60",
-                  )}>
+                {gallery.pending.map((p) => (
+                  <div key={p.tempId} className="relative aspect-square overflow-hidden rounded-md border bg-muted">
+                    <img src={p.previewUrl} alt="" className="h-full w-full object-cover opacity-70" />
+                    {p.status === "uploading" ? (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/40 text-[10px] font-medium text-foreground">
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Uploading
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-destructive/20 text-[10px] font-medium text-destructive">
+                        <span>{p.error || "Upload failed"}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button type="button" onClick={() => gallery.retryUpload(p.tempId)} className="inline-flex items-center gap-1 underline">
+                            <RotateCw className="h-3 w-3" />Retry
+                          </button>
+                          <button type="button" onClick={() => gallery.cancelPending(p.tempId)} className="inline-flex items-center gap-1 underline">
+                            <X className="h-3 w-3" />Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {gallery.canAddMore && (
+                  <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/30 text-xs text-muted-foreground hover:bg-muted/40">
                     <ImagePlus className="mb-1 h-5 w-5" />
                     Add
                     <input
@@ -517,7 +538,6 @@ const ProfileEdit = () => {
                       multiple
                       className="hidden"
                       onChange={handleGalleryAdd}
-                      disabled={galleryField.saving}
                     />
                   </label>
                 )}
