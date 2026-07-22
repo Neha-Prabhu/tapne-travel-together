@@ -970,7 +970,7 @@ const Profile = () => {
                   />
                 </label>
               </div>
-              {avatarField.status === "saving" && (
+              {avatarField.saving && (
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" /> Uploading photo…
                 </span>
