@@ -24,7 +24,10 @@ import {
   Calendar, Sparkles, Heart, Clock, Globe, Instagram, Flag, Check, AlertCircle,
 } from "lucide-react";
 import ReportDialog from "@/components/ReportDialog";
-import { readFileAsDataUrl, useSavedField, validateImageFile } from "@/features/profile/useSavedField";
+import { useMediaSlot } from "@/features/profile/useMediaSlot";
+import { uploadAvatar, deleteAvatar } from "@/features/profile/media";
+import { validateImageFile } from "@/features/profile/useSavedField";
+import type { MediaItem } from "@/types/api";
 
 import { cn } from "@/lib/utils";
 import { apiPost, apiDelete } from "@/lib/api";
@@ -56,6 +59,7 @@ interface ProfileResponse {
     website: string;
     instagram_url?: string;
     avatar_url?: string;
+    avatar_id?: number;
     travel_tags?: string[];
     is_host?: boolean;
     member_since?: string;
@@ -127,7 +131,7 @@ function parseInstagramHandle(url?: string | null): string | null {
 const Profile = () => {
   const { profileId: profileIdParam } = useParams<{ profileId: string }>();
   const userId = profileIdParam;
-  const { user, isAuthenticated, updateProfile, requireAuth, logout } = useAuth();
+  const { user, isAuthenticated, updateProfile, requireAuth, logout, setUserMedia } = useAuth();
   const navigate = useNavigate();
 
   const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
@@ -141,10 +145,17 @@ const Profile = () => {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
 
-  const saveDialogAvatar = useCallback(async (v: string | null) => {
-    await updateProfile({ avatar: v ?? "" } as any);
-  }, [updateProfile]);
-  const avatarField = useSavedField<string | null>(null, { save: saveDialogAvatar });
+  const avatarField = useMediaSlot({
+    upload: uploadAvatar,
+    remove: deleteAvatar,
+    initial: null,
+    onConfirmed: (item) => {
+      setUserMedia({
+        avatar: item?.url || "",
+        avatar_id: item?.id,
+      } as any);
+    },
+  });
 
   // Account management dialogs
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -226,25 +237,21 @@ const Profile = () => {
     setEditBio(p.bio);
     setEditLocation(p.location);
     setEditTags(p.travel_tags ?? []);
-    avatarField.resetTo(p.avatar_url || null);
+    avatarField.resetTo(
+      p.avatar_id && p.avatar_url ? { id: p.avatar_id, url: p.avatar_url } : null,
+    );
     setAvatarUploadError(null);
     setEditOpen(true);
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     const err = validateImageFile(file);
     if (err) { setAvatarUploadError(err); toast.error(err); return; }
     setAvatarUploadError(null);
-    try {
-      const url = await readFileAsDataUrl(file);
-      avatarField.setValue(url);
-    } catch {
-      const msg = "Could not read image file.";
-      setAvatarUploadError(msg); toast.error(msg);
-    }
+    avatarField.uploadFile(file);
   };
 
   const toggleTag = (tag: string) => {
@@ -258,11 +265,12 @@ const Profile = () => {
   useEffect(() => {
     if (!profileData || !p) return;
     if (!isOwner) return;
-    const confirmedAvatar = avatarField.confirmed ?? undefined;
-    if ((p.avatar_url || undefined) === (confirmedAvatar || undefined)) return;
+    const confirmedUrl = avatarField.confirmed?.url;
+    const confirmedId = avatarField.confirmed?.id;
+    if ((p.avatar_url || undefined) === (confirmedUrl || undefined) && p.avatar_id === confirmedId) return;
     setProfileData({
       ...profileData,
-      profile: { ...p, avatar_url: confirmedAvatar || "" },
+      profile: { ...p, avatar_url: confirmedUrl || "", avatar_id: confirmedId },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarField.confirmed]);
@@ -285,7 +293,8 @@ const Profile = () => {
             bio: next.bio ?? editBio,
             location: next.location ?? editLocation,
             travel_tags: next.travel_tags ?? editTags,
-            avatar_url: avatarField.confirmed ?? p.avatar_url,
+            avatar_url: avatarField.confirmed?.url ?? p.avatar_url,
+            avatar_id: avatarField.confirmed?.id ?? p.avatar_id,
           },
         });
       }
@@ -942,7 +951,7 @@ const Profile = () => {
             <div className="flex flex-col items-center gap-2">
               <div className="relative">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={avatarField.value || undefined} />
+                  <AvatarImage src={avatarField.displayUrl || undefined} />
                   <AvatarFallback className="text-2xl bg-accent text-accent-foreground">
                     {editName?.[0]?.toUpperCase() ?? "?"}
                   </AvatarFallback>
@@ -961,7 +970,7 @@ const Profile = () => {
                   />
                 </label>
               </div>
-              {avatarField.status === "saving" && (
+              {avatarField.saving && (
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" /> Uploading photo…
                 </span>

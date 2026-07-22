@@ -146,6 +146,13 @@ const _suspendedUsers = new Set<string>(["ravi_kumar"]);
 const _submittedReports = new Set<string>();
 const _tripParticipation = new Map<number, "pending" | "approved">();
 
+// ── Profile media state (dev-only, in-memory) ──
+// Real backend persists this row-per-item; here we simulate with numeric IDs
+// and blob URLs so the browser never round-trips base64 for media.
+let _mediaIdSeq = 10_000;
+function nextMediaId() { return ++_mediaIdSeq; }
+
+
 
 // Pending signup verification (dev-only in-memory).
 interface PendingSignup { name: string; email: string; password: string; code: string; expiresAt: number; attempts: number; }
@@ -288,6 +295,81 @@ let _devSettings: Record<string, unknown> = _loadDevSettings();
 export function resolveMockRequest(method: string, url: string, body?: unknown): unknown {
   const path = url.replace("/__devmock__", "").replace(/\?.*$/, "");
 
+  // ── Profile media (multipart) ──
+  // Simulated failure: any filename containing "fail" rejects the request so
+  // the UI's error/retry state can be exercised in the preview.
+  const mediaFile = (b: unknown): File | null => {
+    if (typeof FormData !== "undefined" && b instanceof FormData) {
+      const f = b.get("file");
+      return f instanceof File ? f : null;
+    }
+    return null;
+  };
+  const mediaRejection = (f: File | null) => {
+    if (!f) return mockError(400, { error: "No file provided" });
+    if (f.name.toLowerCase().includes("fail")) return mockError(500, { error: "Simulated upload failure" });
+    return null;
+  };
+
+  if (method === "POST" && path === "/accounts/me/avatar/") {
+    const file = mediaFile(body);
+    const rej = mediaRejection(file);
+    if (rej) return rej;
+    const item = { id: nextMediaId(), url: URL.createObjectURL(file!) };
+    if (_devUser) _devUser = { ..._devUser, avatar_id: item.id, avatar_url: item.url } as any;
+    return { avatar: item };
+  }
+  if (method === "DELETE" && /^\/accounts\/me\/avatar\/\d+\/$/.test(path)) {
+    const id = parseInt(path.split("/").filter(Boolean).slice(-1)[0]);
+    if (_devUser && (_devUser as any).avatar_id === id) {
+      _devUser = { ..._devUser, avatar_id: undefined, avatar_url: "" } as any;
+    }
+    return { ok: true };
+  }
+  if (method === "POST" && path === "/accounts/me/cover/") {
+    const file = mediaFile(body);
+    const rej = mediaRejection(file);
+    if (rej) return rej;
+    const item = { id: nextMediaId(), url: URL.createObjectURL(file!) };
+    if (_devUser) _devUser = { ..._devUser, cover_id: item.id, cover_photo_url: item.url } as any;
+    return { cover: item };
+  }
+  if (method === "DELETE" && /^\/accounts\/me\/cover\/\d+\/$/.test(path)) {
+    const id = parseInt(path.split("/").filter(Boolean).slice(-1)[0]);
+    if (_devUser && (_devUser as any).cover_id === id) {
+      _devUser = { ..._devUser, cover_id: undefined, cover_photo_url: "" } as any;
+    }
+    return { ok: true };
+  }
+  if (method === "POST" && path === "/accounts/me/gallery/") {
+    const file = mediaFile(body);
+    const rej = mediaRejection(file);
+    if (rej) return rej;
+    const cur: Array<{ id: number; url: string }> = ((_devUser as any)?.gallery_media) ?? [];
+    if (cur.length >= 12) return mockError(400, { error: "Gallery limit reached." });
+    const item = { id: nextMediaId(), url: URL.createObjectURL(file!) };
+    const next = [...cur, item];
+    if (_devUser) _devUser = { ..._devUser, gallery_media: next } as any;
+    return { item, gallery: next };
+  }
+  if (method === "DELETE" && /^\/accounts\/me\/gallery\/\d+\/$/.test(path)) {
+    const id = parseInt(path.split("/").filter(Boolean).slice(-1)[0]);
+    const cur: Array<{ id: number; url: string }> = ((_devUser as any)?.gallery_media) ?? [];
+    const next = cur.filter((x) => x.id !== id);
+    if (_devUser) _devUser = { ..._devUser, gallery_media: next } as any;
+    return { ok: true, gallery: next };
+  }
+  if (method === "POST" && path === "/accounts/me/gallery/reorder/") {
+    const ids = ((body as any)?.ids) as number[] | undefined;
+    if (!Array.isArray(ids)) return mockError(400, { error: "ids required" });
+    const cur: Array<{ id: number; url: string }> = ((_devUser as any)?.gallery_media) ?? [];
+    const byId = new Map(cur.map((x) => [x.id, x]));
+    const next = ids.map((id) => byId.get(id)).filter(Boolean) as Array<{ id: number; url: string }>;
+    if (next.length !== cur.length) return mockError(400, { error: "ids do not match current gallery" });
+    if (_devUser) _devUser = { ..._devUser, gallery_media: next } as any;
+    return { ok: true, gallery: next };
+  }
+
   // ── Settings ──
   if (path === "/settings/") {
     if (method === "GET") {
@@ -295,13 +377,14 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       return { ..._devSettings };
     }
     if (method === "PATCH" || method === "POST") {
-      if (body && typeof body === "object") {
+      if (body && typeof body === "object" && !(typeof FormData !== "undefined" && body instanceof FormData)) {
         _devSettings = { ..._devSettings, ...(body as Record<string, unknown>) };
         _saveDevSettings(_devSettings);
       }
       return { ok: true, ..._devSettings };
     }
   }
+
 
   // ── Reports ──
   // Report submissions are always acknowledged (a repeated report for the same
@@ -945,15 +1028,28 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     ] : [];
     const reviewDistribution = isHost ? { "5": 70, "4": 20, "3": 5, "2": 3, "1": 2 } : { "5": 0, "4": 0, "3": 0, "2": 0, "1": 0 };
 
-    const isComplete = !!(overlay.avatar_url || mu?.avatar) && !!(su.bio || mu?.bio) && !!(su.location || mu?.location) && (overlay.gallery_photos?.length ?? mockGallery.length) > 0;
+    // Media rendering: prefer per-item entries with stable IDs. Fall back to
+    // legacy string arrays only when the media state hasn't been touched yet.
+    const overlayGalleryMedia: Array<{ id: number; url: string }> | undefined = overlay.gallery_media;
+    const seededGalleryMedia: Array<{ id: number; url: string }> = isHost
+      ? mockGallery.map((url, i) => ({ id: 5000 + i, url }))
+      : [];
+    const effectiveGalleryMedia = overlayGalleryMedia ?? seededGalleryMedia;
+    const effectiveGalleryUrls = effectiveGalleryMedia.map((m) => m.url);
+    const effectiveAvatarUrl = overlay.avatar_url ?? mu?.avatar;
+    const effectiveAvatarId: number | undefined = overlay.avatar_id;
+    const effectiveCoverUrl = overlay.cover_photo_url ?? (isHost
+      ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80"
+      : undefined);
+    const effectiveCoverId: number | undefined = overlay.cover_id;
+
+    const isComplete = !!effectiveAvatarUrl && !!(su.bio || mu?.bio) && !!(su.location || mu?.location) && effectiveGalleryUrls.length > 0;
     const missingFields: string[] = [];
-    if (!(overlay.avatar_url || mu?.avatar)) missingFields.push("avatar");
+    if (!effectiveAvatarUrl) missingFields.push("avatar");
     if (!(su.bio || mu?.bio)) missingFields.push("bio");
     if (!(su.location || mu?.location)) missingFields.push("location");
-    const effectiveCover = overlay.cover_photo_url ?? (isHost ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80" : undefined);
-    const effectiveGallery = overlay.gallery_photos ?? (isHost ? mockGallery : []);
-    if (isHost && !effectiveCover) missingFields.push("cover_photo");
-    if (isHost && !(effectiveGallery?.length)) missingFields.push("gallery_photos");
+    if (isHost && !effectiveCoverUrl) missingFields.push("cover_photo");
+    if (isHost && !effectiveGalleryUrls.length) missingFields.push("gallery_photos");
 
     return {
       profile: {
@@ -963,12 +1059,15 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         bio: su.bio || mu?.bio || "",
         location: su.location || mu?.location || "",
         website: su.website,
-        avatar_url: overlay.avatar_url ?? mu?.avatar,
+        avatar_url: effectiveAvatarUrl,
+        avatar_id: effectiveAvatarId,
         travel_tags: overlay.travel_tags ?? ["Mountains", "Backpacking", "Culture", "Photography"],
         is_host: isHost,
         member_since: "2024-03-15",
-        cover_photo_url: overlay.cover_photo_url ?? (isHost ? "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80" : undefined),
-        gallery_photos: overlay.gallery_photos ?? (isHost ? mockGallery : []),
+        cover_photo_url: effectiveCoverUrl,
+        cover_id: effectiveCoverId,
+        gallery_photos: effectiveGalleryUrls,
+        gallery_media: effectiveGalleryMedia,
         average_rating: isHost ? 4.6 : undefined,
         reviews_count: isHost ? reviewsReceived.length : 0,
         trips_hosted: hostedTrips.length,
@@ -991,7 +1090,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       trips_hosted: hostedTrips,
       trips_joined: joinedTrips,
       reviews: isHost ? reviewsReceived.map((r: any) => ({ id: r.id, reviewer_name: r.author_display_name, reviewer_avatar: r.author_avatar_url, rating: r.rating, text: r.body, trip_title: r.trip_title, created_at: r.created_at })) : [],
-      gallery: isHost ? mockGallery : [],
+      gallery: effectiveGalleryUrls,
       stories: userStories,
     };
   }
@@ -1003,15 +1102,16 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   if (method === "PATCH" && path === "/accounts/me/") {
     const b = body as any;
+    // Text-only PATCH. Media fields are ignored here — clients must use the
+    // dedicated multipart media endpoints. If a client accidentally includes
+    // avatar/cover/gallery bytes they will be silently dropped.
     if (_devUser) {
       if (b?.display_name) _devUser = { ..._devUser, display_name: b.display_name };
       if (b?.bio !== undefined) _devUser = { ..._devUser, bio: b.bio };
       if (b?.location !== undefined) _devUser = { ..._devUser, location: b.location };
       if (b?.website !== undefined) _devUser = { ..._devUser, website: b.website };
+      if (b?.instagram_url !== undefined) _devUser = { ..._devUser, instagram_url: b.instagram_url } as any;
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
-      if (b?.avatar_url !== undefined) _devUser = { ..._devUser, avatar_url: b.avatar_url } as any;
-      if (b?.cover_photo_url !== undefined) _devUser = { ..._devUser, cover_photo_url: b.cover_photo_url } as any;
-      if (b?.gallery_photos !== undefined) _devUser = { ..._devUser, gallery_photos: b.gallery_photos } as any;
     }
     const u: any = _devUser || {};
     return {
@@ -1021,13 +1121,18 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         bio: u.bio,
         location: u.location,
         website: u.website,
-        avatar_url: u.avatar_url,
+        instagram_url: u.instagram_url,
         travel_tags: u.travel_tags,
+        avatar_url: u.avatar_url,
+        avatar_id: u.avatar_id,
         cover_photo_url: u.cover_photo_url,
-        gallery_photos: u.gallery_photos,
+        cover_id: u.cover_id,
+        gallery_photos: Array.isArray(u.gallery_media) ? u.gallery_media.map((x: any) => x.url) : undefined,
+        gallery_media: u.gallery_media,
       },
     };
   }
+
 
   // ── Hosting inbox ──
   if (method === "GET" && path.startsWith("/hosting/inbox")) {
