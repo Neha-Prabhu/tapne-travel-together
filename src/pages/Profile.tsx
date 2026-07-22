@@ -938,22 +938,53 @@ const Profile = () => {
             <DialogDescription>Update your profile details below.</DialogDescription>
           </DialogHeader>
           <div className="space-y-5 pt-2">
-            {/* Avatar upload */}
-            <div className="flex flex-col items-center gap-3">
+            {/* Avatar upload — saves immediately, independent of Save Changes */}
+            <div className="flex flex-col items-center gap-2">
               <div className="relative">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={avatarPreview || undefined} />
+                  <AvatarImage src={avatarField.value || undefined} />
                   <AvatarFallback className="text-2xl bg-accent text-accent-foreground">
                     {editName?.[0]?.toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
-                <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90">
-                  <Camera className="h-3.5 w-3.5" />
-                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                <label className={cn(
+                  "absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90",
+                  avatarField.saving && "pointer-events-none opacity-70",
+                )}>
+                  {avatarField.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={avatarField.saving}
+                  />
                 </label>
               </div>
-              <p className="text-xs text-muted-foreground">Click camera to change photo</p>
+              {avatarField.status === "saving" && (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Uploading photo…
+                </span>
+              )}
+              {avatarField.status === "saved" && (
+                <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
+                  <Check className="h-3 w-3" /> Photo saved
+                </span>
+              )}
+              {avatarField.status === "error" && (
+                <span className="inline-flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3" /> {avatarField.error || "Upload failed"}
+                  <button type="button" onClick={avatarField.retry} className="ml-1 underline">Retry</button>
+                </span>
+              )}
+              {avatarField.status === "idle" && (
+                <p className="text-xs text-muted-foreground">Click camera to change photo (JPEG, PNG, or WebP, up to 2 MB)</p>
+              )}
+              {avatarUploadError && avatarField.status !== "error" && (
+                <span className="text-xs text-destructive">{avatarUploadError}</span>
+              )}
             </div>
+
 
             {/* Editable fields */}
             <div>
