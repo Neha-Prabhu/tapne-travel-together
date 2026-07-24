@@ -12,25 +12,37 @@ export interface MessageData {
   sent_at: string;
 }
 
-export interface ThreadData {
+export interface ThreadParticipant {
+  username: string;
+  display_name: string;
+  avatar_url?: string;
+}
+
+/** Lightweight inbox summary — no message bodies. */
+export interface ThreadSummary {
   id: number;
   type: ThreadType;
   title: string;
   trip_id?: number;
   trip_title?: string;
-  participants: {
-    username: string;
-    display_name: string;
-    avatar_url?: string;
-  }[];
+  participants: ThreadParticipant[];
   last_message?: string;
   last_sent_at?: string;
   unread_count: number;
-  messages: MessageData[];
   readonly?: boolean;
   readonly_reason?: "blocked_by_you" | "blocked_you" | "deactivated" | "suspended";
 }
 
+/** Full thread including cached messages (used for optimistic newly created threads). */
+export interface ThreadData extends ThreadSummary {
+  messages: MessageData[];
+}
+
 export interface InboxResponse {
-  threads: ThreadData[];
+  threads: ThreadSummary[];
+}
+
+export interface ThreadMessagesResponse {
+  messages: MessageData[];
+  has_more: boolean;
 }
