@@ -1194,14 +1194,26 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { messages: page, has_more };
   }
 
-  // ── Mark thread as read ──
+  // ── Mark thread as read up to a specific message id ──
+  // Returns the authoritative remaining unread count. Messages arriving after
+  // the caller's displayed page (id > up_to_id) remain unread.
   const readMatch = path.match(/^\/dm\/inbox\/(\d+)\/read\/$/);
   if (method === "POST" && readMatch) {
     const threadId = parseInt(readMatch[1]);
     const thread = getMockThreads().find(t => t.id === threadId);
     if (!thread) return mockError(404, { error: "Thread not found." });
-    thread.unread_count = 0;
-    return { ok: true };
+    const me = getDevUsername();
+    const b = (body as any) || {};
+    const upToId = typeof b.up_to_id === "number" ? b.up_to_id : Number.MAX_SAFE_INTEGER;
+    const prevLastRead = (thread as any).last_read_id ?? 0;
+    const nextLastRead = Math.max(prevLastRead, upToId);
+    (thread as any).last_read_id = nextLastRead;
+    // Count received messages strictly newer than the acknowledged id.
+    const remaining = thread.messages.filter(
+      m => m.sender_username !== me && m.id > nextLastRead
+    ).length;
+    thread.unread_count = remaining;
+    return { ok: true, unread_count: remaining };
   }
 
   // ── Send message to thread ──
