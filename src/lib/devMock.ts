@@ -1179,11 +1179,10 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const threadId = parseInt(threadGetMatch[1]);
     const thread = getMockThreads().find(t => t.id === threadId);
     if (!thread) return mockError(404, { error: "Thread not found." });
-    const url = new URL(`http://x${path}${(init as any)?.__query || ""}`);
-    // parse query from the raw path (resolveMockRequest strips query — see below)
-    const q = (init as any)?.__query as URLSearchParams | undefined;
-    const beforeStr = q?.get("before");
-    const limit = Math.max(1, Math.min(100, parseInt(q?.get("limit") || "20")));
+    const qIdx = url.indexOf("?");
+    const q = new URLSearchParams(qIdx >= 0 ? url.slice(qIdx + 1) : "");
+    const beforeStr = q.get("before");
+    const limit = Math.max(1, Math.min(100, parseInt(q.get("limit") || "20")));
     const sorted = [...thread.messages].sort((a, b) => a.id - b.id);
     let slice = sorted;
     if (beforeStr) {
