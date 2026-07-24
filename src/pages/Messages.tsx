@@ -130,6 +130,36 @@ const Inbox = () => {
     ? (msgState[activeThreadId] || emptyMsgState)
     : emptyMsgState;
 
+  // Attempt to advance read state up to the newest displayed received message.
+  // Never marks a message that hasn't been shown to the viewer. Retries safely
+  // whenever a newer received message becomes visible.
+  const attemptRead = useCallback(async (threadId: number, messages: MessageData[]) => {
+    const me = user?.username || "dev_user";
+    let newestReceivedId: number | null = null;
+    for (const m of messages) {
+      if (m.sender_username !== me && (newestReceivedId == null || m.id > newestReceivedId)) {
+        newestReceivedId = m.id;
+      }
+    }
+    if (newestReceivedId == null) return;
+    const acked = lastAckedRef.current.get(threadId);
+    if (acked != null && newestReceivedId <= acked) return;
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    try {
+      const res = await apiPost<{ ok?: boolean; unread_count?: number }>(
+        `${cfg.api.dm_inbox}${threadId}/read/`,
+        { up_to_id: newestReceivedId }
+      );
+      lastAckedRef.current.set(threadId, newestReceivedId);
+      const remaining = typeof res?.unread_count === "number" ? Math.max(0, res.unread_count) : 0;
+      setThreads((prev) =>
+        prev.map((t) => (t.id === threadId ? { ...t, unread_count: remaining } : t))
+      );
+    } catch {
+      // Preserve badge — reopening the conversation retries without touching messages.
+    }
+  }, [user?.username]);
+
   // ─── Load initial messages for a selected thread ───
   const loadInitial = useCallback(async (threadId: number) => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -150,30 +180,20 @@ const Inbox = () => {
         `${cfg.api.dm_inbox}${threadId}/messages/?limit=${PAGE_SIZE}`
       );
       if (seqRef.current.get(threadId) !== seq) return; // stale
+      const messages = data.messages || [];
       setMsgState((prev) => ({
         ...prev,
         [threadId]: {
           ...(prev[threadId] || emptyMsgState),
-          messages: data.messages || [],
+          messages,
           hasMore: !!data.has_more,
           loadingInitial: false,
           error: null,
           loaded: true,
         },
       }));
-
-      // Mark as read only after successful display; clear badge only if that succeeds.
-      if (!readSentRef.current.has(threadId)) {
-        try {
-          await apiPost(`${cfg.api.dm_inbox}${threadId}/read/`, {});
-          readSentRef.current.add(threadId);
-          setThreads((prev) =>
-            prev.map((t) => (t.id === threadId ? { ...t, unread_count: 0 } : t))
-          );
-        } catch {
-          // Leave the badge — a later selection or reload can retry.
-        }
-      }
+      // Update read state using only what was actually displayed in this page.
+      attemptRead(threadId, messages);
     } catch (err: any) {
       if (seqRef.current.get(threadId) !== seq) return;
       setMsgState((prev) => ({
@@ -185,7 +205,7 @@ const Inbox = () => {
         },
       }));
     }
-  }, []);
+  }, [attemptRead]);
 
   // Trigger initial load when active thread changes and isn't loaded yet.
   useEffect(() => {
