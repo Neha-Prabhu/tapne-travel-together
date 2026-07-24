@@ -208,13 +208,17 @@ const Inbox = () => {
   }, [attemptRead]);
 
   // Trigger initial load when active thread changes and isn't loaded yet.
+  // If already loaded, retry the read acknowledgement — a previous /read/ may
+  // have failed, or new received messages may now be present.
   useEffect(() => {
     if (activeThreadId == null) return;
     const s = msgState[activeThreadId];
     if (!s || (!s.loaded && !s.loadingInitial && !s.error)) {
       loadInitial(activeThreadId);
+    } else if (s.loaded && s.messages.length > 0) {
+      attemptRead(activeThreadId, s.messages);
     }
-  }, [activeThreadId, msgState, loadInitial]);
+  }, [activeThreadId, msgState, loadInitial, attemptRead]);
 
   // ─── Load earlier messages ───
   const loadEarlier = useCallback(async (threadId: number) => {
