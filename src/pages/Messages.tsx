@@ -1,19 +1,22 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPost } from "@/lib/api";
-import type { ThreadData, InboxResponse, MessageData } from "@/types/messaging";
+import type {
+  ThreadSummary,
+  InboxResponse,
+  MessageData,
+  ThreadMessagesResponse,
+} from "@/types/messaging";
 import {
   MessageCircle, Send, ArrowLeft, Users, MapPin,
-  Loader2, Inbox as InboxIcon, Search, Flag,
+  Loader2, Inbox as InboxIcon, Search, Flag, AlertCircle,
 } from "lucide-react";
 import ReportDialog, { type ReportTarget } from "@/components/ReportDialog";
 
@@ -22,12 +25,34 @@ import { cn } from "@/lib/utils";
 const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 480;
 const DEFAULT_SIDEBAR = 360;
+const PAGE_SIZE = 20;
+
+interface ThreadMessagesState {
+  messages: MessageData[];
+  hasMore: boolean;
+  loadingInitial: boolean;
+  loadingMore: boolean;
+  error: string | null;
+  earlierError: string | null;
+  loaded: boolean;
+}
+
+const emptyMsgState: ThreadMessagesState = {
+  messages: [],
+  hasMore: false,
+  loadingInitial: false,
+  loadingMore: false,
+  error: null,
+  earlierError: null,
+  loaded: false,
+};
 
 const Inbox = () => {
   const { user, isAuthenticated, requireAuth } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [threads, setThreads] = useState<ThreadData[]>([]);
+  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [msgState, setMsgState] = useState<Record<number, ThreadMessagesState>>({});
   const [loading, setLoading] = useState(true);
   const [activeThreadId, setActiveThreadId] = useState<number | null>(null);
   const [messageInput, setMessageInput] = useState("");
@@ -36,15 +61,28 @@ const Inbox = () => {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR);
   const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollWrapRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
 
+  // Per-thread request sequence — late responses from an older request are dropped.
+  const seqRef = useRef<Map<number, number>>(new Map());
+  // Threads whose /read/ POST has already succeeded (avoid re-firing).
+  const readSentRef = useRef<Set<number>>(new Set());
+  // Suppress auto-scroll-to-latest when a "load earlier" just prepended.
+  const suppressAutoScrollRef = useRef(false);
 
-  // Check for query params to auto-open a thread
   const openThreadParam = searchParams.get("thread");
   const newDmParam = searchParams.get("dm");
   const tripQueryParam = searchParams.get("trip_query");
 
+  const getViewport = (): HTMLElement | null => {
+    const root = scrollWrapRef.current;
+    if (!root) return null;
+    return root.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
+  };
+
+  // ─── Load inbox summaries ───
   useEffect(() => {
     if (!isAuthenticated) {
       requireAuth(() => {});
@@ -54,19 +92,19 @@ const Inbox = () => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     apiGet<InboxResponse>(`${cfg.api.dm_inbox}`)
       .then((data) => {
-        setThreads(data.threads || []);
-        // Auto-select thread from params
+        const list = data.threads || [];
+        setThreads(list);
         if (openThreadParam) {
           setActiveThreadId(parseInt(openThreadParam));
-        } else if (data.threads.length > 0 && window.innerWidth >= 768) {
-          setActiveThreadId(data.threads[0].id);
+        } else if (list.length > 0 && window.innerWidth >= 768) {
+          setActiveThreadId(list[0].id);
         }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
-  // Handle new DM or trip query params
+  // Route params that select an existing thread by identity.
   useEffect(() => {
     if (newDmParam && threads.length > 0) {
       const existing = threads.find(
@@ -86,19 +124,152 @@ const Inbox = () => {
     () => threads.find((t) => t.id === activeThreadId) || null,
     [threads, activeThreadId]
   );
+  const activeMsgs: ThreadMessagesState = activeThreadId != null
+    ? (msgState[activeThreadId] || emptyMsgState)
+    : emptyMsgState;
 
-  // Auto-scroll to latest message
+  // ─── Load initial messages for a selected thread ───
+  const loadInitial = useCallback(async (threadId: number) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const seq = (seqRef.current.get(threadId) || 0) + 1;
+    seqRef.current.set(threadId, seq);
+
+    setMsgState((prev) => ({
+      ...prev,
+      [threadId]: {
+        ...(prev[threadId] || emptyMsgState),
+        loadingInitial: true,
+        error: null,
+      },
+    }));
+
+    try {
+      const data = await apiGet<ThreadMessagesResponse>(
+        `${cfg.api.dm_inbox}${threadId}/messages/?limit=${PAGE_SIZE}`
+      );
+      if (seqRef.current.get(threadId) !== seq) return; // stale
+      setMsgState((prev) => ({
+        ...prev,
+        [threadId]: {
+          ...(prev[threadId] || emptyMsgState),
+          messages: data.messages || [],
+          hasMore: !!data.has_more,
+          loadingInitial: false,
+          error: null,
+          loaded: true,
+        },
+      }));
+
+      // Mark as read only after successful display; clear badge only if that succeeds.
+      if (!readSentRef.current.has(threadId)) {
+        try {
+          await apiPost(`${cfg.api.dm_inbox}${threadId}/read/`, {});
+          readSentRef.current.add(threadId);
+          setThreads((prev) =>
+            prev.map((t) => (t.id === threadId ? { ...t, unread_count: 0 } : t))
+          );
+        } catch {
+          // Leave the badge — a later selection or reload can retry.
+        }
+      }
+    } catch (err: any) {
+      if (seqRef.current.get(threadId) !== seq) return;
+      setMsgState((prev) => ({
+        ...prev,
+        [threadId]: {
+          ...(prev[threadId] || emptyMsgState),
+          loadingInitial: false,
+          error: err?.message || "Couldn't load messages.",
+        },
+      }));
+    }
+  }, []);
+
+  // Trigger initial load when active thread changes and isn't loaded yet.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeThread?.messages?.length]);
+    if (activeThreadId == null) return;
+    const s = msgState[activeThreadId];
+    if (!s || (!s.loaded && !s.loadingInitial && !s.error)) {
+      loadInitial(activeThreadId);
+    }
+  }, [activeThreadId, msgState, loadInitial]);
 
+  // ─── Load earlier messages ───
+  const loadEarlier = useCallback(async (threadId: number) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const current = msgState[threadId];
+    if (!current || current.loadingMore || !current.hasMore) return;
+    const oldest = current.messages[0];
+    if (!oldest) return;
+
+    const viewport = getViewport();
+    const prevScrollHeight = viewport?.scrollHeight ?? 0;
+    const prevScrollTop = viewport?.scrollTop ?? 0;
+
+    const seq = (seqRef.current.get(threadId) || 0) + 1;
+    seqRef.current.set(threadId, seq);
+
+    setMsgState((prev) => ({
+      ...prev,
+      [threadId]: { ...prev[threadId], loadingMore: true, earlierError: null },
+    }));
+
+    try {
+      const data = await apiGet<ThreadMessagesResponse>(
+        `${cfg.api.dm_inbox}${threadId}/messages/?limit=${PAGE_SIZE}&before=${oldest.id}`
+      );
+      if (seqRef.current.get(threadId) !== seq) return;
+      const seen = new Set(current.messages.map((m) => m.id));
+      const older = (data.messages || []).filter((m) => !seen.has(m.id));
+      suppressAutoScrollRef.current = true;
+      setMsgState((prev) => ({
+        ...prev,
+        [threadId]: {
+          ...prev[threadId],
+          messages: [...older, ...prev[threadId].messages],
+          hasMore: !!data.has_more,
+          loadingMore: false,
+        },
+      }));
+      // Preserve scroll position on next paint.
+      requestAnimationFrame(() => {
+        const v = getViewport();
+        if (v) {
+          const delta = v.scrollHeight - prevScrollHeight;
+          v.scrollTop = prevScrollTop + delta;
+        }
+      });
+    } catch (err: any) {
+      if (seqRef.current.get(threadId) !== seq) return;
+      setMsgState((prev) => ({
+        ...prev,
+        [threadId]: {
+          ...prev[threadId],
+          loadingMore: false,
+          earlierError: err?.message || "Couldn't load earlier messages.",
+        },
+      }));
+    }
+  }, [msgState]);
+
+  // Auto-scroll to latest on new messages (but not after prepending earlier ones).
+  useEffect(() => {
+    if (suppressAutoScrollRef.current) {
+      suppressAutoScrollRef.current = false;
+      return;
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeThreadId, activeMsgs.messages.length]);
+
+  // ─── Send message ───
   const handleSend = async () => {
-    if (!messageInput.trim() || !activeThread || !user) return;
+    if (!messageInput.trim() || !activeThread || !user || activeThreadId == null) return;
     setSending(true);
     const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const threadId = activeThreadId;
     const newMsg: MessageData = {
       id: Date.now(),
-      thread_id: activeThread.id,
+      thread_id: threadId,
       sender_username: user.username || "dev_user",
       sender_display_name: user.name || "Dev User",
       sender_avatar: user.avatar,
@@ -108,39 +279,38 @@ const Inbox = () => {
     const sentBody = newMsg.body;
 
     // Optimistic update
+    setMsgState((prev) => ({
+      ...prev,
+      [threadId]: {
+        ...(prev[threadId] || { ...emptyMsgState, loaded: true }),
+        messages: [...(prev[threadId]?.messages || []), newMsg],
+      },
+    }));
     setThreads((prev) =>
       prev.map((t) =>
-        t.id === activeThread.id
-          ? {
-              ...t,
-              messages: [...t.messages, newMsg],
-              last_message: newMsg.body,
-              last_sent_at: newMsg.sent_at,
-            }
+        t.id === threadId
+          ? { ...t, last_message: newMsg.body, last_sent_at: newMsg.sent_at }
           : t
       )
     );
     setMessageInput("");
 
     try {
-      await apiPost(`${cfg.api.dm_inbox}${activeThread.id}/messages/`, {
-        body: newMsg.body,
-      });
+      await apiPost(`${cfg.api.dm_inbox}${threadId}/messages/`, { body: newMsg.body });
     } catch (err: any) {
-      // Sending is now forbidden (block or deactivation happened while the
-      // conversation was open). Roll back the optimistic message and swap the
-      // composer for the correct read-only banner.
-      const reason = err?.readonly_reason as ThreadData["readonly_reason"] | undefined;
+      const reason = err?.readonly_reason as ThreadSummary["readonly_reason"] | undefined;
+      // Roll back optimistic message
+      setMsgState((prev) => {
+        const s = prev[threadId];
+        if (!s) return prev;
+        const messages = s.messages.filter((m) => m.id !== newMsg.id);
+        return { ...prev, [threadId]: { ...s, messages } };
+      });
       setThreads((prev) =>
         prev.map((t) => {
-          if (t.id !== activeThread.id) return t;
-          const messages = t.messages.filter((m) => m.id !== newMsg.id);
-          const last = messages[messages.length - 1];
+          if (t.id !== threadId) return t;
           return {
             ...t,
-            messages,
-            last_message: last?.body,
-            last_sent_at: last?.sent_at,
             readonly: reason ? true : t.readonly,
             readonly_reason: reason ?? t.readonly_reason,
           };
@@ -181,7 +351,7 @@ const Inbox = () => {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const getThreadAvatar = (thread: ThreadData) => {
+  const getThreadAvatar = (thread: ThreadSummary) => {
     if (thread.type === "group_chat") return undefined;
     const other = thread.participants.find(
       (p) => p.username !== (user?.username || "dev_user")
@@ -189,7 +359,7 @@ const Inbox = () => {
     return other?.avatar_url;
   };
 
-  const getThreadName = (thread: ThreadData) => {
+  const getThreadName = (thread: ThreadSummary) => {
     if (thread.type === "group_chat") return thread.title;
     if (thread.type === "trip_query") return thread.title;
     const other = thread.participants.find(
@@ -198,28 +368,26 @@ const Inbox = () => {
     return other?.display_name || thread.title;
   };
 
-  const getThreadInitial = (thread: ThreadData) => {
+  const getThreadInitial = (thread: ThreadSummary) => {
     const name = getThreadName(thread);
     return name?.[0]?.toUpperCase() || "?";
   };
 
-  const typeIcon = (type: ThreadData["type"]) => {
+  const typeIcon = (type: ThreadSummary["type"]) => {
     if (type === "group_chat") return <Users className="h-3 w-3" />;
     if (type === "trip_query") return <MapPin className="h-3 w-3" />;
     return null;
   };
 
   // ─── Thread List Item ───
-  const ThreadItem = ({ thread }: { thread: ThreadData }) => {
+  const ThreadItem = ({ thread }: { thread: ThreadSummary }) => {
     const isActive = activeThreadId === thread.id;
     return (
       <button
         onClick={() => setActiveThreadId(thread.id)}
         className={cn(
           "flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors",
-          isActive
-            ? "bg-primary/10"
-            : "hover:bg-muted/60"
+          isActive ? "bg-primary/10" : "hover:bg-muted/60"
         )}
       >
         <Avatar className="h-10 w-10 shrink-0">
@@ -259,8 +427,7 @@ const Inbox = () => {
     );
   };
 
-  // ─── Thread Section ───
-  const ThreadSection = ({ label, threads: sectionThreads }: { label: string; threads: ThreadData[] }) => {
+  const ThreadSection = ({ label, threads: sectionThreads }: { label: string; threads: ThreadSummary[] }) => {
     if (sectionThreads.length === 0) return null;
     return (
       <div className="mb-2">
@@ -274,7 +441,6 @@ const Inbox = () => {
     );
   };
 
-  // ─── Sidebar ───
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       <div className="border-b px-4 py-3">
@@ -312,7 +478,6 @@ const Inbox = () => {
     </div>
   );
 
-  // ─── Chat Window ───
   const ChatWindow = () => {
     if (!activeThread) {
       return (
@@ -327,6 +492,7 @@ const Inbox = () => {
     }
 
     const myUsername = user?.username || "dev_user";
+    const s = activeMsgs;
 
     return (
       <div className="flex h-full flex-col">
@@ -373,79 +539,140 @@ const Inbox = () => {
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 px-4 py-4">
-          <div className="space-y-3">
-            {activeThread.messages.length === 0 && (
-              <div className="py-12 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No messages yet. Say hello! 👋
-                </p>
+        <div ref={scrollWrapRef} className="flex-1 min-h-0">
+          <ScrollArea className="h-full px-4 py-4">
+            {s.loadingInitial && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Loader2 className="mb-2 h-6 w-6 animate-spin text-primary" />
+                <p className="text-xs text-muted-foreground">Loading messages…</p>
               </div>
             )}
-            {activeThread.messages.map((msg) => {
-              const isMine = msg.sender_username === myUsername;
-              return (
-                <div
-                  key={msg.id}
-                  className={cn("flex gap-2", isMine ? "justify-end" : "justify-start")}
-                >
-                  {!isMine && (
-                    <Avatar className="h-7 w-7 shrink-0 mt-1">
-                      <AvatarImage src={msg.sender_avatar} />
-                      <AvatarFallback className="text-[10px] bg-accent text-accent-foreground">
-                        {msg.sender_display_name?.[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="group relative max-w-[75%]">
-                    <div
-                      className={cn(
-                        "rounded-2xl px-3.5 py-2",
-                        isMine
-                          ? "bg-primary text-primary-foreground rounded-br-md"
-                          : "bg-muted text-foreground rounded-bl-md"
-                      )}
-                    >
-                      {!isMine && activeThread.type === "group_chat" && (
-                        <p className="mb-0.5 text-[10px] font-medium opacity-70">
-                          {msg.sender_display_name}
-                        </p>
-                      )}
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
-                      <p
-                        className={cn(
-                          "mt-1 text-[10px]",
-                          isMine ? "text-primary-foreground/60" : "text-muted-foreground"
-                        )}
-                      >
-                        {formatTime(msg.sent_at)}
-                      </p>
-                    </div>
-                    {!isMine && (
-                      <button
-                        type="button"
-                        aria-label="Report message"
-                        title="Report"
-                        onClick={() => setReportTarget({
-                          type: "message",
-                          id: msg.id,
-                          label: `${msg.sender_display_name}'s message`,
-                          ownerUsername: msg.sender_username,
-                          ownerDisplayName: msg.sender_display_name,
-                        })}
-                        className="absolute -right-6 top-1 rounded p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
-                      >
-                        <Flag className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
 
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+            {!s.loadingInitial && s.error && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <AlertCircle className="mb-2 h-6 w-6 text-destructive" />
+                <p className="text-sm text-foreground">{s.error}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => loadInitial(activeThread.id)}
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
+
+            {!s.loadingInitial && !s.error && (
+              <div className="space-y-3">
+                {s.hasMore && (
+                  <div className="flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs"
+                      disabled={s.loadingMore}
+                      onClick={() => loadEarlier(activeThread.id)}
+                    >
+                      {s.loadingMore ? (
+                        <>
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> Loading…
+                        </>
+                      ) : (
+                        "Load earlier messages"
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {s.earlierError && (
+                  <div className="flex items-center justify-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    <span>{s.earlierError}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => loadEarlier(activeThread.id)}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                )}
+
+                {s.loaded && s.messages.length === 0 && (
+                  <div className="py-12 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No messages yet. Say hello! 👋
+                    </p>
+                  </div>
+                )}
+
+                {s.messages.map((msg) => {
+                  const isMine = msg.sender_username === myUsername;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={cn("flex gap-2", isMine ? "justify-end" : "justify-start")}
+                    >
+                      {!isMine && (
+                        <Avatar className="h-7 w-7 shrink-0 mt-1">
+                          <AvatarImage src={msg.sender_avatar} />
+                          <AvatarFallback className="text-[10px] bg-accent text-accent-foreground">
+                            {msg.sender_display_name?.[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="group relative max-w-[75%]">
+                        <div
+                          className={cn(
+                            "rounded-2xl px-3.5 py-2",
+                            isMine
+                              ? "bg-primary text-primary-foreground rounded-br-md"
+                              : "bg-muted text-foreground rounded-bl-md"
+                          )}
+                        >
+                          {!isMine && activeThread.type === "group_chat" && (
+                            <p className="mb-0.5 text-[10px] font-medium opacity-70">
+                              {msg.sender_display_name}
+                            </p>
+                          )}
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                          <p
+                            className={cn(
+                              "mt-1 text-[10px]",
+                              isMine ? "text-primary-foreground/60" : "text-muted-foreground"
+                            )}
+                          >
+                            {formatTime(msg.sent_at)}
+                          </p>
+                        </div>
+                        {!isMine && (
+                          <button
+                            type="button"
+                            aria-label="Report message"
+                            title="Report"
+                            onClick={() => setReportTarget({
+                              type: "message",
+                              id: msg.id,
+                              label: `${msg.sender_display_name}'s message`,
+                              ownerUsername: msg.sender_username,
+                              ownerDisplayName: msg.sender_display_name,
+                            })}
+                            className="absolute -right-6 top-1 rounded p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100"
+                          >
+                            <Flag className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </ScrollArea>
+        </div>
 
         {/* Input */}
         <div className="border-t px-4 py-3">
@@ -460,7 +687,6 @@ const Inbox = () => {
                 : activeThread.readonly_reason === "deactivated"
                 ? "This account has been deactivated. You can't send new messages."
                 : "This conversation is read-only."}
-
             </div>
           ) : (
             <form
@@ -474,7 +700,7 @@ const Inbox = () => {
                 className="flex-1"
                 autoFocus
               />
-              <Button type="submit" size="icon" disabled={!messageInput.trim() || sending} className="shrink-0">
+              <Button type="submit" size="icon" disabled={!messageInput.trim() || sending || s.loadingInitial || !!s.error} className="shrink-0">
                 <Send className="h-4 w-4" />
               </Button>
             </form>
@@ -495,7 +721,6 @@ const Inbox = () => {
     );
   }
 
-  // Mobile: show list or chat
   const showChatOnMobile = activeThreadId !== null;
 
   return (
@@ -507,7 +732,6 @@ const Inbox = () => {
           <div className="shrink-0 border-r bg-card overflow-hidden" style={{ width: sidebarWidth }}>
             <SidebarContent />
           </div>
-          {/* Resizable divider */}
           <div
             className={cn(
               "w-1 cursor-col-resize transition-colors hover:bg-primary/30",
@@ -540,11 +764,7 @@ const Inbox = () => {
 
         {/* Mobile: stacked */}
         <div className="flex w-full flex-col md:hidden">
-          {showChatOnMobile ? (
-            <ChatWindow />
-          ) : (
-            <SidebarContent />
-          )}
+          {showChatOnMobile ? <ChatWindow /> : <SidebarContent />}
         </div>
       </main>
       <ReportDialog
@@ -555,6 +775,5 @@ const Inbox = () => {
     </div>
   );
 };
-
 
 export default Inbox;
