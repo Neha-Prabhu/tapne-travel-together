@@ -1155,7 +1155,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     return { ok: true };
   }
 
-  // ── DM Inbox ──
+  // ── DM Inbox (lightweight summaries — no message bodies) ──
   if (method === "GET" && path === "/dm/inbox/") {
     const me = getDevUsername();
     const threads = getMockThreads().map(t => {
@@ -1167,12 +1167,43 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         else if (_suspendedUsers.has(other.username)) { readonly = true; readonly_reason = "suspended"; }
         else if (_deactivatedUsers.has(other.username)) { readonly = true; readonly_reason = "deactivated"; }
       }
-      return { ...t, readonly, readonly_reason };
+      const { messages: _msgs, ...summary } = t;
+      return { ...summary, readonly, readonly_reason };
     });
-    const resp: InboxResponse = { threads };
-    return resp;
+    return { threads };
   }
 
+  // ── Fetch thread messages (paginated newest→oldest via `before`) ──
+  const threadGetMatch = path.match(/^\/dm\/inbox\/(\d+)\/messages\/$/);
+  if (method === "GET" && threadGetMatch) {
+    const threadId = parseInt(threadGetMatch[1]);
+    const thread = getMockThreads().find(t => t.id === threadId);
+    if (!thread) return mockError(404, { error: "Thread not found." });
+    const url = new URL(`http://x${path}${(init as any)?.__query || ""}`);
+    // parse query from the raw path (resolveMockRequest strips query — see below)
+    const q = (init as any)?.__query as URLSearchParams | undefined;
+    const beforeStr = q?.get("before");
+    const limit = Math.max(1, Math.min(100, parseInt(q?.get("limit") || "20")));
+    const sorted = [...thread.messages].sort((a, b) => a.id - b.id);
+    let slice = sorted;
+    if (beforeStr) {
+      const before = parseInt(beforeStr);
+      slice = sorted.filter(m => m.id < before);
+    }
+    const page = slice.slice(-limit);
+    const has_more = slice.length > page.length;
+    return { messages: page, has_more };
+  }
+
+  // ── Mark thread as read ──
+  const readMatch = path.match(/^\/dm\/inbox\/(\d+)\/read\/$/);
+  if (method === "POST" && readMatch) {
+    const threadId = parseInt(readMatch[1]);
+    const thread = getMockThreads().find(t => t.id === threadId);
+    if (!thread) return mockError(404, { error: "Thread not found." });
+    thread.unread_count = 0;
+    return { ok: true };
+  }
 
   // ── Send message to thread ──
   const threadMsgMatch = path.match(/^\/dm\/inbox\/(\d+)\/messages\/$/);
@@ -1207,7 +1238,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     thread.messages.push(newMsg);
     thread.last_message = newMsg.body;
     thread.last_sent_at = newMsg.sent_at;
-    return { ok: true };
+    return { ok: true, message: newMsg };
   }
 
   // ── Create new DM thread ──
