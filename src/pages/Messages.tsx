@@ -68,8 +68,9 @@ const Inbox = () => {
 
   // Per-thread request sequence — late responses from an older request are dropped.
   const seqRef = useRef<Map<number, number>>(new Map());
-  // Threads whose /read/ POST has already succeeded (avoid re-firing).
-  const readSentRef = useRef<Set<number>>(new Set());
+  // Newest received message id that has been successfully acknowledged as read.
+  // Missing entry means never acked — reopening will retry.
+  const lastAckedRef = useRef<Map<number, number>>(new Map());
   // Suppress auto-scroll-to-latest when a "load earlier" just prepended.
   const suppressAutoScrollRef = useRef(false);
 
