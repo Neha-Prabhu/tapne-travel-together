@@ -25,7 +25,8 @@ import { cn } from "@/lib/utils";
 const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 480;
 const DEFAULT_SIDEBAR = 360;
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
+const EARLIER_PAGE_SIZE = 30;
 
 interface ThreadMessagesState {
   messages: MessageData[];
