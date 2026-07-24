@@ -242,7 +242,7 @@ const Inbox = () => {
 
     try {
       const data = await apiGet<ThreadMessagesResponse>(
-        `${cfg.api.dm_inbox}${threadId}/messages/?limit=${PAGE_SIZE}&before=${oldest.id}`
+        `${cfg.api.dm_inbox}${threadId}/messages/?limit=${EARLIER_PAGE_SIZE}&before=${oldest.id}`
       );
       if (seqRef.current.get(threadId) !== seq) return;
       const seen = new Set(current.messages.map((m) => m.id));
