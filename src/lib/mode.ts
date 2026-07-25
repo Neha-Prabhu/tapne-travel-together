@@ -42,7 +42,11 @@ const DEV_RUNTIME_CONFIG: TapneRuntimeConfig = {
     media_cover: "/__devmock__/accounts/me/cover/",
     media_gallery: "/__devmock__/accounts/me/gallery/",
     media_gallery_reorder: "/__devmock__/accounts/me/gallery/reorder/",
+    password_reset_request: "/__devmock__/auth/password-reset/request/",
+    password_reset_confirm: "/__devmock__/auth/password-reset/confirm/",
+    password_change: "/__devmock__/auth/password-change/",
   },
+
 
   csrf: {
     cookie_name: "csrftoken",

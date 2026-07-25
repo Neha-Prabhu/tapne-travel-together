@@ -42,6 +42,11 @@ export interface TapneRuntimeConfig {
     media_gallery?: string;
     media_gallery_reorder?: string;
 
+    // Password / account security endpoints
+    password_reset_request?: string;
+    password_reset_confirm?: string;
+    password_change?: string;
+
     // Optional named dashboard locations — present only when backend exposes them.
     dashboard_trips?: string;
     dashboard_reviews?: string;
@@ -49,6 +54,7 @@ export interface TapneRuntimeConfig {
     followers?: string;
     following?: string;
   };
+
   csrf: {
     cookie_name: string;
     header_name: string;
