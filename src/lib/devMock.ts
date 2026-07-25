@@ -415,6 +415,8 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     if (cur === "throttle") return mockError(429, { error: "Too many attempts. Try again later.", code: "throttled", retry_after: 60 });
     if (nw.length < 8) return mockError(400, { error: "New password must be at least 8 characters.", code: "weak_password" });
     return { ok: true };
+  }
+
 
 
 
