@@ -8,15 +8,17 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
+
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink, Check } from "lucide-react";
+import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink, Check, Lock } from "lucide-react";
 
 interface BlockedUser {
   username: string;
@@ -81,7 +83,7 @@ function normalize(raw: Partial<Record<keyof SettingsPayload, unknown>>): Settin
 }
 
 const Settings = () => {
-  const { isAuthenticated, requireAuth, logout } = useAuth();
+  const { isAuthenticated, requireAuth, logout, changePassword } = useAuth();
   const navigate = useNavigate();
 
   const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
@@ -506,7 +508,11 @@ const Settings = () => {
               </CardContent>
             </Card>
 
+            {/* Security */}
+            <SecuritySection changePassword={changePassword} />
+
             {/* Danger zone */}
+
             <Card className="border-destructive/30">
               <CardContent className="space-y-4 p-6">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-destructive">
@@ -598,4 +604,84 @@ const Settings = () => {
   );
 };
 
+interface SecuritySectionProps {
+  changePassword: (current: string, next: string) => Promise<{ ok: boolean; code?: string; error?: string; retry_after?: number }>;
+}
+
+const SecuritySection = ({ changePassword }: SecuritySectionProps) => {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [currentErr, setCurrentErr] = useState("");
+  const [nextErr, setNextErr] = useState("");
+  const [confirmErr, setConfirmErr] = useState("");
+  const [throttleErr, setThrottleErr] = useState("");
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentErr(""); setNextErr(""); setConfirmErr(""); setThrottleErr("");
+    if (!current) { setCurrentErr("Enter your current password."); return; }
+    if (next.length < 8) { setNextErr("New password must be at least 8 characters."); return; }
+    if (next === current) { setNextErr("Choose a password different from your current one."); return; }
+    if (next !== confirm) { setConfirmErr("Passwords don't match."); return; }
+    setBusy(true);
+    const r = await changePassword(current, next);
+    setBusy(false);
+    if (r.ok) {
+      setCurrent(""); setNext(""); setConfirm("");
+      toast.success("Password updated");
+      return;
+    }
+    if (r.code === "wrong_password") setCurrentErr(r.error || "Current password is incorrect.");
+    else if (r.code === "weak_password") setNextErr(r.error || "Choose a stronger password.");
+    else if (r.code === "invalid_link") setThrottleErr(r.error || "This session can't change the password. Please log in again.");
+    else if (r.code === "throttled") setThrottleErr(r.error || `Too many attempts. Try again${r.retry_after ? ` in ${r.retry_after}s` : " later"}.`);
+    else setThrottleErr(r.error || "Could not update password.");
+  };
+
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-6">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Lock className="h-5 w-5" />Security
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Change the password you use to log in. You'll stay signed in on this device.
+        </p>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <Label htmlFor="current-pw" className="mb-1.5 block text-sm">Current password</Label>
+            <Input id="current-pw" type="password" autoComplete="current-password" value={current}
+              onChange={(e) => { setCurrent(e.target.value); if (currentErr) setCurrentErr(""); }} />
+            {currentErr && <p className="mt-1 text-xs text-destructive">{currentErr}</p>}
+          </div>
+          <div>
+            <Label htmlFor="new-pw" className="mb-1.5 block text-sm">New password</Label>
+            <Input id="new-pw" type="password" autoComplete="new-password" value={next}
+              onChange={(e) => { setNext(e.target.value); if (nextErr) setNextErr(""); }} />
+            {nextErr ? <p className="mt-1 text-xs text-destructive">{nextErr}</p>
+              : <p className="mt-1 text-xs text-muted-foreground">At least 8 characters.</p>}
+          </div>
+          <div>
+            <Label htmlFor="confirm-pw" className="mb-1.5 block text-sm">Confirm new password</Label>
+            <Input id="confirm-pw" type="password" autoComplete="new-password" value={confirm}
+              onChange={(e) => { setConfirm(e.target.value); if (confirmErr) setConfirmErr(""); }} />
+            {confirmErr && <p className="mt-1 text-xs text-destructive">{confirmErr}</p>}
+          </div>
+          {throttleErr && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-sm text-destructive">
+              {throttleErr}
+            </div>
+          )}
+          <Button type="submit" disabled={busy}>
+            {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}Update password
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default Settings;
+

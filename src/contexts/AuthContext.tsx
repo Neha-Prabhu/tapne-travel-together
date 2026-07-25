@@ -14,6 +14,9 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<SignupResult>;
   verifySignupCode: (code: string, details?: { name: string; email: string; password: string }) => Promise<{ ok: boolean; reason?: string }>;
   resendSignupCode: (details?: { name?: string; email?: string; password?: string }) => Promise<{ ok: boolean; retry_after?: number; error?: string }>;
+  requestPasswordReset: (email: string) => Promise<{ ok: boolean }>;
+  confirmPasswordReset: (uid: string, token: string, newPassword: string) => Promise<{ ok: boolean; code?: string; error?: string }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; code?: string; error?: string; retry_after?: number }>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<any>;
   setUserMedia: (patch: Partial<Pick<User, "avatar" | "avatar_id" | "cover_photo_url" | "cover_id" | "gallery_media" | "gallery_photos">>) => void;
@@ -24,7 +27,13 @@ interface AuthContextType {
   loginModalOpen: boolean;
   setLoginModalOpen: (open: boolean) => void;
   pendingAuthAction: (() => void) | null;
+  /** When a `?auth=reset#uid=…&token=…` link was detected, holds the parsed
+   *  credentials so LoginModal can open its reset-password step. The token is
+   *  never rendered or logged. Consume via `consumePendingReset()`. */
+  pendingReset: { uid: string; token: string } | null;
+  consumePendingReset: () => void;
 }
+
 
 
 export type SignupResult =
@@ -39,8 +48,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [lastAuthError, setLastAuthError] = useState("");
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
+  const [pendingReset, setPendingReset] = useState<{ uid: string; token: string } | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const authMutationVersion = useRef(0);
+
 
   // Persisted identity is only a hydration hint. Never expose it to protected
   // routes or navigation until the current server session has been checked.
@@ -70,6 +81,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       window.history.replaceState({}, "", url);
     }
   }, []);
+
+  // Detect `/?auth=reset#uid=<uid>&token=<token>` reset links exactly once.
+  // Read the fragment, immediately scrub both the query flag and the sensitive
+  // fragment from history, and expose only via pendingReset so the modal can
+  // open its reset-password step. The token is never rendered or logged.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth") !== "reset") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    const hp = new URLSearchParams(hash);
+    const uid = hp.get("uid") || "";
+    const token = hp.get("token") || "";
+    params.delete("auth");
+    const qs = params.toString();
+    const cleanUrl = window.location.pathname + (qs ? `?${qs}` : "");
+    window.history.replaceState({}, "", cleanUrl);
+    if (uid && token) {
+      setPendingReset({ uid, token });
+      setLoginModalOpen(true);
+    }
+  }, []);
+
 
 
   useEffect(() => {
@@ -234,7 +268,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     store.updateUser(patch);
   }, []);
 
+  const requestPasswordReset = useCallback(async (email: string): Promise<{ ok: boolean }> => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const url = cfg.api.password_reset_request;
+    if (!url) return { ok: true };
+    try { await apiPost(url, { email }); } catch { /* swallow — always show the same generic result */ }
+    return { ok: true };
+  }, []);
 
+  const confirmPasswordReset = useCallback(async (uid: string, token: string, newPassword: string) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const url = cfg.api.password_reset_confirm;
+    if (!url) return { ok: false, code: "invalid_link", error: "Reset is not available." };
+    try {
+      await apiPost(url, { uid, token, new_password: newPassword });
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, code: err?.code, error: err?.error || "Could not reset password." };
+    }
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const url = cfg.api.password_change;
+    if (!url) return { ok: false, code: "unavailable", error: "Password change is not available." };
+    try {
+      await apiPost(url, { current_password: currentPassword, new_password: newPassword });
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, code: err?.code, error: err?.error || "Could not update password.", retry_after: err?.retry_after };
+    }
+  }, []);
+
+  const consumePendingReset = useCallback(() => setPendingReset(null), []);
 
   const requireAuth = useCallback((onSuccess?: () => void) => {
     if (user) {
@@ -247,8 +313,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleLoginModalChange = useCallback((open: boolean) => {
     setLoginModalOpen(open);
-    if (!open) setPendingAuthAction(null);
+    if (!open) { setPendingAuthAction(null); setPendingReset(null); }
   }, []);
+
 
   return (
     <AuthContext.Provider value={{
@@ -259,6 +326,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       signup,
       verifySignupCode,
       resendSignupCode,
+      requestPasswordReset,
+      confirmPasswordReset,
+      changePassword,
       logout,
       updateProfile,
       setUserMedia,
@@ -268,7 +338,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loginModalOpen,
       setLoginModalOpen: handleLoginModalChange,
       pendingAuthAction,
+      pendingReset,
+      consumePendingReset,
     }}>
+
       {children}
     </AuthContext.Provider>
   );

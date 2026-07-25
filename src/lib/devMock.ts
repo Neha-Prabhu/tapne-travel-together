@@ -385,6 +385,40 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     }
   }
 
+  // ── Password reset / change ──
+  // Always return the same generic acknowledgement regardless of whether the
+  // email exists, so the modal can't be used for account discovery.
+  if (method === "POST" && path === "/auth/password-reset/request/") {
+    return { ok: true };
+  }
+  if (method === "POST" && path === "/auth/password-reset/confirm/") {
+    const b = (body || {}) as any;
+    const uid = String(b.uid || "");
+    const pw = String(b.new_password || "");
+    if (!uid || uid === "invalid" || !b.token) {
+      return mockError(400, { error: "This reset link is invalid or has expired.", code: "invalid_link" });
+    }
+    if (pw.length < 8) {
+      return mockError(400, { error: "Password must be at least 8 characters.", code: "weak_password" });
+    }
+    return { ok: true };
+  }
+  if (method === "POST" && path === "/auth/password-change/") {
+    if (!_devUser) return mockError(401, { error: "Authentication required." });
+    const b = (body || {}) as any;
+    const cur = String(b.current_password || "");
+    const nw = String(b.new_password || "");
+    if (!cur) return mockError(400, { error: "Enter your current password.", code: "wrong_password" });
+    // Sentinel: "wrongpass" simulates an incorrect current password.
+    if (cur === "wrongpass") return mockError(400, { error: "Current password is incorrect.", code: "wrong_password" });
+    // Sentinel: "throttle" simulates throttling.
+    if (cur === "throttle") return mockError(429, { error: "Too many attempts. Try again later.", code: "throttled", retry_after: 60 });
+    if (nw.length < 8) return mockError(400, { error: "New password must be at least 8 characters.", code: "weak_password" });
+    return { ok: true };
+  }
+
+
+
 
   // ── Reports ──
   // Report submissions are always acknowledged (a repeated report for the same

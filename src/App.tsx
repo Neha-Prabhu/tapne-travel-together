@@ -7,9 +7,11 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { DraftProvider } from "@/contexts/DraftContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import { BookmarksProvider } from "@/contexts/BookmarksContext";
+import { ConflictProvider } from "@/contexts/ConflictContext";
 import ScrollToTop from "@/components/ScrollToTop";
 import RequireAuth from "@/components/RequireAuth";
 import GlobalLoginModal from "@/components/GlobalLoginModal";
+
 import Index from "./pages/Index";
 
 import TripDetail from "./pages/TripDetail";
@@ -47,8 +49,10 @@ const App = () => (
           <DraftProvider>
             <SearchProvider>
               <BookmarksProvider>
+              <ConflictProvider>
               <ScrollToTop />
               <GlobalLoginModal />
+
               <Routes>
                 <Route path="/" element={<Index />} />
 
@@ -85,8 +89,10 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </ConflictProvider>
               </BookmarksProvider>
             </SearchProvider>
+
           </DraftProvider>
         </BrowserRouter>
       </TooltipProvider>
