@@ -83,7 +83,7 @@ function normalize(raw: Partial<Record<keyof SettingsPayload, unknown>>): Settin
 }
 
 const Settings = () => {
-  const { isAuthenticated, requireAuth, logout } = useAuth();
+  const { isAuthenticated, requireAuth, logout, changePassword } = useAuth();
   const navigate = useNavigate();
 
   const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
@@ -508,7 +508,11 @@ const Settings = () => {
               </CardContent>
             </Card>
 
+            {/* Security */}
+            <SecuritySection changePassword={changePassword} />
+
             {/* Danger zone */}
+
             <Card className="border-destructive/30">
               <CardContent className="space-y-4 p-6">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-destructive">
