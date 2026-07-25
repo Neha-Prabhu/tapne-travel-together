@@ -268,7 +268,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     store.updateUser(patch);
   }, []);
 
+  const requestPasswordReset = useCallback(async (email: string): Promise<{ ok: boolean }> => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const url = cfg.api.password_reset_request;
+    if (!url) return { ok: true };
+    try { await apiPost(url, { email }); } catch { /* swallow — always show the same generic result */ }
+    return { ok: true };
+  }, []);
 
+  const confirmPasswordReset = useCallback(async (uid: string, token: string, newPassword: string) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const url = cfg.api.password_reset_confirm;
+    if (!url) return { ok: false, code: "invalid_link", error: "Reset is not available." };
+    try {
+      await apiPost(url, { uid, token, new_password: newPassword });
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, code: err?.code, error: err?.error || "Could not reset password." };
+    }
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const url = cfg.api.password_change;
+    if (!url) return { ok: false, code: "unavailable", error: "Password change is not available." };
+    try {
+      await apiPost(url, { current_password: currentPassword, new_password: newPassword });
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, code: err?.code, error: err?.error || "Could not update password.", retry_after: err?.retry_after };
+    }
+  }, []);
+
+  const consumePendingReset = useCallback(() => setPendingReset(null), []);
 
   const requireAuth = useCallback((onSuccess?: () => void) => {
     if (user) {
@@ -281,8 +313,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleLoginModalChange = useCallback((open: boolean) => {
     setLoginModalOpen(open);
-    if (!open) setPendingAuthAction(null);
+    if (!open) { setPendingAuthAction(null); setPendingReset(null); }
   }, []);
+
 
   return (
     <AuthContext.Provider value={{
@@ -293,6 +326,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       signup,
       verifySignupCode,
       resendSignupCode,
+      requestPasswordReset,
+      confirmPasswordReset,
+      changePassword,
       logout,
       updateProfile,
       setUserMedia,
@@ -302,7 +338,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loginModalOpen,
       setLoginModalOpen: handleLoginModalChange,
       pendingAuthAction,
+      pendingReset,
+      consumePendingReset,
     }}>
+
       {children}
     </AuthContext.Provider>
   );
