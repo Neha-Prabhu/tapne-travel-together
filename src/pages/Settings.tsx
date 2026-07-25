@@ -8,15 +8,17 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
 import { toast } from "sonner";
+
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink, Check } from "lucide-react";
+import { Loader2, AlertTriangle, PauseCircle, SettingsIcon, ShieldOff, ExternalLink, Check, Lock } from "lucide-react";
 
 interface BlockedUser {
   username: string;
