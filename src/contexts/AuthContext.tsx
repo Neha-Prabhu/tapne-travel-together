@@ -82,6 +82,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
+  // Detect `/?auth=reset#uid=<uid>&token=<token>` reset links exactly once.
+  // Read the fragment, immediately scrub both the query flag and the sensitive
+  // fragment from history, and expose only via pendingReset so the modal can
+  // open its reset-password step. The token is never rendered or logged.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth") !== "reset") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    const hp = new URLSearchParams(hash);
+    const uid = hp.get("uid") || "";
+    const token = hp.get("token") || "";
+    params.delete("auth");
+    const qs = params.toString();
+    const cleanUrl = window.location.pathname + (qs ? `?${qs}` : "");
+    window.history.replaceState({}, "", cleanUrl);
+    if (uid && token) {
+      setPendingReset({ uid, token });
+      setLoginModalOpen(true);
+    }
+  }, []);
+
+
 
   useEffect(() => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
