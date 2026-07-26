@@ -275,6 +275,16 @@ const Profile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avatarField.confirmed]);
 
+  // Server revision from the last profile load or successful save. Sent as
+  // expected_revision on every text-field save so concurrent edits surface as
+  // 409 edit_conflict rather than silently overwriting.
+  const profileRevisionRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const r = (p as any)?.revision;
+    if (typeof r === "number") profileRevisionRef.current = r;
+  }, [p]);
+  const { openConflict } = useConflict();
+
   const saveEdit = async () => {
     try {
       const updated = await updateProfile({
@@ -282,7 +292,11 @@ const Profile = () => {
         bio: editBio,
         location: editLocation,
         travel_tags: editTags,
-      });
+        expected_revision: profileRevisionRef.current,
+      } as any);
+      if (typeof (updated as any)?.revision === "number") {
+        profileRevisionRef.current = (updated as any).revision;
+      }
       if (profileData && p) {
         const next = updated || {};
         setProfileData({
@@ -295,13 +309,22 @@ const Profile = () => {
             travel_tags: next.travel_tags ?? editTags,
             avatar_url: avatarField.confirmed?.url ?? p.avatar_url,
             avatar_id: avatarField.confirmed?.id ?? p.avatar_id,
-          },
+            revision: (updated as any)?.revision ?? (p as any)?.revision,
+          } as any,
         });
       }
       toast.success("Profile updated!");
       setEditOpen(false);
-    } catch {
-      toast.error("Could not save profile.");
+    } catch (err: any) {
+      if (isEditConflict(err)) {
+        openConflict({
+          label: "profile",
+          unsavedText: JSON.stringify({ name: editName, bio: editBio, location: editLocation, travel_tags: editTags }, null, 2),
+          onReload: () => window.location.reload(),
+        });
+      } else {
+        toast.error("Could not save profile.");
+      }
     }
 
   };
