@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
+import { useConflict, isEditConflict } from "@/contexts/ConflictContext";
 import { toast } from "sonner";
 
 import {
@@ -85,15 +86,16 @@ function normalize(raw: Partial<Record<keyof SettingsPayload, unknown>>): Settin
 const Settings = () => {
   const { isAuthenticated, requireAuth, logout, changePassword } = useAuth();
   const navigate = useNavigate();
+  const { openConflict } = useConflict();
 
   const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const lastSavedRef = useRef<SettingsPayload>(DEFAULTS);
-  // The member's most recent desired settings — always the latest intent,
-  // even when the last save failed. Retry and follow-up saves use this.
+  // Server revision from the last load or successful save. Sent as
+  // expected_revision on every PATCH so concurrent edits surface as 409.
+  const revisionRef = useRef<number | undefined>(undefined);
   const pendingIntentRef = useRef<SettingsPayload>(DEFAULTS);
-  // Whether the last save attempt failed and pendingIntent still needs to land.
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

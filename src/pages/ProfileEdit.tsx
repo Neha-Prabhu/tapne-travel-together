@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useConflict, isEditConflict } from "@/contexts/ConflictContext";
 import { toast } from "sonner";
 import {
   Loader2, Save, Eye, ArrowLeft, Camera, ImagePlus, X, ArrowUp, ArrowDown,
@@ -216,19 +217,36 @@ const ProfileEdit = () => {
     }
   };
 
+  const revisionRef = useRef<number | undefined>(undefined);
+  const { openConflict } = useConflict();
+  useEffect(() => {
+    const r = (user as any)?.revision;
+    if (typeof r === "number") revisionRef.current = r;
+  }, [user]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateProfile({
+      const updated = await updateProfile({
         name, bio, location,
         website,
         instagram_url: instagramUrl,
         travel_tags: tags,
+        expected_revision: revisionRef.current,
       } as any);
+      if (typeof (updated as any)?.revision === "number") revisionRef.current = (updated as any).revision;
       toast.success("Profile updated");
       navigate(`/users/${user?.username || user?.id}`);
-    } catch {
-      toast.error("Could not save profile");
+    } catch (err: any) {
+      if (isEditConflict(err)) {
+        openConflict({
+          label: "profile",
+          unsavedText: JSON.stringify({ name, bio, location, website, instagram_url: instagramUrl, travel_tags: tags }, null, 2),
+          onReload: () => window.location.reload(),
+        });
+      } else {
+        toast.error("Could not save profile");
+      }
     } finally {
       setSaving(false);
     }
