@@ -959,22 +959,31 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       is_draft: true, is_published: false, can_manage: true,
     };
     _devDrafts.set(newId, newDraft);
-    return { draft: newDraft };
+    _draftRevisions.set(newId, 1);
+    return { draft: { ...newDraft, revision: 1 } };
   }
 
   const draftPatchMatch = path.match(/^\/trip-drafts\/(\d+)\/$/);
   if (method === "PATCH" && draftPatchMatch) {
     const id = parseInt(draftPatchMatch[1]);
     const existing = _devDrafts.get(id) ?? { id, is_draft: true, is_published: false, can_manage: true } as TripData;
-    const updated = { ...existing, ...(body as Record<string, any>) };
+    const b = (body as any) || {};
+    const current = draftRev(id);
+    if (!checkRevision(b, current)) {
+      return conflictResponse({ ...existing, revision: current }, current);
+    }
+    const { expected_revision: _er, ...rest } = b;
+    const updated = { ...existing, ...(rest as Record<string, any>) };
     _devDrafts.set(id, updated);
-    return { draft: updated };
+    const nextRev = bumpDraftRev(id);
+    return { draft: { ...updated, revision: nextRev } };
   }
 
   const draftDeleteMatch = path.match(/^\/trip-drafts\/(\d+)\/$/);
   if (method === "DELETE" && draftDeleteMatch) {
     const id = parseInt(draftDeleteMatch[1]);
     _devDrafts.delete(id);
+    _draftRevisions.delete(id);
     return {};
   }
 
@@ -982,7 +991,13 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "POST" && draftPublishMatch) {
     const id = parseInt(draftPublishMatch[1]);
     const existing = _devDrafts.get(id);
+    const b = (body as any) || {};
+    const current = draftRev(id);
+    if (!checkRevision(b, current)) {
+      return conflictResponse({ ...(existing || {}), revision: current }, current);
+    }
     if (existing) _devDrafts.set(id, { ...existing, is_draft: false, is_published: true });
+    bumpDraftRev(id);
     return { trip_id: id, id };
   }
 
