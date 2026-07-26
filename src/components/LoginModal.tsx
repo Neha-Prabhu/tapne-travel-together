@@ -308,22 +308,24 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
                 </div>
               ) : error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || (mode === "signup" && !emailAvailable)}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {mode === "login" ? "Log In" : "Sign Up"}
               </Button>
             </form>
 
-            <p className="text-center text-sm text-muted-foreground">
-              {mode === "login" ? "Don't have an account? " : "Already have an account? "}
-              <button
-                type="button"
-                className="font-medium text-primary hover:underline"
-                onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
-              >
-                {mode === "login" ? "Sign up" : "Log in"}
-              </button>
-            </p>
+            {emailAvailable && (
+              <p className="text-center text-sm text-muted-foreground">
+                {mode === "login" ? "Don't have an account? " : "Already have an account? "}
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline"
+                  onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
+                >
+                  {mode === "login" ? "Sign up" : "Log in"}
+                </button>
+              </p>
+            )}
           </div>
         )}
 
