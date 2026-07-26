@@ -403,14 +403,19 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (path === "/settings/") {
     if (method === "GET") {
       _devSettings = _loadDevSettings();
-      return { ..._devSettings };
+      return { ..._devSettings, revision: _settingsRevision };
     }
     if (method === "PATCH" || method === "POST") {
       if (body && typeof body === "object" && !(typeof FormData !== "undefined" && body instanceof FormData)) {
-        _devSettings = { ..._devSettings, ...(body as Record<string, unknown>) };
+        if (!checkRevision(body, _settingsRevision)) {
+          return conflictResponse({ ..._devSettings, revision: _settingsRevision }, _settingsRevision);
+        }
+        const { expected_revision: _er, ...rest } = body as Record<string, unknown>;
+        _devSettings = { ..._devSettings, ...rest };
         _saveDevSettings(_devSettings);
+        _settingsRevision += 1;
       }
-      return { ok: true, ..._devSettings };
+      return { ok: true, ..._devSettings, revision: _settingsRevision };
     }
   }
 
