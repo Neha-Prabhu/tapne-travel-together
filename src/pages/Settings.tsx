@@ -151,9 +151,10 @@ const Settings = () => {
   // This guarantees the final stored value matches the member's last selection.
   const runSaveLoop = useCallback(async () => {
     if (savingRef.current) return;
+    if (conflictPausedRef.current) return;
     savingRef.current = true;
     try {
-      while (dirtyRef.current) {
+      while (dirtyRef.current && !conflictPausedRef.current) {
         const attempt = pendingIntentRef.current;
         dirtyRef.current = false;
         setSaveState("saving");
@@ -169,7 +170,9 @@ const Settings = () => {
           }
           lastSavedRef.current = confirmed;
           if (!dirtyRef.current) {
-            setValues(confirmed);
+            // Only reconcile local values when the server echoed a different
+            // shape; never overwrite the member's still-current selection.
+            setValues((prev) => (equal(prev, attempt) ? confirmed : prev));
             pendingIntentRef.current = confirmed;
             setSaveState("saved");
             if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
@@ -179,11 +182,17 @@ const Settings = () => {
           }
         } catch (err: any) {
           if (isEditConflict(err)) {
-            // Stop the loop and surface the conflict dialog. Preserve the
-            // member's unsaved intent so they can copy it before reload.
+            // Freeze the current unsaved selections on-screen. Do NOT revert
+            // to lastSavedRef — the member's choices must remain visible
+            // while the shared conflict dialog is open and after Keep
+            // editing. Pause the auto-save loop so the dialog can't reopen
+            // by itself; a later deliberate field change (or Reload latest)
+            // resumes saving.
+            conflictPausedRef.current = true;
+            dirtyRef.current = false;
+            if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
             const unsaved = pendingIntentRef.current;
-            setValues(lastSavedRef.current);
-            setSaveState("error");
+            setSaveState("conflict");
             openConflict({
               label: "settings",
               unsavedText: JSON.stringify(unsaved, null, 2),
@@ -196,6 +205,8 @@ const Settings = () => {
                   lastSavedRef.current = normalized;
                   pendingIntentRef.current = normalized;
                   if (data && typeof data.revision === "number") revisionRef.current = data.revision;
+                  conflictPausedRef.current = false;
+                  dirtyRef.current = false;
                   setSaveState("idle");
                 } catch { /* leave state as-is */ }
               },
@@ -203,7 +214,8 @@ const Settings = () => {
             break;
           }
           if (!dirtyRef.current) {
-            setValues(lastSavedRef.current);
+            // Non-conflict failure — leave the member's selection intact and
+            // let them retry deliberately.
             setSaveState("error");
             break;
           }
@@ -215,6 +227,7 @@ const Settings = () => {
   }, [openConflict]);
 
   const scheduleSave = useCallback(() => {
+    if (conflictPausedRef.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => { runSaveLoop(); }, 450);
   }, [runSaveLoop]);
