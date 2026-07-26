@@ -486,8 +486,15 @@ const CreateTrip = () => {
     customQuestions, autoApprove, paymentMethod, paymentDetails,
   });
 
+  // When a conflict surfaces, freeze the 10s autosave interval so the shared
+  // dialog can't reopen on its own after Keep editing. Manual buttons (Save
+  // Draft, Publish, preview toggle) intentionally bypass this pause; Reload
+  // latest performs a hard reload which clears it entirely.
+  const conflictPausedRef = useRef(false);
+
   const handleSaveError = (err: unknown, id: number | null) => {
     if (isEditConflict(err) && id) {
+      conflictPausedRef.current = true;
       openConflict({
         label: "trip",
         unsavedText: JSON.stringify(buildFormSnapshot(), null, 2),
@@ -536,9 +543,13 @@ const CreateTrip = () => {
       generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact, medicalDetails,
       emergencyDetails, faqs, contactPreferences, hosts, customQuestions, autoApprove, paymentMethod, paymentDetails]);
 
-  // Auto-save every 10 seconds
+  // Auto-save every 10 seconds. Skipped while a conflict is unresolved so the
+  // dialog cannot reopen on its own after Keep editing.
   useEffect(() => {
-    const interval = setInterval(() => { saveDraftData(); }, 10000);
+    const interval = setInterval(() => {
+      if (conflictPausedRef.current) return;
+      saveDraftData();
+    }, 10000);
     return () => clearInterval(interval);
   }, [saveDraftData]);
 
