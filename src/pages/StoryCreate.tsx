@@ -54,7 +54,7 @@ const StoryCreate = () => {
       } else {
         // After a first successful save the story exists — subsequent writes
         // must PATCH by slug so revision tracking stays intact.
-        const slug = (window as any).__tapne_pending_story_slug || data!.blog.slug;
+        const slug = (window as any).__tapne_pending_story_slug;
         data = await apiPatch(`${cfg.api.blogs}${slug}/`, payload);
       }
       const slug = data.blog?.slug;
