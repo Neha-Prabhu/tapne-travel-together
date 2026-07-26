@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,6 +10,7 @@ import TiptapEditor from "@/components/TiptapEditor";
 import StoryPreviewView from "@/components/StoryPreviewView";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch } from "@/lib/api";
+import { useConflict, isEditConflict } from "@/contexts/ConflictContext";
 import type { BlogData } from "@/types/api";
 import { toast } from "sonner";
 import { Loader2, Save, Eye, ArrowLeft, Send } from "lucide-react";
@@ -19,6 +20,7 @@ const StoryEdit = () => {
   const { storyId } = useParams<{ storyId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { openConflict } = useConflict();
   const isPreview = searchParams.get("mode") === "preview";
 
   const [title, setTitle] = useState("");
@@ -28,38 +30,60 @@ const StoryEdit = () => {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const revisionRef = useRef<number | undefined>(undefined);
+  const savingRef = useRef(false);
 
   useEffect(() => { if (!isAuthenticated) requireAuth(() => {}); }, [isAuthenticated]);
 
-  useEffect(() => {
+  const loadStory = () => {
     if (!storyId) return;
     const cfg = window.TAPNE_RUNTIME_CONFIG;
+    setLoading(true);
     apiGet<{ blog: BlogData }>(`${cfg.api.blogs}${storyId}/`)
       .then((data) => {
-        const b = data.blog || (data as any);
+        const b = (data.blog || (data as any)) as BlogData;
         setTitle(b.title || "");
         setDescription(b.short_description || b.excerpt || "");
         setCoverUrl(b.cover_image_url || "");
         setLocation(b.location || "");
         setContent(b.body || "");
+        revisionRef.current = b.revision;
       })
       .catch(() => toast.error("Could not load story"))
       .finally(() => setLoading(false));
-  }, [storyId]);
+  };
+
+  useEffect(loadStory, [storyId]);
+
+  const snapshotText = () => JSON.stringify({ title, description, coverUrl, location, content }, null, 2);
 
   const handleSubmit = async (publish: boolean) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      await apiPatch(`${cfg.api.blogs}${storyId}/`, {
-        title, short_description: description, cover_image_url: coverUrl, location, body: content, status: publish ? "published" : "draft",
+      const data = await apiPatch<{ blog: { slug: string; revision?: number } }>(`${cfg.api.blogs}${storyId}/`, {
+        title, short_description: description, cover_image_url: coverUrl, location, body: content,
+        status: publish ? "published" : "draft",
+        expected_revision: revisionRef.current,
       });
+      if (typeof data.blog?.revision === "number") revisionRef.current = data.blog.revision;
       toast.success(publish ? "Story published" : "Saved");
-      navigate(`/stories/${storyId}`);
-    } catch {
-      toast.error("Could not save");
+      if (publish) navigate(`/stories/${storyId}`);
+    } catch (err: any) {
+      if (isEditConflict(err)) {
+        openConflict({
+          label: "story",
+          unsavedText: snapshotText(),
+          onReload: () => { loadStory(); },
+        });
+      } else {
+        toast.error("Could not save");
+      }
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 

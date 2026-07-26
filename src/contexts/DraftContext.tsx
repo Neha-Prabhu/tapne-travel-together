@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TripData, MyTripsResponse } from "@/types/api";
+import { createSerialQueue } from "@/lib/editConflict";
 
 export interface TripDraft {
   id: number;
@@ -15,6 +16,8 @@ export interface TripDraft {
   lastEditedAt: string;
   createdAt: string;
   formData: Record<string, any>;
+  /** Server revision — used as `expected_revision` on the next update. */
+  revision: number;
 }
 
 function tripDataToDraft(t: TripData): TripDraft {
@@ -29,6 +32,7 @@ function tripDataToDraft(t: TripData): TripDraft {
     status: t.is_draft ? "draft" : "published",
     lastEditedAt: new Date().toISOString(),
     createdAt: new Date().toISOString(),
+    revision: t.revision ?? 1,
     formData: {
       totalPrice: t.price_per_person?.toString() || "",
       earlyBirdPrice: t.early_bird_price?.toString() || "",
@@ -109,11 +113,20 @@ function draftToServerPayload(updates: Partial<TripDraft>): Record<string, any> 
 interface DraftContextType {
   drafts: TripDraft[];
   createDraft: () => Promise<number>;
-  updateDraft: (id: number, updates: Partial<TripDraft>) => void;
+  /** Serialized, revision-guarded update. Resolves after the write lands; on
+   *  409 edit_conflict throws the raw API error so callers can open the
+   *  conflict dialog. Later `updateDraft` calls always send the latest values
+   *  with the newly-returned revision. */
+  updateDraft: (id: number, updates: Partial<TripDraft>) => Promise<void>;
   deleteDraft: (id: number) => void;
   duplicateDraft: (id: number) => Promise<number>;
   getDraft: (id: number) => TripDraft | undefined;
+  /** Waits for any in-flight save on this draft, then publishes with the
+   *  latest known revision. */
   publishDraft: (id: number, currentFormData?: Record<string, any>) => Promise<number | null>;
+  /** Refetches the latest server copy after a conflict so the form can be
+   *  re-populated before the member edits again. */
+  reloadDraft: (id: number) => Promise<TripDraft | null>;
   loading: boolean;
 }
 
@@ -123,22 +136,26 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [drafts, setDrafts] = useState<TripDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAuth();
-  
-  const isAuthenticatedRef = useRef(isAuthenticated);
 
-  // Keep the ref in sync during render (not in an effect) so children whose
-  // effects fire before ours — e.g. CreateTrip triggering createDraft on the
-  // same render session-restore turns authenticated — see the current value.
+  const isAuthenticatedRef = useRef(isAuthenticated);
   isAuthenticatedRef.current = isAuthenticated;
 
-  useEffect(() => {
-    isAuthenticatedRef.current = isAuthenticated;
-  }, [isAuthenticated]);
+  useEffect(() => { isAuthenticatedRef.current = isAuthenticated; }, [isAuthenticated]);
 
-  // Load drafts from API — re-runs when isAuthenticated changes
+  // Per-draft serial save queue.
+  const queueRef = useRef(createSerialQueue());
+  // Authoritative revision map, keyed by draft id. Kept in a ref so serial
+  // saves see the newest value even when triggered before React re-renders.
+  const revisionsRef = useRef<Map<number, number>>(new Map());
+  const setRevision = (id: number, rev: number) => {
+    revisionsRef.current.set(id, rev);
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, revision: rev } : d)));
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       setDrafts([]);
+      revisionsRef.current.clear();
       return;
     }
     const cfg = window.TAPNE_RUNTIME_CONFIG;
@@ -147,6 +164,7 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .then((data) => {
         const allDrafts = data.trips.map(tripDataToDraft);
         setDrafts(allDrafts);
+        revisionsRef.current = new Map(allDrafts.map((d) => [d.id, d.revision]));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -157,25 +175,34 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     const data = await apiPost<{ draft: TripData }>(cfg.api.trip_drafts, { title: "", destination: "" });
     const newDraft = tripDataToDraft(data.draft);
+    revisionsRef.current.set(newDraft.id, newDraft.revision);
     setDrafts((prev) => [newDraft, ...prev]);
     return newDraft.id;
   }, []);
 
-  const updateDraft = useCallback((id: number, updates: Partial<TripDraft>) => {
+  const updateDraft = useCallback((id: number, updates: Partial<TripDraft>): Promise<void> => {
     setDrafts((prev) =>
       prev.map((d) => (d.id === id ? { ...d, ...updates, lastEditedAt: new Date().toISOString() } : d))
     );
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     const payload = draftToServerPayload(updates);
-    if (Object.keys(payload).length > 0) {
-      apiPatch(`${cfg.api.trip_drafts}${id}/`, payload).catch(() => {});
-    }
+    if (Object.keys(payload).length === 0) return Promise.resolve();
+    return queueRef.current.run(`draft:${id}`, async () => {
+      const expected = revisionsRef.current.get(id);
+      const data = await apiPatch<{ draft: TripData }>(
+        `${cfg.api.trip_drafts}${id}/`,
+        { ...payload, expected_revision: expected },
+      );
+      const nextRev = data?.draft?.revision;
+      if (typeof nextRev === "number") setRevision(id, nextRev);
+    });
   }, []);
 
   const deleteDraft = useCallback(async (id: number) => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
     try {
       await apiDelete(`${cfg.api.trip_drafts}${id}/`);
+      revisionsRef.current.delete(id);
       setDrafts((prev) => prev.filter((d) => d.id !== id));
     } catch {}
   }, []);
@@ -188,36 +215,55 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     payload.title = original.title ? `Copy of ${original.title}` : "";
     const data = await apiPost<{ draft: TripData }>(cfg.api.trip_drafts, payload);
     const newDraft = tripDataToDraft(data.draft);
+    revisionsRef.current.set(newDraft.id, newDraft.revision);
     setDrafts((prev) => [newDraft, ...prev]);
     return newDraft.id;
   }, [drafts]);
 
   const getDraft = useCallback((id: number) => drafts.find((d) => d.id === id), [drafts]);
 
+  const reloadDraft = useCallback(async (id: number): Promise<TripDraft | null> => {
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    try {
+      const data = await apiGet<MyTripsResponse>(cfg.api.my_trips);
+      const t = data.trips.find((x) => x.id === id);
+      if (!t) return null;
+      const d = tripDataToDraft(t);
+      revisionsRef.current.set(id, d.revision);
+      setDrafts((prev) => prev.map((x) => (x.id === id ? d : x)));
+      return d;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const publishDraft = useCallback(async (id: number, currentFormData?: Record<string, any>) => {
     const cfg = window.TAPNE_RUNTIME_CONFIG;
 
     if (currentFormData && Object.keys(currentFormData).length > 0) {
-      const payload = draftToServerPayload({ formData: currentFormData } as Partial<TripDraft>);
-      if (Object.keys(payload).length > 0) {
-        await apiPatch(`${cfg.api.trip_drafts}${id}/`, payload);
-      }
+      // Queue a final save with the latest values before publishing.
+      await updateDraft(id, { formData: currentFormData } as Partial<TripDraft>);
+    } else {
+      // Drain any pending save.
+      await queueRef.current.run(`draft:${id}`, async () => {});
     }
 
     let publishedId: number | null = null;
-    try {
-      const res = await apiPost<{ trip_id?: number; id?: number }>(`${cfg.api.trip_drafts}${id}/publish/`, {});
-      publishedId = res?.trip_id ?? res?.id ?? id;
-    } catch (err: any) {
-      throw new Error(err?.message || err?.error || "Could not publish trip");
-    }
-
+    const res = await queueRef.current.run(`draft:${id}`, async () => {
+      const expected = revisionsRef.current.get(id);
+      return apiPost<{ trip_id?: number; id?: number }>(
+        `${cfg.api.trip_drafts}${id}/publish/`,
+        { expected_revision: expected },
+      );
+    });
+    publishedId = res?.trip_id ?? res?.id ?? id;
+    revisionsRef.current.delete(id);
     setDrafts((prev) => prev.filter((d) => d.id !== id));
     return publishedId;
-  }, []);
+  }, [updateDraft]);
 
   return (
-    <DraftContext.Provider value={{ drafts, createDraft, updateDraft, deleteDraft, duplicateDraft, getDraft, publishDraft, loading }}>
+    <DraftContext.Provider value={{ drafts, createDraft, updateDraft, deleteDraft, duplicateDraft, getDraft, publishDraft, reloadDraft, loading }}>
       {children}
     </DraftContext.Provider>
   );
