@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [lastAuthError, setLastAuthError] = useState("");
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
-  const [pendingReset, setPendingReset] = useState<{ uid: string; token: string } | null>(null);
+  const [pendingReset, setPendingReset] = useState<{ uid: string; token: string; invalid?: boolean } | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const authMutationVersion = useRef(0);
 
@@ -102,6 +102,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     window.history.replaceState({}, "", cleanUrl);
     if (uid && token) {
       setPendingReset({ uid, token });
+      setLoginModalOpen(true);
+    } else {
+      // Malformed reset link — open the modal at the invalid-link step so the
+      // member can request a fresh one instead of silently failing.
+      setPendingReset({ uid: "", token: "", invalid: true });
       setLoginModalOpen(true);
     }
   }, []);
