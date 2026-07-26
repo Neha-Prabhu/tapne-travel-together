@@ -29,8 +29,10 @@ interface AuthContextType {
   pendingAuthAction: (() => void) | null;
   /** When a `?auth=reset#uid=…&token=…` link was detected, holds the parsed
    *  credentials so LoginModal can open its reset-password step. The token is
-   *  never rendered or logged. Consume via `consumePendingReset()`. */
-  pendingReset: { uid: string; token: string } | null;
+   *  never rendered or logged. When the link is malformed (missing uid/token)
+   *  `invalid` is set so the modal opens directly at the invalid-link step.
+   *  Consume via `consumePendingReset()`. */
+  pendingReset: { uid: string; token: string; invalid?: boolean } | null;
   consumePendingReset: () => void;
 }
 
