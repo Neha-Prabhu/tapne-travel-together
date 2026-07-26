@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet, apiPatch, apiPost, apiDelete } from "@/lib/api";
+import { useConflict, isEditConflict } from "@/contexts/ConflictContext";
 import { toast } from "sonner";
 
 import {
@@ -85,15 +86,16 @@ function normalize(raw: Partial<Record<keyof SettingsPayload, unknown>>): Settin
 const Settings = () => {
   const { isAuthenticated, requireAuth, logout, changePassword } = useAuth();
   const navigate = useNavigate();
+  const { openConflict } = useConflict();
 
   const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const lastSavedRef = useRef<SettingsPayload>(DEFAULTS);
-  // The member's most recent desired settings — always the latest intent,
-  // even when the last save failed. Retry and follow-up saves use this.
+  // Server revision from the last load or successful save. Sent as
+  // expected_revision on every PATCH so concurrent edits surface as 409.
+  const revisionRef = useRef<number | undefined>(undefined);
   const pendingIntentRef = useRef<SettingsPayload>(DEFAULTS);
-  // Whether the last save attempt failed and pendingIntent still needs to land.
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,12 +121,13 @@ const Settings = () => {
       setLoading(true);
       try {
         const cfg = window.TAPNE_RUNTIME_CONFIG;
-        const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings);
+        const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>> & { revision?: number }>(cfg.api.settings);
         if (!cancelled && data && typeof data === "object") {
           const normalized = normalize(data);
           setValues(normalized);
           lastSavedRef.current = normalized;
           pendingIntentRef.current = normalized;
+          if (typeof data.revision === "number") revisionRef.current = data.revision;
         }
       } catch { /* keep defaults */ }
       finally { if (!cancelled) setLoading(false); }
@@ -152,10 +155,15 @@ const Settings = () => {
         setSaveState("saving");
         try {
           const cfg = window.TAPNE_RUNTIME_CONFIG;
-          const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>>>(cfg.api.settings, attempt);
+          const saved = await apiPatch<Partial<Record<keyof SettingsPayload, unknown>> & { revision?: number }>(
+            cfg.api.settings,
+            { ...attempt, expected_revision: revisionRef.current },
+          );
           const confirmed = saved && typeof saved === "object" ? normalize({ ...attempt, ...saved }) : attempt;
+          if (saved && typeof (saved as any).revision === "number") {
+            revisionRef.current = (saved as any).revision;
+          }
           lastSavedRef.current = confirmed;
-          // Only overwrite optimistic values if no newer selection is queued.
           if (!dirtyRef.current) {
             setValues(confirmed);
             pendingIntentRef.current = confirmed;
@@ -165,10 +173,31 @@ const Settings = () => {
               setSaveState((s) => (s === "saved" ? "idle" : s));
             }, 1600);
           }
-        } catch {
-          // Failed intent stays in pendingIntentRef so Retry re-applies it.
-          // If a newer selection arrived during the failed save, prefer it
-          // (dirtyRef is true) and continue the loop without surfacing error.
+        } catch (err: any) {
+          if (isEditConflict(err)) {
+            // Stop the loop and surface the conflict dialog. Preserve the
+            // member's unsaved intent so they can copy it before reload.
+            const unsaved = pendingIntentRef.current;
+            setValues(lastSavedRef.current);
+            setSaveState("error");
+            openConflict({
+              label: "settings",
+              unsavedText: JSON.stringify(unsaved, null, 2),
+              onReload: async () => {
+                const cfg = window.TAPNE_RUNTIME_CONFIG;
+                try {
+                  const data = await apiGet<Partial<Record<keyof SettingsPayload, unknown>> & { revision?: number }>(cfg.api.settings);
+                  const normalized = normalize(data || {});
+                  setValues(normalized);
+                  lastSavedRef.current = normalized;
+                  pendingIntentRef.current = normalized;
+                  if (data && typeof data.revision === "number") revisionRef.current = data.revision;
+                  setSaveState("idle");
+                } catch { /* leave state as-is */ }
+              },
+            });
+            break;
+          }
           if (!dirtyRef.current) {
             setValues(lastSavedRef.current);
             setSaveState("error");
@@ -179,7 +208,7 @@ const Settings = () => {
     } finally {
       savingRef.current = false;
     }
-  }, []);
+  }, [openConflict]);
 
   const scheduleSave = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

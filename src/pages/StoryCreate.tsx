@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import TiptapEditor from "@/components/TiptapEditor";
 import StoryPreviewView from "@/components/StoryPreviewView";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiPost } from "@/lib/api";
+import { apiPost, apiPatch } from "@/lib/api";
+import { useConflict, isEditConflict } from "@/contexts/ConflictContext";
 import { toast } from "sonner";
 import { Loader2, Save, Eye, ArrowLeft, Send } from "lucide-react";
 
@@ -17,6 +18,7 @@ const StoryCreate = () => {
   const { isAuthenticated, requireAuth, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { openConflict } = useConflict();
   const isPreview = searchParams.get("mode") === "preview";
 
   const [title, setTitle] = useState("");
@@ -25,25 +27,58 @@ const StoryCreate = () => {
   const [location, setLocation] = useState("");
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  // Server revision after the first successful save. Sent as expected_revision
+  // on every subsequent save so concurrent edits surface as edit_conflict.
+  const revisionRef = useRef<number | undefined>(undefined);
+  const savingRef = useRef(false);
 
   useEffect(() => { if (!isAuthenticated) requireAuth(() => {}); }, [isAuthenticated]);
 
+  const snapshotText = () => JSON.stringify({ title, description, coverUrl, location, content }, null, 2);
+
   const handleSubmit = async (publish: boolean) => {
     if (!title.trim()) { toast.error("Title is required"); return; }
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const cfg = window.TAPNE_RUNTIME_CONFIG;
-      const data = await apiPost<{ blog: { slug: string } }>(cfg.api.blogs, {
-        title, short_description: description, cover_image_url: coverUrl, location, body: content, status: publish ? "published" : "draft",
-      });
-      toast.success(publish ? "Story published" : "Draft saved");
+      const payload = {
+        title, short_description: description, cover_image_url: coverUrl, location, body: content,
+        status: publish ? "published" : "draft",
+        expected_revision: revisionRef.current,
+      };
+      let data: { blog: { slug: string; revision?: number } };
+      if (revisionRef.current === undefined) {
+        data = await apiPost(cfg.api.blogs, payload);
+      } else {
+        // After a first successful save the story exists — subsequent writes
+        // must PATCH by slug so revision tracking stays intact.
+        const slug = (window as any).__tapne_pending_story_slug;
+        data = await apiPatch(`${cfg.api.blogs}${slug}/`, payload);
+      }
       const slug = data.blog?.slug;
-      if (slug) navigate(`/stories/${slug}`);
-      else navigate("/dashboard/stories");
-    } catch {
-      toast.error("Could not save story");
+      if (typeof data.blog?.revision === "number") revisionRef.current = data.blog.revision;
+      if (slug) (window as any).__tapne_pending_story_slug = slug;
+      toast.success(publish ? "Story published" : "Draft saved");
+      if (publish && slug) navigate(`/stories/${slug}`);
+      else if (publish) navigate("/dashboard/stories");
+    } catch (err: any) {
+      if (isEditConflict(err)) {
+        openConflict({
+          label: "story",
+          unsavedText: snapshotText(),
+          onReload: () => {
+            const slug = (window as any).__tapne_pending_story_slug;
+            if (slug) window.location.assign(`/stories/${slug}/edit`);
+          },
+        });
+      } else {
+        toast.error("Could not save story");
+      }
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 

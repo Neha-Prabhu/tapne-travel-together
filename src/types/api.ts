@@ -110,7 +110,8 @@ export interface FaqItem {
   answer: string;
 }
 
-export interface TripData { 
+export interface TripData {
+  revision?: number;
   id: number;
   title: string;
   summary?: string;
@@ -263,6 +264,7 @@ export interface BlogData {
   created_at?: string;
   tags?: string[];
   location?: string;
+  revision?: number;
 }
 
 // ─── Profile ──────────────────────────────────────────────────────────────
@@ -276,6 +278,7 @@ export interface ProfileData {
   created_trips: number;
   joined_trips: number;
   avatar_url?: string;
+  revision?: number;
 }
 
 // ─── Home Feed ────────────────────────────────────────────────────────────

@@ -69,11 +69,17 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     }
   }, [open, lastAuthError]);
 
-  // A detected reset link opens the modal directly into the reset step.
+  // A detected reset link opens the modal directly into the reset step,
+  // or into the invalid-link step if the token/uid were missing/malformed.
   useEffect(() => {
     if (open && pendingReset) {
-      resetCredsRef.current = { uid: pendingReset.uid, token: pendingReset.token };
-      setStep("reset");
+      if (pendingReset.invalid || !pendingReset.uid || !pendingReset.token) {
+        resetCredsRef.current = null;
+        setStep("invalid");
+      } else {
+        resetCredsRef.current = { uid: pendingReset.uid, token: pendingReset.token };
+        setStep("reset");
+      }
       setMode("login");
       setError(""); setResetError("");
       consumePendingReset();

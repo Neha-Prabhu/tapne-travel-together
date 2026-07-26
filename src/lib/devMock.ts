@@ -162,6 +162,35 @@ let _lastResendAt = 0;
 function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
 function mockError(status: number, body: Record<string, unknown>) { return { __mock_error: true, error: { status, ...body } }; }
 
+// ── Revision tracking for edit-conflict guards ──
+// Every editable resource carries a monotonic revision. Clients must send
+// `expected_revision` matching the last-known value; a mismatch returns 409
+// edit_conflict along with the latest server payload so callers can preserve
+// unsaved changes and re-fetch. Every successful write bumps the counter and
+// echoes the new revision so the client's next request stays in sync.
+const _draftRevisions = new Map<number, number>();
+const _blogRevisions = new Map<string, number>();
+let _profileRevision = 1;
+let _settingsRevision = 1;
+function draftRev(id: number) { return _draftRevisions.get(id) ?? 1; }
+function bumpDraftRev(id: number) { const n = draftRev(id) + 1; _draftRevisions.set(id, n); return n; }
+function blogRev(slug: string) { return _blogRevisions.get(slug) ?? 1; }
+function bumpBlogRev(slug: string) { const n = blogRev(slug) + 1; _blogRevisions.set(slug, n); return n; }
+function conflictResponse(latest: unknown, revision: number) {
+  return mockError(409, {
+    error: "This item was updated elsewhere. Reload to see the latest version.",
+    code: "edit_conflict",
+    revision,
+    latest,
+  });
+}
+function checkRevision(body: unknown, current: number): boolean {
+  if (!body || typeof body !== "object") return true;
+  const exp = (body as any).expected_revision;
+  if (exp === undefined || exp === null) return true;
+  return Number(exp) === current;
+}
+
 // ── Messaging state ──
 function getDevUsername() { return _devUser?.username || MOCK_SESSION_USERS[0]?.username || "arjun_mehta"; }
 function getDevDisplayName() { return _devUser?.display_name || MOCK_SESSION_USERS[0]?.display_name || "Arjun Mehta"; }
@@ -374,14 +403,19 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (path === "/settings/") {
     if (method === "GET") {
       _devSettings = _loadDevSettings();
-      return { ..._devSettings };
+      return { ..._devSettings, revision: _settingsRevision };
     }
     if (method === "PATCH" || method === "POST") {
       if (body && typeof body === "object" && !(typeof FormData !== "undefined" && body instanceof FormData)) {
-        _devSettings = { ..._devSettings, ...(body as Record<string, unknown>) };
+        if (!checkRevision(body, _settingsRevision)) {
+          return conflictResponse({ ..._devSettings, revision: _settingsRevision }, _settingsRevision);
+        }
+        const { expected_revision: _er, ...rest } = body as Record<string, unknown>;
+        _devSettings = { ..._devSettings, ...rest };
         _saveDevSettings(_devSettings);
+        _settingsRevision += 1;
       }
-      return { ok: true, ..._devSettings };
+      return { ok: true, ..._devSettings, revision: _settingsRevision };
     }
   }
 
@@ -800,23 +834,36 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       { slug: "budget-himachal", title: "Budget Himachal in ₹8,000", excerpt: "A complete breakdown of how I did a 7-day Himachal trip.", short_description: "A complete breakdown of how I did a 7-day Himachal trip on a shoestring budget.", body: "<p>Everyone thinks Himachal is expensive. I proved them wrong.</p><p>Here's exactly how I spent 7 days in the mountains for just ₹8,000. The key? Local buses, homestays, and cooking your own meals when possible.</p>", cover_image_url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80", author_username: "karan_singh", author_display_name: "Karan Singh", created_at: "2026-02-10", tags: ["Budget", "Trek", "Solo"], location: "Himachal Pradesh, India" },
     ];
     const blog = allBlogs.find(b => b.slug === slug);
-    return { blog: blog || null };
+    return { blog: blog ? { ...blog, revision: blogRev(slug) } : null };
   }
 
   // Blog create
   if (method === "POST" && path === "/blogs/") {
-    return { blog: { slug: "new-experience", ...(body as any) } };
+    const b = (body as any) || {};
+    const slug = b.slug || "new-experience";
+    _blogRevisions.set(slug, 1);
+    const { expected_revision: _er, ...rest } = b;
+    return { blog: { slug, ...rest, revision: 1 } };
   }
 
-  // Blog update (PATCH)
+  // Blog update (PATCH) — enforce expected_revision to detect concurrent edits.
   const blogPatchMatch = path.match(/^\/blogs\/([^/]+)\/$/);
   if (method === "PATCH" && blogPatchMatch) {
-    return { blog: { slug: blogPatchMatch[1], ...(body as any) } };
+    const slug = blogPatchMatch[1];
+    const b = (body as any) || {};
+    const current = blogRev(slug);
+    if (!checkRevision(b, current)) {
+      return conflictResponse({ slug, revision: current }, current);
+    }
+    const { expected_revision: _er, ...rest } = b;
+    const nextRev = bumpBlogRev(slug);
+    return { blog: { slug, ...rest, revision: nextRev } };
   }
 
   // Blog delete
   const blogDeleteMatch = path.match(/^\/blogs\/([^/]+)\/$/);
   if (method === "DELETE" && blogDeleteMatch) {
+    _blogRevisions.delete(blogDeleteMatch[1]);
     return {};
   }
 
@@ -912,22 +959,31 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       is_draft: true, is_published: false, can_manage: true,
     };
     _devDrafts.set(newId, newDraft);
-    return { draft: newDraft };
+    _draftRevisions.set(newId, 1);
+    return { draft: { ...newDraft, revision: 1 } };
   }
 
   const draftPatchMatch = path.match(/^\/trip-drafts\/(\d+)\/$/);
   if (method === "PATCH" && draftPatchMatch) {
     const id = parseInt(draftPatchMatch[1]);
     const existing = _devDrafts.get(id) ?? { id, is_draft: true, is_published: false, can_manage: true } as TripData;
-    const updated = { ...existing, ...(body as Record<string, any>) };
+    const b = (body as any) || {};
+    const current = draftRev(id);
+    if (!checkRevision(b, current)) {
+      return conflictResponse({ ...existing, revision: current }, current);
+    }
+    const { expected_revision: _er, ...rest } = b;
+    const updated = { ...existing, ...(rest as Record<string, any>) };
     _devDrafts.set(id, updated);
-    return { draft: updated };
+    const nextRev = bumpDraftRev(id);
+    return { draft: { ...updated, revision: nextRev } };
   }
 
   const draftDeleteMatch = path.match(/^\/trip-drafts\/(\d+)\/$/);
   if (method === "DELETE" && draftDeleteMatch) {
     const id = parseInt(draftDeleteMatch[1]);
     _devDrafts.delete(id);
+    _draftRevisions.delete(id);
     return {};
   }
 
@@ -935,7 +991,13 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "POST" && draftPublishMatch) {
     const id = parseInt(draftPublishMatch[1]);
     const existing = _devDrafts.get(id);
+    const b = (body as any) || {};
+    const current = draftRev(id);
+    if (!checkRevision(b, current)) {
+      return conflictResponse({ ...(existing || {}), revision: current }, current);
+    }
     if (existing) _devDrafts.set(id, { ...existing, is_draft: false, is_published: true });
+    bumpDraftRev(id);
     return { trip_id: id, id };
   }
 
@@ -1131,11 +1193,19 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── Profile (own - me) ──
   if (method === "GET" && path === "/accounts/me/") {
-    return { profile: _devUser ? { username: _devUser.username, display_name: _devUser.display_name, bio: _devUser.bio, location: _devUser.location, website: _devUser.website, created_trips: 0, joined_trips: 0 } : null };
+    return { profile: _devUser ? { username: _devUser.username, display_name: _devUser.display_name, bio: _devUser.bio, location: _devUser.location, website: _devUser.website, created_trips: 0, joined_trips: 0, revision: _profileRevision } : null };
   }
 
   if (method === "PATCH" && path === "/accounts/me/") {
     const b = body as any;
+    if (!checkRevision(b, _profileRevision)) {
+      const u: any = _devUser || {};
+      return conflictResponse({
+        username: u.username, display_name: u.display_name, bio: u.bio, location: u.location,
+        website: u.website, instagram_url: u.instagram_url, travel_tags: u.travel_tags,
+        revision: _profileRevision,
+      }, _profileRevision);
+    }
     // Text-only PATCH. Media fields are ignored here — clients must use the
     // dedicated multipart media endpoints. If a client accidentally includes
     // avatar/cover/gallery bytes they will be silently dropped.
@@ -1147,6 +1217,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       if (b?.instagram_url !== undefined) _devUser = { ..._devUser, instagram_url: b.instagram_url } as any;
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
     }
+    _profileRevision += 1;
     const u: any = _devUser || {};
     return {
       profile: {
@@ -1163,6 +1234,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         cover_id: u.cover_id,
         gallery_photos: Array.isArray(u.gallery_media) ? u.gallery_media.map((x: any) => x.url) : undefined,
         gallery_media: u.gallery_media,
+        revision: _profileRevision,
       },
     };
   }

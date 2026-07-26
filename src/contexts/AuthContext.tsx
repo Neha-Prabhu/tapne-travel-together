@@ -18,7 +18,7 @@ interface AuthContextType {
   confirmPasswordReset: (uid: string, token: string, newPassword: string) => Promise<{ ok: boolean; code?: string; error?: string }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; code?: string; error?: string; retry_after?: number }>;
   logout: () => void;
-  updateProfile: (updates: Partial<User>) => Promise<any>;
+  updateProfile: (updates: Partial<User> & { expected_revision?: number }) => Promise<any>;
   setUserMedia: (patch: Partial<Pick<User, "avatar" | "avatar_id" | "cover_photo_url" | "cover_id" | "gallery_media" | "gallery_photos">>) => void;
   lastAuthError: string;
   clearAuthError: () => void;
@@ -29,8 +29,10 @@ interface AuthContextType {
   pendingAuthAction: (() => void) | null;
   /** When a `?auth=reset#uid=…&token=…` link was detected, holds the parsed
    *  credentials so LoginModal can open its reset-password step. The token is
-   *  never rendered or logged. Consume via `consumePendingReset()`. */
-  pendingReset: { uid: string; token: string } | null;
+   *  never rendered or logged. When the link is malformed (missing uid/token)
+   *  `invalid` is set so the modal opens directly at the invalid-link step.
+   *  Consume via `consumePendingReset()`. */
+  pendingReset: { uid: string; token: string; invalid?: boolean } | null;
   consumePendingReset: () => void;
 }
 
@@ -48,7 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [lastAuthError, setLastAuthError] = useState("");
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
-  const [pendingReset, setPendingReset] = useState<{ uid: string; token: string } | null>(null);
+  const [pendingReset, setPendingReset] = useState<{ uid: string; token: string; invalid?: boolean } | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const authMutationVersion = useRef(0);
 
@@ -100,6 +102,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     window.history.replaceState({}, "", cleanUrl);
     if (uid && token) {
       setPendingReset({ uid, token });
+      setLoginModalOpen(true);
+    } else {
+      // Malformed reset link — open the modal at the invalid-link step so the
+      // member can request a fresh one instead of silently failing.
+      setPendingReset({ uid: "", token: "", invalid: true });
       setLoginModalOpen(true);
     }
   }, []);
@@ -235,33 +242,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     store.logout();
   }, []);
 
-  const updateProfile = useCallback(async (updates: Partial<User>) => {
-    try {
-      const cfg = window.TAPNE_RUNTIME_CONFIG;
-      // Text-only fields. Profile media (avatar, cover, gallery) is persisted
-      // through dedicated multipart endpoints — never sent as part of this
-      // JSON PATCH.
-      const payload: Record<string, unknown> = {};
-      if (updates.name !== undefined) payload.display_name = updates.name;
-      if (updates.bio !== undefined) payload.bio = updates.bio;
-      if (updates.location !== undefined) payload.location = updates.location;
-      if (updates.website !== undefined) payload.website = updates.website;
-      if ((updates as any).instagram_url !== undefined) payload.instagram_url = (updates as any).instagram_url;
-      if (updates.travel_tags !== undefined) payload.travel_tags = updates.travel_tags;
-      const data = await apiPatch<{ profile: any }>(cfg.api.profile_me, payload);
-      const p = data.profile || {};
-      store.updateUser({
-        name: p.display_name ?? updates.name ?? store.user?.name,
-        bio: p.bio ?? updates.bio ?? store.user?.bio,
-        location: p.location ?? updates.location ?? store.user?.location,
-        website: p.website ?? updates.website ?? store.user?.website,
-        instagram_url: p.instagram_url ?? (updates as any).instagram_url ?? (store.user as any)?.instagram_url,
-        travel_tags: p.travel_tags ?? updates.travel_tags ?? store.user?.travel_tags,
-      });
-      return data.profile;
-    } catch (err) {
-      throw err;
-    }
+  const updateProfile = useCallback(async (updates: Partial<User> & { expected_revision?: number }) => {
+    // Text-only fields. Profile media (avatar, cover, gallery) is persisted
+    // through dedicated multipart endpoints — never sent as part of this
+    // JSON PATCH. The caller passes `expected_revision` (from the last load
+    // or successful save) so concurrent edits surface as 409 edit_conflict.
+    const cfg = window.TAPNE_RUNTIME_CONFIG;
+    const payload: Record<string, unknown> = {};
+    if (updates.name !== undefined) payload.display_name = updates.name;
+    if (updates.bio !== undefined) payload.bio = updates.bio;
+    if (updates.location !== undefined) payload.location = updates.location;
+    if (updates.website !== undefined) payload.website = updates.website;
+    if ((updates as any).instagram_url !== undefined) payload.instagram_url = (updates as any).instagram_url;
+    if (updates.travel_tags !== undefined) payload.travel_tags = updates.travel_tags;
+    if (updates.expected_revision !== undefined) payload.expected_revision = updates.expected_revision;
+    const data = await apiPatch<{ profile: any }>(cfg.api.profile_me, payload);
+    const p = data.profile || {};
+    store.updateUser({
+      name: p.display_name ?? updates.name ?? store.user?.name,
+      bio: p.bio ?? updates.bio ?? store.user?.bio,
+      location: p.location ?? updates.location ?? store.user?.location,
+      website: p.website ?? updates.website ?? store.user?.website,
+      instagram_url: p.instagram_url ?? (updates as any).instagram_url ?? (store.user as any)?.instagram_url,
+      travel_tags: p.travel_tags ?? updates.travel_tags ?? store.user?.travel_tags,
+    });
+    return data.profile;
   }, []);
 
   const setUserMedia = useCallback((patch: Partial<Pick<User, "avatar" | "avatar_id" | "cover_photo_url" | "cover_id" | "gallery_media" | "gallery_photos">>) => {

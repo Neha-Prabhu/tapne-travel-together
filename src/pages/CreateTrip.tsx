@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDrafts } from "@/contexts/DraftContext";
+import { useConflict, isEditConflict } from "@/contexts/ConflictContext";
 import { toast } from "sonner";
 import {
   Loader2, Plus, Trash2, GripVertical, MapPin, Calendar, Users, DollarSign,
@@ -154,7 +155,8 @@ const CreateTrip = () => {
   const { tripId: tripIdParam } = useParams<{ tripId: string }>();
   const draftIdParam = tripIdParam || searchParams.get("draft");
   const isPreviewMode = searchParams.get("mode") === "preview";
-  const { getDraft, updateDraft, createDraft, publishDraft } = useDrafts();
+  const { getDraft, updateDraft, createDraft, publishDraft, reloadDraft } = useDrafts();
+  const { openConflict } = useConflict();
 
   // Auth gate — only after the session check has resolved to avoid a false
   // "signed out" flash on hard refresh.
@@ -470,22 +472,62 @@ const CreateTrip = () => {
     setFaqs(prev => { const arr = [...prev]; const [item] = arr.splice(from, 1); arr.splice(to, 0, item); return arr; });
   };
 
-  const saveDraftData = useCallback(() => {
+  // Snapshot the full form state so a conflict dialog can show every
+  // unsaved field the member has been editing.
+  const buildFormSnapshot = () => ({
+    title, destination, category, summary, startDate, endDate,
+    bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice,
+    earlyBirdPrice, earlyBirdSeats, paymentTerms, advanceAmount, highlights,
+    itinerary, includedItems, notIncludedItems, accommodationType, roomSharing,
+    stayName, stayDescription, amenities, thingsToCarry, experienceLevel,
+    fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
+    generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
+    medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
+    customQuestions, autoApprove, paymentMethod, paymentDetails,
+  });
+
+  const handleSaveError = (err: unknown, id: number | null) => {
+    if (isEditConflict(err) && id) {
+      openConflict({
+        label: "trip",
+        unsavedText: JSON.stringify(buildFormSnapshot(), null, 2),
+        onReload: async () => {
+          await reloadDraft(id);
+          // Force re-hydration from the newly fetched draft.
+          hasLoadedDraft.current = false;
+          window.location.reload();
+        },
+      });
+      return true;
+    }
+    return false;
+  };
+
+  // Serialized, revision-guarded save. Returns a Promise so callers (autosave,
+  // Save Draft, preview toggle, publish) can wait for it and surface conflicts.
+  const saveDraftData = useCallback(async (): Promise<boolean> => {
     const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
-    if (!id) return;
-    updateDraft(id, {
-      title, destination, category, summary, startDate, endDate,
-      formData: {
-        bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice,
-        earlyBirdPrice, earlyBirdSeats, paymentTerms, advanceAmount, highlights,
-        itinerary, includedItems, notIncludedItems, accommodationType, roomSharing,
-        stayName, stayDescription, amenities, thingsToCarry, experienceLevel,
-        fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
-        generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
-        medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
-        customQuestions, autoApprove, paymentMethod, paymentDetails,
-      },
-    });
+    if (!id) return false;
+    try {
+      await updateDraft(id, {
+        title, destination, category, summary, startDate, endDate,
+        formData: {
+          bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice,
+          earlyBirdPrice, earlyBirdSeats, paymentTerms, advanceAmount, highlights,
+          itinerary, includedItems, notIncludedItems, accommodationType, roomSharing,
+          stayName, stayDescription, amenities, thingsToCarry, experienceLevel,
+          fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
+          generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
+          medicalDetails, emergencyDetails, faqs, contactPreferences, hosts,
+          customQuestions, autoApprove, paymentMethod, paymentDetails,
+        },
+      });
+      return true;
+    } catch (err) {
+      handleSaveError(err, id);
+      return false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftId, draftIdParam, updateDraft, title, destination, category, summary, startDate, endDate,
       bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice, earlyBirdPrice,
       earlyBirdSeats, paymentTerms, advanceAmount, highlights, itinerary, includedItems, notIncludedItems,
@@ -538,13 +580,14 @@ const CreateTrip = () => {
     } catch {}
   }, []);
 
-  const handleSaveDraft = useCallback(() => {
+  const handleSaveDraft = useCallback(async () => {
     const id = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
     if (!id) {
       if (!isAuthenticated) requireAuth();
       return;
     }
-    saveDraftData();
+    const ok = await saveDraftData();
+    if (!ok) return;
     localStorage.removeItem("tapne_draft_autosave");
     setSavedDraft(true);
     toast.success("Draft saved!");
@@ -571,25 +614,30 @@ const CreateTrip = () => {
     if (!isAuthenticated) { toast.info("Please log in to create a trip"); requireAuth(); return; }
     if (!validate()) { toast.error("Please fill required fields"); return; }
     setLoading(true);
-    saveDraftData();
-    localStorage.removeItem("tapne_draft_autosave");
     const numId = draftId ?? (draftIdParam ? Number(draftIdParam) : null);
     try {
+      // Wait for the final autosave to land with the newest revision before
+      // publishing, so publish never runs on stale server state.
+      const ok = await saveDraftData();
+      if (!ok) { setLoading(false); return; }
+      localStorage.removeItem("tapne_draft_autosave");
       let publishedId: number | null = null;
       if (numId) publishedId = await publishDraft(numId);
       toast.success("Trip published! 🎉");
       if (publishedId) navigate(`/trips/${publishedId}`);
       else navigate("/dashboard/trips");
     } catch (err: any) {
-      toast.error(err?.message || "Could not publish trip");
+      if (!handleSaveError(err, numId)) toast.error(err?.message || "Could not publish trip");
     } finally {
       setLoading(false);
     }
   };
 
   // Toggle preview mode (keeps URL in sync without reload)
-  const togglePreview = useCallback(() => {
-    saveDraftData();
+  const togglePreview = useCallback(async () => {
+    // Both entering and leaving preview must flush pending edits so preview
+    // sees the newest values and switching back never overwrites them.
+    await saveDraftData();
     const next = new URLSearchParams(searchParams);
     if (isPreviewMode) next.delete("mode");
     else next.set("mode", "preview");
