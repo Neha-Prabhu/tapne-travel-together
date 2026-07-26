@@ -93,8 +93,25 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     return () => clearInterval(t);
   }, [step]);
 
-  const googleOAuthUrl = (window as any).TAPNE_RUNTIME_CONFIG?.google_oauth_url as string | undefined;
+  const runtimeCfg = (window as any).TAPNE_RUNTIME_CONFIG || {};
+  const googleOAuthUrl = runtimeCfg.google_oauth_url as string | undefined;
   const hasGoogle = !!googleOAuthUrl;
+  // Account email delivery availability. Defaults to true when unspecified so
+  // existing signup/reset flows keep working; when explicitly false, hide
+  // controls that would start signup, resend, or password-reset requests.
+  const emailAvailable = runtimeCfg.email_available !== false;
+
+  // If email delivery becomes unavailable while the modal sits on the signup
+  // tab, fall back to login mode. Already-open verification and reset-
+  // confirmation steps must NOT be interrupted.
+  useEffect(() => {
+    if (!emailAvailable && step === "form" && mode === "signup") {
+      setMode("login"); setError("");
+    }
+    if (!emailAvailable && step === "forgot") {
+      setStep("form");
+    }
+  }, [emailAvailable, step, mode]);
 
   const handleGoogleAuth = () => {
     if (googleOAuthUrl) {
