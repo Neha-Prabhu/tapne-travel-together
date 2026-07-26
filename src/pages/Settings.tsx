@@ -259,14 +259,19 @@ const Settings = () => {
       const next = { ...prev, [key]: val };
       // Latest intent replaces any previously failed intent.
       pendingIntentRef.current = next;
+      // A deliberate field change lifts the post-conflict pause so this
+      // fresh selection can attempt to save.
+      const wasPaused = conflictPausedRef.current;
+      if (wasPaused) conflictPausedRef.current = false;
       // Mark dirty whenever a save is in flight — even if the new selection
       // matches the last confirmed value — so the in-flight completion cannot
       // overwrite the member's newer choice. The follow-up pass re-sends the
       // latest intent so the server ends on it too.
-      if (!equal(next, lastSavedRef.current) || savingRef.current) {
+      if (!equal(next, lastSavedRef.current) || savingRef.current || wasPaused) {
         dirtyRef.current = true;
-        // Clear a lingering error immediately — the member has moved on.
-        setSaveState((s) => (s === "error" ? "idle" : s));
+        // Clear a lingering error/conflict badge immediately — the member
+        // has moved on.
+        setSaveState((s) => (s === "error" || s === "conflict" ? "idle" : s));
         scheduleSave();
       }
       return next;
@@ -277,6 +282,7 @@ const Settings = () => {
     // Reapply the last failed intent optimistically, then re-run the loop.
     const intent = pendingIntentRef.current;
     setValues(intent);
+    conflictPausedRef.current = false;
     dirtyRef.current = true;
     setSaveState("idle");
     if (debounceRef.current) clearTimeout(debounceRef.current);
