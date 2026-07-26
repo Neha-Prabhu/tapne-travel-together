@@ -90,7 +90,7 @@ const Settings = () => {
 
   const [values, setValues] = useState<SettingsPayload>(DEFAULTS);
   const [loading, setLoading] = useState(true);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error" | "conflict">("idle");
   const lastSavedRef = useRef<SettingsPayload>(DEFAULTS);
   // Server revision from the last load or successful save. Sent as
   // expected_revision on every PATCH so concurrent edits surface as 409.
@@ -98,6 +98,10 @@ const Settings = () => {
   const pendingIntentRef = useRef<SettingsPayload>(DEFAULTS);
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
+  // When a conflict surfaces, freeze the debounced auto-save so the dialog
+  // can't reopen on its own. A later deliberate field change (or Reload
+  // latest) clears the pause.
+  const conflictPausedRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
