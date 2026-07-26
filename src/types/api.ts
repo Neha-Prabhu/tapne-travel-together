@@ -64,6 +64,11 @@ export interface TapneRuntimeConfig {
     authenticated: boolean;
     user: SessionUser | null;
   };
+  /** When false, the backend cannot send account emails: signup verification,
+   *  resend, and password-reset-request flows must be hidden. Login and Google
+   *  OAuth remain available. Defaults to true when unspecified. */
+  email_available?: boolean;
+  google_oauth_url?: string;
 }
 
 declare global {
