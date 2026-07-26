@@ -508,8 +508,14 @@ const Settings = () => {
               {saveState === "error" && (
                 <span className="flex items-center gap-2 text-destructive">
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  Couldn't save. Your last change was reverted.
+                  Couldn't save. Your change is still shown — retry to try again.
                   <Button size="sm" variant="outline" className="h-6 px-2 py-0 text-xs" onClick={retrySave}>Retry</Button>
+                </span>
+              )}
+              {saveState === "conflict" && (
+                <span className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  This was changed elsewhere. Your unsaved choice is preserved — reload to see the latest.
                 </span>
               )}
             </div>
