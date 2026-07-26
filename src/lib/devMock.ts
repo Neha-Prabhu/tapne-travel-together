@@ -162,6 +162,35 @@ let _lastResendAt = 0;
 function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
 function mockError(status: number, body: Record<string, unknown>) { return { __mock_error: true, error: { status, ...body } }; }
 
+// ── Revision tracking for edit-conflict guards ──
+// Every editable resource carries a monotonic revision. Clients must send
+// `expected_revision` matching the last-known value; a mismatch returns 409
+// edit_conflict along with the latest server payload so callers can preserve
+// unsaved changes and re-fetch. Every successful write bumps the counter and
+// echoes the new revision so the client's next request stays in sync.
+const _draftRevisions = new Map<number, number>();
+const _blogRevisions = new Map<string, number>();
+let _profileRevision = 1;
+let _settingsRevision = 1;
+function draftRev(id: number) { return _draftRevisions.get(id) ?? 1; }
+function bumpDraftRev(id: number) { const n = draftRev(id) + 1; _draftRevisions.set(id, n); return n; }
+function blogRev(slug: string) { return _blogRevisions.get(slug) ?? 1; }
+function bumpBlogRev(slug: string) { const n = blogRev(slug) + 1; _blogRevisions.set(slug, n); return n; }
+function conflictResponse(latest: unknown, revision: number) {
+  return mockError(409, {
+    error: "This item was updated elsewhere. Reload to see the latest version.",
+    code: "edit_conflict",
+    revision,
+    latest,
+  });
+}
+function checkRevision(body: unknown, current: number): boolean {
+  if (!body || typeof body !== "object") return true;
+  const exp = (body as any).expected_revision;
+  if (exp === undefined || exp === null) return true;
+  return Number(exp) === current;
+}
+
 // ── Messaging state ──
 function getDevUsername() { return _devUser?.username || MOCK_SESSION_USERS[0]?.username || "arjun_mehta"; }
 function getDevDisplayName() { return _devUser?.display_name || MOCK_SESSION_USERS[0]?.display_name || "Arjun Mehta"; }
