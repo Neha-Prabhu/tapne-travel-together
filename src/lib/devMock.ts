@@ -1193,11 +1193,19 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── Profile (own - me) ──
   if (method === "GET" && path === "/accounts/me/") {
-    return { profile: _devUser ? { username: _devUser.username, display_name: _devUser.display_name, bio: _devUser.bio, location: _devUser.location, website: _devUser.website, created_trips: 0, joined_trips: 0 } : null };
+    return { profile: _devUser ? { username: _devUser.username, display_name: _devUser.display_name, bio: _devUser.bio, location: _devUser.location, website: _devUser.website, created_trips: 0, joined_trips: 0, revision: _profileRevision } : null };
   }
 
   if (method === "PATCH" && path === "/accounts/me/") {
     const b = body as any;
+    if (!checkRevision(b, _profileRevision)) {
+      const u: any = _devUser || {};
+      return conflictResponse({
+        username: u.username, display_name: u.display_name, bio: u.bio, location: u.location,
+        website: u.website, instagram_url: u.instagram_url, travel_tags: u.travel_tags,
+        revision: _profileRevision,
+      }, _profileRevision);
+    }
     // Text-only PATCH. Media fields are ignored here — clients must use the
     // dedicated multipart media endpoints. If a client accidentally includes
     // avatar/cover/gallery bytes they will be silently dropped.
@@ -1209,6 +1217,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       if (b?.instagram_url !== undefined) _devUser = { ..._devUser, instagram_url: b.instagram_url } as any;
       if (b?.travel_tags !== undefined) _devUser = { ..._devUser, travel_tags: b.travel_tags } as any;
     }
+    _profileRevision += 1;
     const u: any = _devUser || {};
     return {
       profile: {
@@ -1225,6 +1234,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
         cover_id: u.cover_id,
         gallery_photos: Array.isArray(u.gallery_media) ? u.gallery_media.map((x: any) => x.url) : undefined,
         gallery_media: u.gallery_media,
+        revision: _profileRevision,
       },
     };
   }
