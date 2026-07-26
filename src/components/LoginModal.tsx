@@ -284,7 +284,7 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <Label className="text-sm">Password</Label>
-                  {mode === "login" && (
+                  {mode === "login" && emailAvailable && (
                     <button
                       type="button"
                       className="text-xs font-medium text-primary hover:underline"
