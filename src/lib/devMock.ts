@@ -834,23 +834,36 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       { slug: "budget-himachal", title: "Budget Himachal in ₹8,000", excerpt: "A complete breakdown of how I did a 7-day Himachal trip.", short_description: "A complete breakdown of how I did a 7-day Himachal trip on a shoestring budget.", body: "<p>Everyone thinks Himachal is expensive. I proved them wrong.</p><p>Here's exactly how I spent 7 days in the mountains for just ₹8,000. The key? Local buses, homestays, and cooking your own meals when possible.</p>", cover_image_url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80", author_username: "karan_singh", author_display_name: "Karan Singh", created_at: "2026-02-10", tags: ["Budget", "Trek", "Solo"], location: "Himachal Pradesh, India" },
     ];
     const blog = allBlogs.find(b => b.slug === slug);
-    return { blog: blog || null };
+    return { blog: blog ? { ...blog, revision: blogRev(slug) } : null };
   }
 
   // Blog create
   if (method === "POST" && path === "/blogs/") {
-    return { blog: { slug: "new-experience", ...(body as any) } };
+    const b = (body as any) || {};
+    const slug = b.slug || "new-experience";
+    _blogRevisions.set(slug, 1);
+    const { expected_revision: _er, ...rest } = b;
+    return { blog: { slug, ...rest, revision: 1 } };
   }
 
-  // Blog update (PATCH)
+  // Blog update (PATCH) — enforce expected_revision to detect concurrent edits.
   const blogPatchMatch = path.match(/^\/blogs\/([^/]+)\/$/);
   if (method === "PATCH" && blogPatchMatch) {
-    return { blog: { slug: blogPatchMatch[1], ...(body as any) } };
+    const slug = blogPatchMatch[1];
+    const b = (body as any) || {};
+    const current = blogRev(slug);
+    if (!checkRevision(b, current)) {
+      return conflictResponse({ slug, revision: current }, current);
+    }
+    const { expected_revision: _er, ...rest } = b;
+    const nextRev = bumpBlogRev(slug);
+    return { blog: { slug, ...rest, revision: nextRev } };
   }
 
   // Blog delete
   const blogDeleteMatch = path.match(/^\/blogs\/([^/]+)\/$/);
   if (method === "DELETE" && blogDeleteMatch) {
+    _blogRevisions.delete(blogDeleteMatch[1]);
     return {};
   }
 
