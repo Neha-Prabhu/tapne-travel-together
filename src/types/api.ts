@@ -120,8 +120,10 @@ export interface TripData {
   id: number;
   title: string;
   summary?: string;
+  origin_city?: string;
   destination?: string;
   banner_image_url?: string;
+  gallery_image_urls?: string[];
   host_username?: string;
   host_display_name?: string;
   host_bio?: string;
@@ -142,6 +144,9 @@ export interface TripData {
   price_per_person?: number;
   total_trip_price?: number;
   early_bird_price?: number;
+  early_bird_seats?: number;
+  currency?: string;
+  advance_amount?: number;
   payment_terms?: string;
   highlights?: string[];
   itinerary_days?: ItineraryDay[];
@@ -171,6 +176,27 @@ export interface TripData {
   payment_details?: string;
   application_questions?: ApplicationQuestionData[];
   auto_approve?: boolean;
+  stays?: Array<{
+    id?: string;
+    accommodation_type?: string;
+    room_sharing?: string;
+    name?: string;
+    description?: string;
+    amenities?: string[];
+  }>;
+  experience_level?: string;
+  fitness_level?: string;
+  age_range?: [number, number];
+  enforce_age?: boolean;
+  code_of_conduct?: string;
+  general_policy?: string;
+  medical_declaration?: boolean;
+  emergency_contact?: boolean;
+  medical_details?: string;
+  emergency_details?: string;
+  contact_preferences?: string[];
+  co_hosts?: string;
+  saved_count?: number;
 }
 
 export interface ApplicationQuestionData {

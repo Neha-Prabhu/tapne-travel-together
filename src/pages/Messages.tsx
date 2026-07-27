@@ -73,6 +73,7 @@ const Inbox = () => {
   const lastAckedRef = useRef<Map<number, number>>(new Map());
   // Suppress auto-scroll-to-latest when a "load earlier" just prepended.
   const suppressAutoScrollRef = useRef(false);
+  const creatingDmRef = useRef<string | null>(null);
 
   const openThreadParam = searchParams.get("thread");
   const newDmParam = searchParams.get("dm");
@@ -106,13 +107,32 @@ const Inbox = () => {
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
-  // Route params that select an existing thread by identity.
+  // Route params select an existing thread or create an empty, usable DM.
   useEffect(() => {
-    if (newDmParam && threads.length > 0) {
+    if (newDmParam && !loading) {
       const existing = threads.find(
         (t) => t.type === "dm" && t.participants.some((p) => p.username === newDmParam)
       );
-      if (existing) setActiveThreadId(existing.id);
+      if (existing) {
+        setActiveThreadId(existing.id);
+      } else if (creatingDmRef.current !== newDmParam) {
+        creatingDmRef.current = newDmParam;
+        const cfg = window.TAPNE_RUNTIME_CONFIG;
+        apiPost<{ thread: ThreadSummary & { messages?: MessageData[] } }>(cfg.api.dm_inbox, {
+          type: "dm",
+          username: newDmParam,
+        }).then(({ thread }) => {
+          const { messages = [], ...summary } = thread;
+          setThreads((prev) => prev.some((t) => t.id === summary.id) ? prev : [summary, ...prev]);
+          setMsgState((prev) => ({
+            ...prev,
+            [summary.id]: { ...emptyMsgState, messages, loaded: true },
+          }));
+          setActiveThreadId(summary.id);
+        }).finally(() => {
+          creatingDmRef.current = null;
+        });
+      }
     }
     if (tripQueryParam && threads.length > 0) {
       const existing = threads.find(
@@ -120,7 +140,7 @@ const Inbox = () => {
       );
       if (existing) setActiveThreadId(existing.id);
     }
-  }, [newDmParam, tripQueryParam, threads]);
+  }, [newDmParam, tripQueryParam, threads, loading]);
 
   const activeThread = useMemo(
     () => threads.find((t) => t.id === activeThreadId) || null,

@@ -63,6 +63,7 @@ const StoryCreate = () => {
       toast.success(publish ? "Story published" : "Draft saved");
       if (publish && slug) navigate(`/stories/${slug}`);
       else if (publish) navigate("/dashboard/stories");
+      else if (slug) navigate(`/stories/${slug}/edit`, { replace: true });
     } catch (err: any) {
       if (isEditConflict(err)) {
         openConflict({

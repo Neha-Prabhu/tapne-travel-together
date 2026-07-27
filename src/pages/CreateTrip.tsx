@@ -325,6 +325,10 @@ const CreateTrip = () => {
     if (draft.startDate) setStartDate(draft.startDate);
     if (draft.endDate) setEndDate(draft.endDate);
     const fd = draft.formData || {};
+    if (fd.description !== undefined) setDescription(fd.description);
+    if (fd.originCity !== undefined) setOriginCity(fd.originCity);
+    if (fd.heroImage !== undefined) setHeroImage(fd.heroImage);
+    if (fd.galleryImages) setGalleryImages(fd.galleryImages);
     if (fd.bookingCloseDate) setBookingCloseDate(fd.bookingCloseDate);
     if (fd.totalSeats) setTotalSeats(fd.totalSeats);
     if (fd.minSeats) setMinSeats(fd.minSeats);
@@ -339,19 +343,28 @@ const CreateTrip = () => {
     if (fd.itinerary) setItinerary(fd.itinerary);
     if (fd.includedItems) setIncludedItems(fd.includedItems);
     if (fd.notIncludedItems) setNotIncludedItems(fd.notIncludedItems);
-    if (fd.accommodationType) setAccommodationType(fd.accommodationType);
-    if (fd.roomSharing) setRoomSharing(fd.roomSharing);
-    if (fd.stayName) setStayName(fd.stayName);
-    if (fd.stayDescription) setStayDescription(fd.stayDescription);
-    if (fd.amenities) setAmenities(fd.amenities);
+    if (fd.stays?.length) setStays(fd.stays);
+    else {
+      if (fd.accommodationType) setAccommodationType(fd.accommodationType);
+      if (fd.roomSharing) setRoomSharing(fd.roomSharing);
+      if (fd.stayName) setStayName(fd.stayName);
+      if (fd.stayDescription) setStayDescription(fd.stayDescription);
+      if (fd.amenities) setAmenities(fd.amenities);
+    }
     if (fd.thingsToCarry) setThingsToCarry(fd.thingsToCarry);
     if (fd.experienceLevel) setExperienceLevel(fd.experienceLevel);
     if (fd.fitnessLevel) setFitnessLevel(fd.fitnessLevel);
     if (fd.suitableFor) setSuitableFor(fd.suitableFor);
     if (fd.tripVibes) setTripVibes(fd.tripVibes);
+    if (fd.ageRange) setAgeRange(fd.ageRange);
+    if (fd.enforceAge !== undefined) setEnforceAge(fd.enforceAge);
     if (fd.codeOfConduct) setCodeOfConduct(fd.codeOfConduct);
     if (fd.generalPolicy) setGeneralPolicy(fd.generalPolicy);
     if (fd.cancellationPolicy) setCancellationPolicy(fd.cancellationPolicy);
+    if (fd.medicalDeclaration !== undefined) setMedicalDeclaration(fd.medicalDeclaration);
+    if (fd.emergencyContact !== undefined) setEmergencyContact(fd.emergencyContact);
+    if (fd.medicalDetails !== undefined) setMedicalDetails(fd.medicalDetails);
+    if (fd.emergencyDetails !== undefined) setEmergencyDetails(fd.emergencyDetails);
     if (fd.faqs) setFaqs(fd.faqs);
     if (fd.contactPreferences) setContactPreferences(fd.contactPreferences);
     if (fd.hosts) setHosts(fd.hosts);
@@ -519,9 +532,9 @@ const CreateTrip = () => {
       await updateDraft(id, {
         title, destination, category, summary, startDate, endDate,
         formData: {
-          bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice,
+          description, originCity, heroImage, galleryImages, bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice,
           earlyBirdPrice, earlyBirdSeats, paymentTerms, advanceAmount, highlights,
-          itinerary, includedItems, notIncludedItems, accommodationType, roomSharing,
+          itinerary, includedItems, notIncludedItems, stays, accommodationType, roomSharing,
           stayName, stayDescription, amenities, thingsToCarry, experienceLevel,
           fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
           generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact,
@@ -535,10 +548,10 @@ const CreateTrip = () => {
       return false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftId, draftIdParam, updateDraft, title, destination, category, summary, startDate, endDate,
+  }, [draftId, draftIdParam, updateDraft, title, description, originCity, heroImage, galleryImages, destination, category, summary, startDate, endDate,
       bookingCloseDate, totalSeats, minSeats, accessType, currency, totalPrice, earlyBirdPrice,
       earlyBirdSeats, paymentTerms, advanceAmount, highlights, itinerary, includedItems, notIncludedItems,
-      accommodationType, roomSharing, stayName, stayDescription, amenities, thingsToCarry,
+       stays, accommodationType, roomSharing, stayName, stayDescription, amenities, thingsToCarry,
       experienceLevel, fitnessLevel, suitableFor, tripVibes, ageRange, enforceAge, codeOfConduct,
       generalPolicy, cancellationPolicy, medicalDeclaration, emergencyContact, medicalDetails,
       emergencyDetails, faqs, contactPreferences, hosts, customQuestions, autoApprove, paymentMethod, paymentDetails]);

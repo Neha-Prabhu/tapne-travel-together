@@ -34,8 +34,15 @@ function tripDataToDraft(t: TripData): TripDraft {
     createdAt: new Date().toISOString(),
     revision: t.revision ?? 1,
     formData: {
+      description: t.description || "",
+      originCity: t.origin_city || "",
+      heroImage: t.banner_image_url || null,
+      galleryImages: t.gallery_image_urls || [],
+      currency: t.currency || "INR",
       totalPrice: t.price_per_person?.toString() || "",
       earlyBirdPrice: t.early_bird_price?.toString() || "",
+      earlyBirdSeats: t.early_bird_seats?.toString() || "",
+      advanceAmount: t.advance_amount?.toString() || "",
       paymentTerms: t.payment_terms || "full",
       totalSeats: t.total_seats?.toString() || "",
       minSeats: t.minimum_seats?.toString() || "",
@@ -54,13 +61,34 @@ function tripDataToDraft(t: TripData): TripDraft {
       tripVibes: t.trip_vibe || [],
       difficultyLevel: t.difficulty_level || "",
       paceLevel: t.pace_level || "",
+      experienceLevel: t.experience_level || t.difficulty_level || "",
+      fitnessLevel: t.fitness_level || t.pace_level || "",
+      stays: (t.stays || []).map((s, i) => ({
+        id: s.id || `s${i + 1}`,
+        accommodationType: s.accommodation_type || "",
+        roomSharing: s.room_sharing || "",
+        stayName: s.name || "",
+        stayDescription: s.description || "",
+        amenities: s.amenities || [],
+        amenityInput: "",
+      })),
+      ageRange: t.age_range || [18, 60],
+      enforceAge: t.enforce_age || false,
+      codeOfConduct: t.code_of_conduct || "",
+      generalPolicy: t.general_policy || "",
       cancellationPolicy: t.cancellation_policy || "",
+      medicalDeclaration: t.medical_declaration || false,
+      emergencyContact: t.emergency_contact || false,
+      medicalDetails: t.medical_details || "",
+      emergencyDetails: t.emergency_details || "",
       faqs: (t.faqs || []).map((f, i) => ({ id: `f${i}`, question: f.question, answer: f.answer })),
       accessType: t.access_type || "open",
       customQuestions: t.application_questions || [],
       autoApprove: t.auto_approve || false,
       paymentMethod: t.payment_method || "direct_contact",
       paymentDetails: t.payment_details || "",
+      contactPreferences: t.contact_preferences || ["In-app chat"],
+      hosts: t.co_hosts || "",
     },
   };
 }
@@ -77,8 +105,15 @@ function draftToServerPayload(updates: Partial<TripDraft>): Record<string, any> 
 
   if (updates.formData) {
     const fd = updates.formData;
+    if (fd.description !== undefined) p.description = fd.description;
+    if (fd.originCity !== undefined) p.origin_city = fd.originCity;
+    if (fd.heroImage !== undefined) p.banner_image_url = fd.heroImage;
+    if (fd.galleryImages !== undefined) p.gallery_image_urls = fd.galleryImages;
+    if (fd.currency !== undefined) p.currency = fd.currency;
     if (fd.totalPrice !== undefined) p.price_per_person = fd.totalPrice ? Number(fd.totalPrice) : null;
     if (fd.earlyBirdPrice !== undefined) p.early_bird_price = fd.earlyBirdPrice ? Number(fd.earlyBirdPrice) : null;
+    if (fd.earlyBirdSeats !== undefined) p.early_bird_seats = fd.earlyBirdSeats ? Number(fd.earlyBirdSeats) : null;
+    if (fd.advanceAmount !== undefined) p.advance_amount = fd.advanceAmount ? Number(fd.advanceAmount) : null;
     if (fd.paymentTerms !== undefined) p.payment_terms = fd.paymentTerms;
     if (fd.totalSeats !== undefined) p.total_seats = fd.totalSeats ? Number(fd.totalSeats) : null;
     if (fd.minSeats !== undefined) p.minimum_seats = fd.minSeats ? Number(fd.minSeats) : null;
@@ -99,13 +134,33 @@ function draftToServerPayload(updates: Partial<TripDraft>): Record<string, any> 
     if (fd.tripVibes !== undefined) p.trip_vibe = fd.tripVibes;
     if (fd.difficultyLevel !== undefined) p.difficulty_level = fd.difficultyLevel;
     if (fd.paceLevel !== undefined) p.pace_level = fd.paceLevel;
+    if (fd.experienceLevel !== undefined) p.experience_level = fd.experienceLevel;
+    if (fd.fitnessLevel !== undefined) p.fitness_level = fd.fitnessLevel;
+    if (fd.stays !== undefined) p.stays = fd.stays.map((s: any) => ({
+      id: s.id,
+      accommodation_type: s.accommodationType,
+      room_sharing: s.roomSharing,
+      name: s.stayName,
+      description: s.stayDescription,
+      amenities: s.amenities,
+    }));
+    if (fd.ageRange !== undefined) p.age_range = fd.ageRange;
+    if (fd.enforceAge !== undefined) p.enforce_age = fd.enforceAge;
+    if (fd.codeOfConduct !== undefined) p.code_of_conduct = fd.codeOfConduct;
+    if (fd.generalPolicy !== undefined) p.general_policy = fd.generalPolicy;
     if (fd.cancellationPolicy !== undefined) p.cancellation_policy = fd.cancellationPolicy;
+    if (fd.medicalDeclaration !== undefined) p.medical_declaration = fd.medicalDeclaration;
+    if (fd.emergencyContact !== undefined) p.emergency_contact = fd.emergencyContact;
+    if (fd.medicalDetails !== undefined) p.medical_details = fd.medicalDetails;
+    if (fd.emergencyDetails !== undefined) p.emergency_details = fd.emergencyDetails;
     if (fd.faqs !== undefined) p.faqs = fd.faqs.map((f: any) => ({ question: f.question, answer: f.answer }));
     if (fd.accessType !== undefined) p.access_type = fd.accessType;
     if (fd.customQuestions !== undefined) p.application_questions = fd.customQuestions;
     if (fd.autoApprove !== undefined) p.auto_approve = fd.autoApprove;
     if (fd.paymentMethod !== undefined) p.payment_method = fd.paymentMethod;
     if (fd.paymentDetails !== undefined) p.payment_details = fd.paymentDetails;
+    if (fd.contactPreferences !== undefined) p.contact_preferences = fd.contactPreferences;
+    if (fd.hosts !== undefined) p.co_hosts = fd.hosts;
   }
   return p;
 }
