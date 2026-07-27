@@ -133,8 +133,23 @@ const PAST_TRIP: TripData = {
 MOCK_TRIPS.push(PAST_TRIP);
 
 const MOCK_SESSION_USERS: SessionUser[] = mockUsers.map(mockUserToSessionUser);
-
-let _devUser: SessionUser | null = null;
+const _DEV_SESSION_KEY = "tapne_dev_session_v1";
+function loadDevUser(): SessionUser | null {
+  try {
+    const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(_DEV_SESSION_KEY) : null;
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function saveDevUser(user: SessionUser | null) {
+  try {
+    if (typeof sessionStorage === "undefined") return;
+    if (user) sessionStorage.setItem(_DEV_SESSION_KEY, JSON.stringify(user));
+    else sessionStorage.removeItem(_DEV_SESSION_KEY);
+  } catch { /* ignore dev persistence failures */ }
+}
+let _devUser: SessionUser | null = loadDevUser();
 const _devDrafts = new Map<number, TripData>();
 let _devDraftCounter = 5000;
 const _bookmarkedTripIds = new Set<number>();
@@ -606,6 +621,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       reactivated = true;
     }
     _devUser = MOCK_SESSION_USERS.find(u => u.username === identifier) || MOCK_SESSION_USERS[0];
+    saveDevUser(_devUser);
     return { user: _devUser, reactivated };
   }
 
@@ -673,6 +689,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   if (method === "POST" && path === "/auth/logout/") {
     _devUser = null;
+    saveDevUser(null);
     return {};
   }
 
