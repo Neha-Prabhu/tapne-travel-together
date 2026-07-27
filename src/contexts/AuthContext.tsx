@@ -66,21 +66,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  // Handle post-OAuth suspension redirect: providers (e.g. Google) send us
-  // back to the originally requested URL with ?auth_error=suspended. We keep
-  // the rest of the query intact, surface the same generic suspension notice
-  // in the login modal exactly once, and stay signed out so protected content
-  // remains locked.
+  // Handle post-OAuth redirects that arrive with ?auth_error=<code>. We
+  // consume the value exactly once, strip only auth_error from the query
+  // (preserving all other params and the fragment), and surface a matching
+  // sentinel so LoginModal can render the correct copy. Unknown values are
+  // ignored so stray links cannot reopen the modal.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("auth_error") === "suspended") {
-      setLastAuthError("__suspended__");
+    const code = params.get("auth_error");
+    if (!code) return;
+    const known: Record<string, string> = {
+      suspended: "__suspended__",
+      account_unavailable: "__account_unavailable__",
+      oauth_cancelled: "__oauth_cancelled__",
+      email_unverified: "__email_unverified__",
+      oauth_failed: "__oauth_failed__",
+    };
+    const sentinel = known[code];
+    params.delete("auth_error");
+    const qs = params.toString();
+    const url = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
+    window.history.replaceState({}, "", url);
+    if (sentinel) {
+      setLastAuthError(sentinel);
       setLoginModalOpen(true);
-      params.delete("auth_error");
-      const qs = params.toString();
-      const url = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
-      window.history.replaceState({}, "", url);
     }
   }, []);
 
