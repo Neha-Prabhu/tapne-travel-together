@@ -133,8 +133,23 @@ const PAST_TRIP: TripData = {
 MOCK_TRIPS.push(PAST_TRIP);
 
 const MOCK_SESSION_USERS: SessionUser[] = mockUsers.map(mockUserToSessionUser);
-
-let _devUser: SessionUser | null = null;
+const _DEV_SESSION_KEY = "tapne_dev_session_v1";
+function loadDevUser(): SessionUser | null {
+  try {
+    const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(_DEV_SESSION_KEY) : null;
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function saveDevUser(user: SessionUser | null) {
+  try {
+    if (typeof sessionStorage === "undefined") return;
+    if (user) sessionStorage.setItem(_DEV_SESSION_KEY, JSON.stringify(user));
+    else sessionStorage.removeItem(_DEV_SESSION_KEY);
+  } catch { /* ignore dev persistence failures */ }
+}
+let _devUser: SessionUser | null = loadDevUser();
 const _devDrafts = new Map<number, TripData>();
 let _devDraftCounter = 5000;
 const _bookmarkedTripIds = new Set<number>();
@@ -170,6 +185,25 @@ function mockError(status: number, body: Record<string, unknown>) { return { __m
 // echoes the new revision so the client's next request stays in sync.
 const _draftRevisions = new Map<number, number>();
 const _blogRevisions = new Map<string, number>();
+const _DEV_BLOGS_KEY = "tapne_dev_blogs_v1";
+function loadDevBlogs(): Map<string, BlogData & { status?: string }> {
+  try {
+    const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(_DEV_BLOGS_KEY) : null;
+    const list = raw ? JSON.parse(raw) : [];
+    return new Map(Array.isArray(list) ? list.map((blog: BlogData & { status?: string }) => [blog.slug, blog]) : []);
+  } catch {
+    return new Map();
+  }
+}
+const _devBlogs = loadDevBlogs();
+for (const blog of _devBlogs.values()) _blogRevisions.set(blog.slug, blog.revision ?? 1);
+function saveDevBlogs() {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(_DEV_BLOGS_KEY, JSON.stringify(Array.from(_devBlogs.values())));
+    }
+  } catch { /* ignore dev persistence failures */ }
+}
 let _profileRevision = 1;
 let _settingsRevision = 1;
 function draftRev(id: number) { return _draftRevisions.get(id) ?? 1; }
@@ -510,7 +544,32 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   // ── DM Start ──
   if (method === "POST" && path === "/dm/start/") {
-    return { ok: true, thread_id: 1 };
+    const b = (body as any) || {};
+    const username = b.host_username || b.username;
+    if (!username) return mockError(400, { error: "Member is required." });
+    if (_blockedUsers.has(username)) return mockError(403, { error: "You've blocked this member." });
+    if (_suspendedUsers.has(username) || _deactivatedUsers.has(username)) {
+      return mockError(403, { error: "This account is not available." });
+    }
+    const threads = getMockThreads();
+    const existing = threads.find(
+      t => t.type === "dm" && t.participants.some(p => p.username === username)
+    );
+    if (existing) return { ok: true, thread_id: existing.id };
+    const member = MOCK_SESSION_USERS.find(u => u.username === username);
+    const id = Math.max(100, ...threads.map(t => t.id)) + 1;
+    threads.unshift({
+      id,
+      type: "dm",
+      title: member?.display_name || username,
+      participants: [
+        { username: getDevUsername(), display_name: getDevDisplayName() },
+        { username, display_name: member?.display_name || username },
+      ],
+      unread_count: 0,
+      messages: [],
+    });
+    return { ok: true, thread_id: id };
   }
 
   // ── Trip Reviews ──
@@ -562,6 +621,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       reactivated = true;
     }
     _devUser = MOCK_SESSION_USERS.find(u => u.username === identifier) || MOCK_SESSION_USERS[0];
+    saveDevUser(_devUser);
     return { user: _devUser, reactivated };
   }
 
@@ -629,6 +689,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
 
   if (method === "POST" && path === "/auth/logout/") {
     _devUser = null;
+    saveDevUser(null);
     return {};
   }
 
@@ -817,6 +878,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   if (method === "GET" && path === "/blogs/") {
     return {
       blogs: [
+        ...Array.from(_devBlogs.values()),
         { slug: "solo-girl-india", title: "Solo Traveling as a Girl in India", excerpt: "My honest experience backpacking across Rajasthan and Kerala as a solo female traveler.", short_description: "My honest experience backpacking across Rajasthan and Kerala as a solo female traveler.", body: "<p>Traveling solo as a woman in India was one of the most transformative experiences of my life.</p>", cover_image_url: "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&q=80", author_username: "priya_sharma", author_display_name: "Priya Sharma", created_at: "2026-03-01", tags: ["Solo", "Cultural", "Budget"], location: "Rajasthan, India" },
         { slug: "found-travel-group", title: "How I Found My Travel Group", excerpt: "From solo trips to finding my tribe — here's how Tapne changed the way I travel.", short_description: "From solo trips to finding my tribe — here's how Tapne changed the way I travel.", body: "<p>I used to think solo travel was the only way.</p>", cover_image_url: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=600&q=80", author_username: "arjun_mehta", author_display_name: "Arjun Mehta", created_at: "2026-02-20", tags: ["Social", "Chill"], location: "Goa, India" },
         { slug: "budget-himachal", title: "Budget Himachal in ₹8,000", excerpt: "A complete breakdown of how I did a 7-day Himachal trip on a shoestring budget.", short_description: "A complete breakdown of how I did a 7-day Himachal trip on a shoestring budget.", body: "<p>Everyone thinks Himachal is expensive. I proved them wrong.</p>", cover_image_url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80", author_username: "karan_singh", author_display_name: "Karan Singh", created_at: "2026-02-10", tags: ["Budget", "Trek", "Solo"], location: "Himachal Pradesh, India" },
@@ -833,17 +895,31 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       { slug: "found-travel-group", title: "How I Found My Travel Group", excerpt: "From solo trips to finding my tribe.", short_description: "From solo trips to finding my tribe — here's how Tapne changed the way I travel.", body: "<p>I used to think solo travel was the only way. But after joining my first community trip on Tapne, everything changed.</p><p>The people I met became lifelong friends. Now I host my own trips and love watching strangers become friends over shared sunsets and chai.</p>", cover_image_url: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=600&q=80", author_username: "arjun_mehta", author_display_name: "Arjun Mehta", created_at: "2026-02-20", tags: ["Social", "Chill"], location: "Goa, India" },
       { slug: "budget-himachal", title: "Budget Himachal in ₹8,000", excerpt: "A complete breakdown of how I did a 7-day Himachal trip.", short_description: "A complete breakdown of how I did a 7-day Himachal trip on a shoestring budget.", body: "<p>Everyone thinks Himachal is expensive. I proved them wrong.</p><p>Here's exactly how I spent 7 days in the mountains for just ₹8,000. The key? Local buses, homestays, and cooking your own meals when possible.</p>", cover_image_url: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=600&q=80", author_username: "karan_singh", author_display_name: "Karan Singh", created_at: "2026-02-10", tags: ["Budget", "Trek", "Solo"], location: "Himachal Pradesh, India" },
     ];
-    const blog = allBlogs.find(b => b.slug === slug);
+    const blog = _devBlogs.get(slug) || allBlogs.find(b => b.slug === slug);
     return { blog: blog ? { ...blog, revision: blogRev(slug) } : null };
   }
 
   // Blog create
   if (method === "POST" && path === "/blogs/") {
     const b = (body as any) || {};
-    const slug = b.slug || "new-experience";
+    const baseSlug = (b.slug || b.title || "new-experience")
+      .toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "new-experience";
+    let slug = baseSlug;
+    let suffix = 2;
+    while (_devBlogs.has(slug)) slug = `${baseSlug}-${suffix++}`;
     _blogRevisions.set(slug, 1);
     const { expected_revision: _er, ...rest } = b;
-    return { blog: { slug, ...rest, revision: 1 } };
+    const blog = {
+      slug,
+      ...rest,
+      author_username: getDevUsername(),
+      author_display_name: getDevDisplayName(),
+      created_at: new Date().toISOString(),
+      revision: 1,
+    };
+    _devBlogs.set(slug, blog);
+    saveDevBlogs();
+    return { blog };
   }
 
   // Blog update (PATCH) — enforce expected_revision to detect concurrent edits.
@@ -857,12 +933,17 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     }
     const { expected_revision: _er, ...rest } = b;
     const nextRev = bumpBlogRev(slug);
-    return { blog: { slug, ...rest, revision: nextRev } };
+    const blog = { ...(_devBlogs.get(slug) || {}), slug, ...rest, revision: nextRev };
+    _devBlogs.set(slug, blog);
+    saveDevBlogs();
+    return { blog };
   }
 
   // Blog delete
   const blogDeleteMatch = path.match(/^\/blogs\/([^/]+)\/$/);
   if (method === "DELETE" && blogDeleteMatch) {
+    _devBlogs.delete(blogDeleteMatch[1]);
+    saveDevBlogs();
     _blogRevisions.delete(blogDeleteMatch[1]);
     return {};
   }

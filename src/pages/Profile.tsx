@@ -167,6 +167,7 @@ const Profile = () => {
   const [reviewReport, setReviewReport] = useState<null | { type: "review"; id: number; label: string; ownerUsername?: string; ownerDisplayName?: string }>(null);
 
   const [blockPending, setBlockPending] = useState(false);
+  const [messagePending, setMessagePending] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [accountActionPending, setAccountActionPending] = useState(false);
@@ -612,8 +613,24 @@ const Profile = () => {
                   >
                     {isFollowing ? <><UserCheck className="mr-1 h-4 w-4" /> Following</> : <><UserPlus className="mr-1 h-4 w-4" /> Follow</>}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => { if (!isAuthenticated) { requireAuth(); return; } navigate(`/messages?dm=${p.username}`); }}>
-                    <MessageCircle className="mr-1 h-4 w-4" /> Message
+                   <Button size="sm" variant="outline" disabled={messagePending} onClick={async () => {
+                     if (!isAuthenticated) { requireAuth(); return; }
+                     setMessagePending(true);
+                     try {
+                       const cfg = window.TAPNE_RUNTIME_CONFIG;
+                       const data = await apiPost<{ ok: boolean; thread_id?: number; error?: string }>(
+                         cfg.api.dm_start,
+                         { host_username: p.username },
+                       );
+                       if (data.ok && data.thread_id) navigate(`/messages?thread=${data.thread_id}`);
+                       else navigate(`/messages?dm=${encodeURIComponent(p.username)}`);
+                     } catch (err: any) {
+                       toast.error(err?.error || "Could not start conversation.");
+                     } finally {
+                       setMessagePending(false);
+                     }
+                   }}>
+                     {messagePending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-1 h-4 w-4" />} Message
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => { if (!isAuthenticated) { requireAuth(() => setReportOpen(true)); return; } setReportOpen(true); }}>
                     <Flag className="mr-1 h-4 w-4" /> Report

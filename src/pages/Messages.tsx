@@ -21,6 +21,7 @@ import {
 import ReportDialog, { type ReportTarget } from "@/components/ReportDialog";
 
 import { cn } from "@/lib/utils";
+import { IS_DEV_MODE } from "@/lib/mode";
 
 const MIN_SIDEBAR = 280;
 const MAX_SIDEBAR = 480;
@@ -73,6 +74,7 @@ const Inbox = () => {
   const lastAckedRef = useRef<Map<number, number>>(new Map());
   // Suppress auto-scroll-to-latest when a "load earlier" just prepended.
   const suppressAutoScrollRef = useRef(false);
+  const creatingDmRef = useRef<string | null>(null);
 
   const openThreadParam = searchParams.get("thread");
   const newDmParam = searchParams.get("dm");
@@ -106,13 +108,46 @@ const Inbox = () => {
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
-  // Route params that select an existing thread by identity.
+  // Route params select an existing thread or create an empty, usable DM.
   useEffect(() => {
-    if (newDmParam && threads.length > 0) {
+    if (newDmParam && !loading) {
       const existing = threads.find(
         (t) => t.type === "dm" && t.participants.some((p) => p.username === newDmParam)
       );
-      if (existing) setActiveThreadId(existing.id);
+      if (existing) {
+        setActiveThreadId(existing.id);
+      } else if (creatingDmRef.current !== newDmParam) {
+        creatingDmRef.current = newDmParam;
+        const cfg = window.TAPNE_RUNTIME_CONFIG;
+        const request = IS_DEV_MODE
+          ? apiPost<{ thread: ThreadSummary & { messages?: MessageData[] } }>(cfg.api.dm_inbox, {
+              type: "dm",
+              username: newDmParam,
+            })
+          : apiPost<{ ok: boolean; thread_id?: number; error?: string }>(cfg.api.dm_start, {
+              host_username: newDmParam,
+            }).then(async (started) => {
+              if (!started.ok || !started.thread_id) throw new Error(started.error || "Could not start conversation.");
+              const inbox = await apiGet<InboxResponse>(cfg.api.dm_inbox);
+              const thread = inbox.threads.find((item) => item.id === started.thread_id);
+              if (!thread) throw new Error("Could not open conversation.");
+              return { thread };
+            });
+        request.then(({ thread }) => {
+          const threadWithMessages = thread as ThreadSummary & { messages?: MessageData[] };
+          const { messages = [], ...summary } = threadWithMessages;
+          setThreads((prev) => prev.some((t) => t.id === summary.id) ? prev : [summary, ...prev]);
+          setMsgState((prev) => ({
+            ...prev,
+            [summary.id]: messages.length > 0
+              ? { ...emptyMsgState, messages, loaded: true }
+              : (prev[summary.id] || emptyMsgState),
+          }));
+          setActiveThreadId(summary.id);
+        }).finally(() => {
+          creatingDmRef.current = null;
+        });
+      }
     }
     if (tripQueryParam && threads.length > 0) {
       const existing = threads.find(
@@ -120,7 +155,7 @@ const Inbox = () => {
       );
       if (existing) setActiveThreadId(existing.id);
     }
-  }, [newDmParam, tripQueryParam, threads]);
+  }, [newDmParam, tripQueryParam, threads, loading]);
 
   const activeThread = useMemo(
     () => threads.find((t) => t.id === activeThreadId) || null,

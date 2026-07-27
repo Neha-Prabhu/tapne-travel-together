@@ -1,22 +1,12 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Star, Camera, ArrowLeft, ArrowRight, Check, X, Loader2 } from "lucide-react";
+import { Star, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { apiPost } from "@/lib/api";
 import type { TripData } from "@/types/api";
-
-const POSITIVE_TAGS = [
-  "Well organized", "Great people", "Worth the money",
-  "Amazing itinerary", "Good vibes", "Helpful host",
-];
-const NEGATIVE_TAGS = [
-  "Poor planning", "Miscommunication", "Not worth the price",
-  "Felt rushed", "Safety concerns", "Uncomfortable stay",
-];
 
 interface ReviewModalProps {
   open: boolean;
@@ -33,10 +23,6 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, init
   const [hoverRating, setHoverRating] = useState(0);
   const [headline, setHeadline] = useState("");
   const [loved, setLoved] = useState("");
-  const [improve, setImprove] = useState("");
-  const [travelAgain, setTravelAgain] = useState<"Yes" | "Maybe" | "No" | "">("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -46,10 +32,6 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, init
       setLoved(initialReview.body || "");
     }
   }, [open, initialReview]);
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  };
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -79,15 +61,11 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, init
     setRating(0);
     setHeadline("");
     setLoved("");
-    setImprove("");
-    setTravelAgain("");
-    setSelectedTags([]);
-    setPhotos([]);
   };
 
   const ratingLabels = ["", "Poor", "Fair", "Good", "Great", "Amazing"];
 
-  const totalSteps = 4;
+  const totalSteps = 2;
   const currentProgress = step + 1;
 
   return (
@@ -136,100 +114,9 @@ const ReviewModal = ({ open, onOpenChange, trip, tripId, onReviewSubmitted, init
               <Textarea rows={3} value={loved} onChange={e => setLoved(e.target.value)} placeholder="The people, the places, the vibe..." />
               <p className="text-xs text-muted-foreground">{loved.length < 10 ? `${10 - loved.length} more chars needed` : "✓"}</p>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">What could have been better? <span className="text-xs text-muted-foreground">(optional)</span></label>
-              <Textarea rows={2} value={improve} onChange={e => setImprove(e.target.value)} placeholder="Anything you'd improve..." />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Would you travel with this group again?</label>
-              <div className="flex gap-2">
-                {(["Yes", "Maybe", "No"] as const).map(opt => (
-                  <Button key={opt} variant={travelAgain === opt ? "default" : "outline"} size="sm" onClick={() => setTravelAgain(opt)} className="flex-1">{opt}</Button>
-                ))}
-              </div>
-            </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(0)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(2)} disabled={loved.length < 10} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Tags */}
-        {step === 2 && (
-          <div className="space-y-4 py-2">
-            <h3 className="text-lg font-semibold text-center">Quick tags</h3>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Positive</p>
-              <div className="flex flex-wrap gap-2">
-                {POSITIVE_TAGS.map(tag => (
-                  <Badge key={tag} variant={selectedTags.includes(tag) ? "default" : "outline"} className="cursor-pointer transition-colors" onClick={() => toggleTag(tag)}>{tag}</Badge>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Could improve</p>
-              <div className="flex flex-wrap gap-2">
-                {NEGATIVE_TAGS.map(tag => (
-                  <Badge key={tag} variant={selectedTags.includes(tag) ? "destructive" : "outline"} className="cursor-pointer transition-colors" onClick={() => toggleTag(tag)}>{tag}</Badge>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(1)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(3)} className="flex-1">Continue <ArrowRight className="ml-1.5 h-4 w-4" /></Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Photos + Summary + Submit */}
-        {step === 3 && (
-          <div className="space-y-5 py-2">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Camera className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h3 className="text-sm font-semibold">Add photos <span className="text-xs font-normal text-muted-foreground">(optional)</span></h3>
-                </div>
-              </div>
-              <div className="flex gap-3 flex-wrap">
-                {photos.map((url, i) => (
-                  <div key={i} className="relative h-16 w-16">
-                    <img src={url} alt="" className="h-full w-full rounded-lg object-cover" />
-                    <button onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5"><X className="h-3 w-3 text-white" /></button>
-                  </div>
-                ))}
-                <label className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-primary/50">
-                  <Camera className="h-5 w-5 text-muted-foreground" />
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => setPhotos(prev => [...prev, reader.result as string]);
-                    reader.readAsDataURL(file);
-                    e.target.value = "";
-                  }} />
-                </label>
-              </div>
-            </div>
-
-            <div className="rounded-lg border p-4 space-y-3 text-sm">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Review Summary</p>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Rating:</span>
-                <div className="flex">{[1, 2, 3, 4, 5].map(s => <Star key={s} className={cn("h-4 w-4", s <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />)}</div>
-              </div>
-              <div><span className="text-muted-foreground">Loved:</span> <span>{loved}</span></div>
-              {improve && <div><span className="text-muted-foreground">Improve:</span> <span>{improve}</span></div>}
-              {travelAgain && <div><span className="text-muted-foreground">Travel again:</span> <span>{travelAgain}</span></div>}
-              {selectedTags.length > 0 && (
-                <div className="flex flex-wrap gap-1">{selectedTags.map(t => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}</div>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setStep(2)} className="flex-1"><ArrowLeft className="mr-1.5 h-4 w-4" /> Back</Button>
-              <Button onClick={handleSubmit} disabled={loading} className="flex-1">
+              <Button onClick={handleSubmit} disabled={loading || loved.length < 10} className="flex-1">
                 {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
                 {loading ? "Submitting..." : "Post Review"}
               </Button>
