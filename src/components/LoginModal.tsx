@@ -60,12 +60,12 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     setForgotEmail(""); setForgotError("");
     setNewPassword(""); setConfirmPassword(""); setResetError("");
     resetCredsRef.current = null;
-    if (lastAuthError === "__suspended__") clearAuthError?.();
+    if (lastAuthError?.startsWith("__")) clearAuthError?.();
   };
 
   useEffect(() => {
-    if (open && lastAuthError === "__suspended__" && !error) {
-      setError("__suspended__");
+    if (open && lastAuthError?.startsWith("__") && !error) {
+      setError(lastAuthError);
     }
   }, [open, lastAuthError]);
 
