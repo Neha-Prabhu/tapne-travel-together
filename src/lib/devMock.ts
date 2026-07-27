@@ -170,7 +170,25 @@ function mockError(status: number, body: Record<string, unknown>) { return { __m
 // echoes the new revision so the client's next request stays in sync.
 const _draftRevisions = new Map<number, number>();
 const _blogRevisions = new Map<string, number>();
-const _devBlogs = new Map<string, BlogData & { status?: string }>();
+const _DEV_BLOGS_KEY = "tapne_dev_blogs_v1";
+function loadDevBlogs(): Map<string, BlogData & { status?: string }> {
+  try {
+    const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(_DEV_BLOGS_KEY) : null;
+    const list = raw ? JSON.parse(raw) : [];
+    return new Map(Array.isArray(list) ? list.map((blog: BlogData & { status?: string }) => [blog.slug, blog]) : []);
+  } catch {
+    return new Map();
+  }
+}
+const _devBlogs = loadDevBlogs();
+for (const blog of _devBlogs.values()) _blogRevisions.set(blog.slug, blog.revision ?? 1);
+function saveDevBlogs() {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(_DEV_BLOGS_KEY, JSON.stringify(Array.from(_devBlogs.values())));
+    }
+  } catch { /* ignore dev persistence failures */ }
+}
 let _profileRevision = 1;
 let _settingsRevision = 1;
 function draftRev(id: number) { return _draftRevisions.get(id) ?? 1; }
@@ -883,6 +901,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
       revision: 1,
     };
     _devBlogs.set(slug, blog);
+    saveDevBlogs();
     return { blog };
   }
 
@@ -899,6 +918,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
     const nextRev = bumpBlogRev(slug);
     const blog = { ...(_devBlogs.get(slug) || {}), slug, ...rest, revision: nextRev };
     _devBlogs.set(slug, blog);
+    saveDevBlogs();
     return { blog };
   }
 
@@ -906,6 +926,7 @@ export function resolveMockRequest(method: string, url: string, body?: unknown):
   const blogDeleteMatch = path.match(/^\/blogs\/([^/]+)\/$/);
   if (method === "DELETE" && blogDeleteMatch) {
     _devBlogs.delete(blogDeleteMatch[1]);
+    saveDevBlogs();
     _blogRevisions.delete(blogDeleteMatch[1]);
     return {};
   }
