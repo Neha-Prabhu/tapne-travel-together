@@ -60,12 +60,12 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
     setForgotEmail(""); setForgotError("");
     setNewPassword(""); setConfirmPassword(""); setResetError("");
     resetCredsRef.current = null;
-    if (lastAuthError === "__suspended__") clearAuthError?.();
+    if (lastAuthError?.startsWith("__")) clearAuthError?.();
   };
 
   useEffect(() => {
-    if (open && lastAuthError === "__suspended__" && !error) {
-      setError("__suspended__");
+    if (open && lastAuthError?.startsWith("__") && !error) {
+      setError(lastAuthError);
     }
   }, [open, lastAuthError]);
 
@@ -306,6 +306,18 @@ const LoginModal = ({ open, onOpenChange, onSuccess }: LoginModalProps) => {
                   <a href="mailto:support@tapnetravel.com" className="underline font-medium">support@tapnetravel.com</a>
                   {" "}if you believe this was a mistake.
                 </div>
+              ) : error === "__account_unavailable__" ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  This account is unavailable. Contact{" "}
+                  <a href="mailto:support@tapnetravel.com" className="underline font-medium">support@tapnetravel.com</a>
+                  {" "}if you believe this is a mistake.
+                </div>
+              ) : error === "__oauth_cancelled__" ? (
+                <p className="text-sm text-destructive">Google sign-in was cancelled.</p>
+              ) : error === "__email_unverified__" ? (
+                <p className="text-sm text-destructive">Google could not verify the email address for this account.</p>
+              ) : error === "__oauth_failed__" ? (
+                <p className="text-sm text-destructive">Google sign-in is temporarily unavailable. Please try again.</p>
               ) : error ? <p className="text-sm text-destructive">{error}</p> : null}
 
               <Button type="submit" className="w-full" disabled={loading || (mode === "signup" && !emailAvailable)}>
