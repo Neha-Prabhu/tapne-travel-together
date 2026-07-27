@@ -134,7 +134,8 @@ const Inbox = () => {
               return { thread };
             });
         request.then(({ thread }) => {
-          const { messages = [], ...summary } = thread;
+          const threadWithMessages = thread as ThreadSummary & { messages?: MessageData[] };
+          const { messages = [], ...summary } = threadWithMessages;
           setThreads((prev) => prev.some((t) => t.id === summary.id) ? prev : [summary, ...prev]);
           setMsgState((prev) => ({
             ...prev,
